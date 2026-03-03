@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="foreground_service_notification">正在向相机传输位置数据 %d</string>
+    <string name="foreground_service_notification">正在向 %d 台相机传输位置数据</string>
     <string name="scan_for_devices">点击查找并关联您的相机</string>
     <string name="permission_gps">访问精确位置</string>
     <string name="permission_background_gps">允许应用在后台访问位置</string>
@@ -61,7 +61,7 @@
     <string name="welcome_feature_device_management_title">设备管理</string>
     <string name="welcome_get_started_button">开始使用</string>
     <string name="welcome_settings_note">您可以稍后从主菜单访问这些设置</string>
-    <string name="welcome_app_icon_description">相机GPS应用图标</string>
+    <string name="welcome_app_icon_description">Alpha GPS 应用图标</string>
     <!-- Settings screen strings -->
     <string name="settings">设置</string>
     <string name="app_controls">应用控制</string>
@@ -87,8 +87,8 @@
     <!-- Help & FAQ strings -->
     <string name="help_faq_title">帮助与常见问题</string>
     <string name="help_close_description">关闭</string>
-    <string name="help_about_title">关于 CameraGPS</string>
-    <string name="help_about_description">此应用通过蓝牙为您的相机提供实时GPS坐标，无需使用相机内置GPS即可自动为照片添加地理标记。</string>
+    <string name="help_about_title">关于 Alpha GPS</string>
+    <string name="help_about_description">此应用通过蓝牙为您的相机提供实时 GPS 坐标，无需使用相机内置 GPS 即可自动为照片添加地理标记。</string>
     <string name="help_need_more_title">需要更多帮助？</string>
     <string name="help_need_more_description">查看顶部菜单中的应用日志以获取故障排除信息，或检查您的设备设置以确保已授予所有权限。</string>
     <!-- FAQ Questions -->
@@ -96,10 +96,10 @@
     <string name="faq_connect_camera_answer">1. 确保您的相机支持蓝牙连接和GPS标记\n2. 在手机上启用蓝牙\n3. 点击"添加相机设备"开始配对过程\n4. 按照屏幕说明配对您的相机。首次配对完成后重启相机。</string>
     <string name="faq_camera_not_appearing_question">为什么我的相机没有出现在列表中？</string>
     <string name="faq_camera_not_appearing_answer">• 确保相机处于配对/蓝牙模式\n• 检查相机是否支持所需的蓝牙配置文件\n• 确保您在范围内（通常为10米）\n• 尝试重启手机蓝牙</string>
-    <string name="faq_enable_service_question">如何永久启用服务？</string>
+    <string name="faq_enable_service_question">如何让该服务保持常驻？它好像运行一段时间后就会自动停止</string>
     <string name="faq_enable_service_answer">请访问应用设置，尝试电池和后台部分的选项。或者尝试以下方法：\n要保持GPS数据与相机同步：\n1. 进入设备设置 &gt; 应用\n2. 在应用列表中找到"Alpha GPS"\n3. 点击并选择"电池"\n4. 选择"不优化"或"允许后台活动"\n5. 这可防止系统停止GPS服务\n\n您也可以通过应用中的设备详情页面访问此设置。</string>
     <string name="faq_camera_not_connecting_question">我的相机无法自动连接，该怎么办？</string>
-    <string name="faq_camera_not_connecting_answer">不幸的是，可能会出现自动连接不工作的情况。如果遇到问题，请执行以下操作：在主屏幕上，点击您的相机打开详情屏幕。在那里您可以启用"始终开启"模式，这将保持应用在前台。或者尝试关闭再打开蓝牙，或在应用中移除该设备后重新配对。</string>
+    <string name="faq_camera_not_connecting_answer">不幸的是，可能会出现自动连接不工作的情况。如果遇到问题，请执行以下操作：在主屏幕上，点击您的相机打开详情屏幕。在那里您可以启用始终开启模式，这将保持应用在前台。\n或者尝试关闭再打开蓝牙，或在应用中移除该设备后重新配对。</string>
     <string name="faq_permissions_question">应用需要哪些权限？</string>
     <string name="faq_permissions_answer">应用需要：\n• 位置权限（用于GPS数据）\n• 蓝牙权限（连接相机）\n• 电池优化豁免（用于持续服务）\n• 附近设备权限（用于设备发现）</string>
     <string name="faq_gps_accuracy_question">GPS数据的准确性如何？</string>
@@ -158,11 +158,11 @@
     <string name="_3_make_sure_the_camera_is_discoverable">3. 确保相机可被发现</string>
     <string name="once_your_camera_is_ready_tap_continue_to_start_pairing">\n相机准备就绪后，点击"继续"开始配对。</string>
     <string name="android_12_requires_keep_alive">运行Android 11及以下版本的设备必须启用保持活跃模式。点击设备并启用该设置</string>
-    <string name="always_on_description">在前台运行应用。如果在有激进省电措施的设备上无法可靠建立连接，这会很有用（例如小米设备及可能更多）</string>
+    <string name="always_on_description">在前台运行应用。如果在有激进省电措施的设备上无法可靠建立连接，这会很有用（例如小米等机型）</string>
     <string name="quick_start_feature_title">快速开始</string>
     <string name="quick_start_feature_description">在下一个屏幕上，按照说明配对您的相机。配对完成后，应用将自动连接到您的相机并开始传输位置数据。如果没有立即开始，请尝试重启相机。</string>
     <string name="always_on_quickstart">始终开启模式</string>
-    <string name="always_on_quickstart_description">如果默认连接模式不起作用，您可以在配对设备后启用始终开启模式。在主屏幕上点击设备条目并开启开关。此模式可能使用更多电池，但仅在连接到相机时传输位置数据。</string>
+    <string name="always_on_quickstart_description">如果默认连接模式不起作用，您可以在配对设备后启用“始终开启”模式。在主屏幕上点击设备条目并开启开关。此模式可能消耗更多电量，但仅在连接到相机时传输位置数据。</string>
     <string name="reset_welcome">下次启动时显示欢迎屏幕</string>
     <string name="will_show_welcome">下次启动时将显示欢迎屏幕！</string>
     <string name="is_there_documenation">有文档说明吗？</string>
@@ -198,5 +198,15 @@
     <string name="sentry_consent_allow">允许</string>
     <string name="sentry_consent_decline">拒绝</string>
     <string name="sentry_consent_dont_show">不再显示</string>
-    <string name="notification_channel_name">Transmission state</string>
+    <string name="notification_channel_name">传输状态</string>
+    <string name="permissions_missing_title">缺少权限</string>
+    <string name="enable_auto_start">开机自启动</string>
+    <string name="location_provider_title">定位服务提供商</string>
+    <string name="location_provider_play_services">Google Play 服务 (推荐)</string>
+    <string name="location_provider_platform">Android 平台 (LocationManager)</string>
+    <string name="location_provider_hint">如果您的设备缺少 Google Play 服务或其运行不稳定，请切换至 Android 平台内置服务。</string>
+    <string name="location_provider_restart_required">请重启应用并关闭相机以应用此更改。如果已开启“始终开启”模式，请预先将其关闭</string>
+    <string name="disconnect_notification_channel_name">设备已断开</string>
+    <string name="continue_anyway">仍然继续</string>
+    <string name="permissions_missing_description">需开启以下权限以确保功能完整：\n%1$s</string>
 </resources>
