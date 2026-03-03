@@ -397,9 +397,9 @@ class LocationSenderService : LifecycleService() {
 
     @SuppressLint("MissingPermission")
     private suspend fun handleNoAddress(startId: Int) {
-        if (!startAsForegroundService()) {
+       /* if (!startAsForegroundService()) {
             return
-        }
+        }*/
         if (deviceDao.getAlwaysOnEnabledDeviceCount() == 0) {
             Timber.i("No always-on devices found, shutting down service")
             requestShutdown(startId)
@@ -443,6 +443,8 @@ class LocationSenderService : LifecycleService() {
             return
         }
 
+        // TODO, if a camera is still on and connected it will not shutdown the service, maybe we should disconnect the camera in that case and shut down if no active connections remain?
+         cameraConnectionManager.pauseDevice(address)
         if (cameraConnectionManager.getActiveCameras().isEmpty() && deviceDao.getAlwaysOnEnabledDeviceCount() == 0) {
             Timber.d("No connected or always on cameras remaining, shutting down service")
             requestShutdown(startId)
@@ -499,9 +501,9 @@ class LocationSenderService : LifecycleService() {
             return
         }
 
-        if (!startAsForegroundService()) {
+     /*   if (isLocationTransmitting || !startAsForegroundService()) {
             return
-        }
+        }*/
 
         // shutdown service if bluetooth is turned off
         // could be potentially improved by just disabling the transmission and reconnect after bluetooth is on again
@@ -567,6 +569,9 @@ class LocationSenderService : LifecycleService() {
     @SuppressLint("MissingPermission")
     override fun onCreate() {
         super.onCreate()
+        if(!startAsForegroundService()) {
+            return
+        }
 
 
         deviceDao = LogDatabase.getDatabase(this).cameraDeviceDao()
@@ -937,7 +942,7 @@ class LocationSenderService : LifecycleService() {
             value: ByteArray,
             gatt: BluetoothGatt,
             characteristic: BluetoothGattCharacteristic
-        ) {
+        ) {/*
             val service = gatt.services?.find { it.uuid == SonyBluetoothConstants.SERVICE_UUID }
             val locationEnabledCharacteristic =
                 service?.getCharacteristic(CHARACTERISTIC_LOCATION_ENABLED_IN_CAMERA)
@@ -954,7 +959,7 @@ class LocationSenderService : LifecycleService() {
 
             } else if (characteristic.uuid.equals(CHARACTERISTIC_LOCATION_ENABLED_IN_CAMERA)) {
                 Timber.w("Received characteristic read from camera (location status): ${characteristic.uuid}, $value")
-            }
+            }*/
             cameraConnectionManager.setLocationDataConfig(
                 gatt.device.address.uppercase(),
                 LocationDataConfig(hasTimeZoneDstFlag(value))
@@ -981,7 +986,7 @@ class LocationSenderService : LifecycleService() {
             LocationDataConverter.buildLocationDataPacket(locationDataConfig, locationResult!!)
 
         if (!BluetoothGattUtils.writeCharacteristic(gatt, characteristic, locationPacket)) {
-            Timber.e("Failed to send location data to camera")
+            //Timber.e("Failed to send location data to camera")
         }
     }
 

@@ -23,8 +23,10 @@ object BluetoothGattUtils {
     ): Boolean {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             val result = gatt.writeCharacteristic(characteristic, value, writeType)
-            if (result != 0) {
+            // 201 == device busy, spams sentry, but I do not know the cause yet
+            if (result != 0 && result != 201) {
                 Timber.e("Writing characteristic failed. Result: $result")
+
                 false
             } else {
                 Timber.d("Characteristic written successfully (API 33+)")
