@@ -101,7 +101,7 @@
     <string name="enableConstantly">Always On (dauerbetrieb)</string>
     <!-- Device limitation hint -->
     <string name="single_device_limitation_hint">Derzeit wird nur eine Kamera gleichzeitig unterstützt. Unterstützung für mehrere Geräte wird in einem zukünftigen Update hinzugefügt.</string>
-    <string name="android_12_requires_keep_alive">Smartphones mit Android 11 oder niedriger müssen den "Immer An" Modus aktivieren. Tippen sie auf die Kamera und aktivieren sie die Einstellung</string>
+    <string name="android_12_requires_keep_alive">Smartphones mit Android 11 oder niedriger müssen den Immer An Modus aktivieren. Tippen sie auf die Kamera und aktivieren sie die Einstellung</string>
     <string name="always_on_description">Lässt die App im Vordergrund laufen. Nützliich, wenn die Verbindung nicht verlässlich automatisch hergestellt werden kann (z.B. durch aggressive Batteriesparmaßen bei Xiaomi Geräten und möglicherweise weiteren)</string>
     <!-- Battery optimization dialog strings -->
     <string name="battery_optimization_title">Akkuoptimierung</string>
@@ -111,18 +111,18 @@
     <string name="battery_optimization_dont_show">Nicht mehr anzeigen</string>
     <!-- Xiaomi-specific battery optimization strings -->
     <string name="battery_optimization_xiaomi_title">Xiaomi Akkuoptimierung</string>
-    <string name="battery_optimization_xiaomi_message">Auf Xiaomi-Geräten sind zusätzliche Schritte nötig, damit die App im Hintergrund zuverlässig funktioniert:\n\n1. Akkuoptimierung öffnen\n2. Diese App auf "Nicht optimieren" setzen\n3. Zu Einstellungen &gt; Apps &gt; Apps verwalten gehen\n4. Diese App finden und "Autostart" aktivieren\n5. "Hintergrund-App-Limits" auf "Keine Einschränkungen" stellen</string>
+    <string name="battery_optimization_xiaomi_message">Auf Xiaomi-Geräten sind zusätzliche Schritte nötig, damit die App im Hintergrund zuverlässig funktioniert:\n\n1. Akkuoptimierung öffnen\n2. Diese App auf Nicht optimieren setzen\n3. Zu Einstellungen &gt; Apps &gt; Apps verwalten gehen\n4. Diese App finden und Autostart aktivieren\n5. Hintergrund-App-Limits auf Keine Einschränkungen stellen</string>
     <string name="battery_optimization_xiaomi_autostart">Autostart-Einstellungen öffnen</string>
     <string name="battery_optimization_xiaomi_battery">Akku-Einstellungen öffnen</string>
     <!-- Oppo-specific battery optimization strings -->
     <string name="battery_optimization_oppo_title">OPPO Akkuoptimierung</string>
-    <string name="battery_optimization_oppo_message">Auf OPPO-Geräten (einschließlich Realme und OnePlus) sind zusätzliche Schritte nötig, damit die App im Hintergrund zuverlässig funktioniert:\n\n1. Akkuoptimierung öffnen\n2. Dieser App erlauben, im Hintergrund zu laufen\n3. "Autostart" für diese App aktivieren\n4. "Akkuoptimierung" für diese App deaktivieren\n5. "Hintergrund-App-Verwaltung" auf uneingeschränkte Hintergrundaktivität setzen</string>
+    <string name="battery_optimization_oppo_message">Auf OPPO-Geräten (einschließlich Realme und OnePlus) sind zusätzliche Schritte nötig, damit die App im Hintergrund zuverlässig funktioniert:\n\n1. Akkuoptimierung öffnen\n2. Dieser App erlauben, im Hintergrund zu laufen\n3. Autostart für diese App aktivieren\n4. Akkuoptimierung für diese App deaktivieren\n5. Hintergrund-App-Verwaltung auf uneingeschränkte Hintergrundaktivität setzen</string>
     <string name="battery_optimization_oppo_autostart">Autostart-Einstellungen öffnen</string>
     <string name="battery_optimization_oppo_battery">Akku-Einstellungen öffnen</string>
     <!-- Battery optimization settings screen strings -->
     <string name="battery_optimization_settings_title">Akku &amp; Hintergrund-Einstellungen</string>
     <string name="battery_optimization_settings_short"><![CDATA[Passen Sie diese Einstellungen an, falls die App im Hintergrund nicht zuverlässig funktioniert. <b>Hinweis: Dies ändert nicht das Verhalten App selbst, sondern versucht nur zu verhindern, dass sie vom Betriebssystem beendet wird. Nur bei Problemen verwenden.</b>]]></string>
-    <string name="battery_optimization_settings_description">Einige Hersteller erfordern zusätzliche Berechtigungen für Hintergrundaktivität. Falls die erste Option nicht funktioniert, tippen Sie auf "Einstellungen öffnen". Navigieren Sie zum Akku-/Energiebereich und versuchen Sie, die App von Optimierungen auszuschließen.</string>
+    <string name="battery_optimization_settings_description">Einige Hersteller erfordern zusätzliche Berechtigungen für Hintergrundaktivität. Falls die erste Option nicht funktioniert, tippen Sie auf Einstellungen öffnen. Navigieren Sie zum Akku-/Energiebereich und versuchen Sie, die App von Optimierungen auszuschließen.</string>
     <string name="learn_more">Mehr erfahren</string>
     <string name="show_less">Weniger anzeigen</string>
     <string name="battery_optimization_open_settings">Akkuoptimierung deaktivieren</string>
@@ -164,7 +164,7 @@
     <string name="welcome_feature_gps_sync_title">Echtzeit Standortübertragung</string>
     <string name="welcome_feature_connect_title">Verbinde die Kamera</string>
     <string name="how_about_privacy">Wie sieht es mit dem Datenschutz aus?</string>
-    <string name="how_about_privacy_answer">Die App überträgt keine personenbezogenen Daten an den Entwickler und/oder Drittparteien. Sämtliche erhobenen Informationen (Standortdaten) werden nur für die Übertragung der Standortdaten zu der verbundenen Kamera verwendet und nicht dauerhaft gespeichert. Die Standorterfassung wird beendet, sobald die Verbindung zur Kamera getrennt wird. Zur Analyse von Problemen und Abstürzen können anonymisierte Logs an den Fehlerberichts\-Dienst Sentry gesendet werden. Sie können diese Funktion jederzeit in den App\-Einstellungen unter „Fehlerberichterstattung Einstellungen“ deaktivieren. Bei Fragen und Bedenken melden Sie sich bitte bei der oben genannten E\-Mail\-Adresse.</string>
+    <string name="how_about_privacy_answer">Die App überträgt keine personenbezogenen Daten an den Entwickler und/oder Drittparteien. Sämtliche erhobenen Informationen (Standortdaten) werden nur für die Übertragung der Standortdaten zu der verbundenen Kamera verwendet und nicht dauerhaft gespeichert. Die Standorterfassung wird beendet, sobald die Verbindung zur Kamera getrennt wird. Zur Analyse von Problemen und Abstürzen können anonymisierte Logs an den FehlerberichtsDienst Sentry gesendet werden. Sie können diese Funktion jederzeit in den AppEinstellungen unter „Fehlerberichterstattung Einstellungen“ deaktivieren. Bei Fragen und Bedenken melden Sie sich bitte bei der oben genannten EMailAdresse.</string>
     <!-- Device management strings -->
     <string name="device_management">Geräteverwaltung</string>
     <string name="no_devices_found">Keine Geräte gefunden</string>
@@ -173,7 +173,7 @@
     <string name="delete">Löschen</string>
     <string name="always_on_enabled">Immer An aktiviert</string>
     <string name="enable_auto_start_description">Startet die App nach einem Geräte-Neustart automatisch für Kameras, für die der „Immer an\"-Modus konfiguriert ist.</string>
-    <string name="hint_if_issues_after_switching">Hinweis: Aufgrund von kürzlichen Änderungen in der App kann es nach dem Deaktivieren des „Immer an"-Modus erforderlich sein, einmalig eine Aktion durchzuführen. Deaktivieren und reaktivieren Sie das Gerät einfach einmal in diesen Einstellungen. Dies ist nur einmal nach dem App-Update nötig – nachfolgende Moduswechsel funktionieren sofort.</string>
+    <string name="hint_if_issues_after_switching">Hinweis: Aufgrund von kürzlichen Änderungen in der App kann es nach dem Deaktivieren des „Immer an\"-Modus erforderlich sein, einmalig eine Aktion durchzuführen. Deaktivieren und reaktivieren Sie das Gerät einfach einmal in diesen Einstellungen. Dies ist nur einmal nach dem App-Update nötig – nachfolgende Moduswechsel funktionieren sofort.</string>
     <!-- Pairing dialog strings -->
     <string name="pairing_camera_title">Kopple Kamera</string>
     <string name="pairing_complete_title">Kopplung abgeschlossen</string>
@@ -201,4 +201,6 @@
     <string name="location_provider_restart_required">Schalte die Kamera aus und starte die App neu um die Änderungen durchzuführen. Falls der \"Always On\" Modus aktiv ist, deaktiviere diesen zuerst</string>
     <string name="disconnect_notification_channel_name">Gerät nicht verbunden</string>
     <string name="continue_anyway">Trotzdem fortfahren</string>
+    <string name="app_name" translatable="false"></string>
+    <string name="app_name_ui" translatable="false"></string>
 </resources>
