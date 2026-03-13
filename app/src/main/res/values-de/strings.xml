@@ -201,6 +201,4 @@
     <string name="location_provider_restart_required">Schalte die Kamera aus und starte die App neu um die Änderungen durchzuführen. Falls der \"Always On\" Modus aktiv ist, deaktiviere diesen zuerst</string>
     <string name="disconnect_notification_channel_name">Gerät nicht verbunden</string>
     <string name="continue_anyway">Trotzdem fortfahren</string>
-    <string name="app_name" translatable="false"></string>
-    <string name="app_name_ui" translatable="false"></string>
 </resources>
