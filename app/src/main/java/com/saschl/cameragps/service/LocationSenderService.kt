@@ -39,12 +39,10 @@ import com.saschl.cameragps.database.LogDatabase
 import com.saschl.cameragps.database.devices.CameraDevice
 import com.saschl.cameragps.database.devices.CameraDeviceDAO
 import com.saschl.cameragps.notification.NotificationsHelper
-import com.saschl.cameragps.service.SonyBluetoothConstants.CHARACTERISTIC_LOCATION_ENABLED_IN_CAMERA
 import com.saschl.cameragps.service.SonyBluetoothConstants.CHARACTERISTIC_READ_UUID
 import com.saschl.cameragps.service.SonyBluetoothConstants.locationTransmissionNotificationId
 import com.saschl.cameragps.utils.PreferencesManager
 import com.saschl.cameragps.utils.SentryInit
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
@@ -117,15 +115,19 @@ class LocationSenderService : LifecycleService() {
 
     private var locationResult: Location? = null
 
-    private lateinit var cameraConnectionManager: CameraConnectionManager
-
     private lateinit var deviceDao: CameraDeviceDAO
 
     private val bluetoothManager: BluetoothManager by lazy {
         applicationContext.getSystemService()!!
     }
 
-    private val bluetoothGattCallback = BluetoothGattCallbackHandler()
+    private val cameraConnectionManager by lazy {
+        CameraConnectionManager(
+            context = applicationContext,
+            bluetoothManager = bluetoothManager,
+            gattCallback = BluetoothGattCallbackHandler()
+        )
+    }
 
     private fun hasTimeZoneDstFlag(value: ByteArray): Boolean {
         return value.size >= 5 && (value[4].toInt() and 0x02) != 0
@@ -145,9 +147,6 @@ class LocationSenderService : LifecycleService() {
    // private val commandChannel = Channel<CommandData>(Channel.UNLIMITED)
 
     //data class CommandData(val intent: Intent?, val startId: Int)
-
-
-
 
     @RequiresPermission(allOf = [Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION])
     private fun startLocationTransmission() {
@@ -569,6 +568,8 @@ class LocationSenderService : LifecycleService() {
     @SuppressLint("MissingPermission")
     override fun onCreate() {
         super.onCreate()
+        cameraConnectionManager
+
         if(!startAsForegroundService()) {
             return
         }
@@ -577,8 +578,7 @@ class LocationSenderService : LifecycleService() {
         deviceDao = LogDatabase.getDatabase(this).cameraDeviceDao()
         initializeLogging()
         initializeLocationServices()
-        cameraConnectionManager =
-            CameraConnectionManager(this, bluetoothManager, bluetoothGattCallback)
+
 
         /*lifecycleScope.launch {
             for (command in commandChannel) {

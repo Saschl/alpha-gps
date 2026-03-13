@@ -173,7 +173,7 @@ fun AssociatedDevicesList(
                             )
                         }
 
-                        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.S
+                        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S
                             && !isAlwaysOnEnabled
                         ) {
                             Text(

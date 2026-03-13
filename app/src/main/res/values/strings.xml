@@ -147,7 +147,7 @@
     <!-- Device detail screen strings -->
     <string name="back">Back</string>
     <string name="enable_device">Enable device</string>
-    <string name="enableConstantly">Keep alive (always On)</string>
+    <string name="enableConstantly">Keep alive (Always On)</string>
 
     <!-- Device limitation hint -->
     <string name="single_device_limitation_hint">Currently only one camera device is supported. Multiple device support will be added in a future update.</string>

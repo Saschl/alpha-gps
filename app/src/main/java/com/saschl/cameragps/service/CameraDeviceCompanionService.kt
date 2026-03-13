@@ -111,7 +111,6 @@ class CameraDeviceCompanionService : CompanionDeviceService() {
 
     @Deprecated("Deprecated in Java")
     override fun onDeviceDisappeared(address: String) {
-        super.onDeviceDisappeared(address)
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
             Timber.i("Device disappeared oldest api: $address. Service will keep running until destroyed")
             stopServiceOnDeviceDisappeared(address)
@@ -156,8 +155,8 @@ class CameraDeviceCompanionService : CompanionDeviceService() {
             action = ACTION_REQUEST_SHUTDOWN
 
         }
-        shutdownIntent.putExtra("address", "all")
-        startService(shutdownIntent)
+     /*   shutdownIntent.putExtra("address", "all")
+        startService(shutdownIntent)*/
         return super.onUnbind(intent)
     }
 

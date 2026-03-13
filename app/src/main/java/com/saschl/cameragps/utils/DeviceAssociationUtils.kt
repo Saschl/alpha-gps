@@ -48,7 +48,7 @@ object DeviceAssociationUtils {
                 }
             } catch (_: ClassCastException) {
                 // Not a BLE device
-                Timber.e("API level is below 33 but it is not a BluetoothDevice. Trying with scanresult")
+                Timber.w("API level is below 33 but it is not a BluetoothDevice. Trying with scanresult")
                 val scanResult =
                     intent.getParcelableExtra<ScanResult>(CompanionDeviceManager.EXTRA_DEVICE)
                 result = scanResult?.let {
@@ -98,9 +98,9 @@ object DeviceAssociationUtils {
             }
 
             override fun onDeviceFound(intentSender: IntentSender) {
-                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+                if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.S_V2) {
                     Timber.i("Device found")
-                    // On Android < 12 we get the device found callback instead of association pending
+                    // On Android <= 12 we get the device found callback instead of association pending
                     result.complete(intentSender)
                 }
             }
