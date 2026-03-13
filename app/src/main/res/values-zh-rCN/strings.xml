@@ -172,6 +172,4 @@
     <string name="disconnect_notification_channel_name">设备已断开</string>
     <string name="continue_anyway">仍然继续</string>
     <string name="permissions_missing_description">需开启以下权限以确保功能完整：\n%1$s</string>
-    <string name="app_name" translatable="false"></string>
-    <string name="app_name_ui" translatable="false"></string>
 </resources>
