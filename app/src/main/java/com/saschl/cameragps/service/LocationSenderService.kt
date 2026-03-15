@@ -43,6 +43,7 @@ import com.saschl.cameragps.service.SonyBluetoothConstants.CHARACTERISTIC_READ_U
 import com.saschl.cameragps.service.SonyBluetoothConstants.locationTransmissionNotificationId
 import com.saschl.cameragps.utils.PreferencesManager
 import com.saschl.cameragps.utils.SentryInit
+import com.saschl.cameragps.shared.ui.settings.LocationProvider
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
@@ -590,7 +591,7 @@ class LocationSenderService : LifecycleService() {
 
     private fun initializeLocationServices() {
         val provider = PreferencesManager.getLocationProvider(this)
-        usePlayServices = provider == PreferencesManager.LocationProvider.PLAY_SERVICES
+        usePlayServices = provider == LocationProvider.PLAY_SERVICES
         locationCallback = LocationUpdateHandler()
 
         if (usePlayServices) {

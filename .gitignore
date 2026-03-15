@@ -11,6 +11,8 @@
 local.properties
 *.aab
 *.apk
+.kotlin
+shared/build
 
 # Sentry Config File
 sentry.properties

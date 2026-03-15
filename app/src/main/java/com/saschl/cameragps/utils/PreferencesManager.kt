@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
 import androidx.core.content.edit
+import com.saschl.cameragps.shared.ui.settings.LocationProvider
 import java.time.Duration
 import java.time.Instant
 import java.time.temporal.ChronoUnit
@@ -21,10 +22,7 @@ object PreferencesManager {
     private const val LOCATION_PROVIDER_PLAY_SERVICES = "play_services"
     private const val LOCATION_PROVIDER_PLATFORM = "platform"
 
-    enum class LocationProvider {
-        PLAY_SERVICES,
-        PLATFORM
-    }
+    // LocationProvider enum lives in shared module (com.saschl.cameragps.shared.ui.settings)
 
     private fun getPreferences(context: Context): SharedPreferences {
         return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)

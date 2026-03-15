@@ -16,12 +16,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.saschl.cameragps.R
+import com.saschl.cameragps.shared.ui.settings.LocationProvider
 import com.saschl.cameragps.utils.PreferencesManager
 
 @Composable
 internal fun LocationProviderCard(
-    locationProvider: PreferencesManager.LocationProvider,
-    onProviderChange: (PreferencesManager.LocationProvider) -> Unit
+    locationProvider: LocationProvider,
+    onProviderChange: (LocationProvider) -> Unit
 ) {
     SettingsCard(title = stringResource(R.string.location_provider_title)) {
         Column(
@@ -32,14 +33,14 @@ internal fun LocationProviderCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable {
-                        onProviderChange(PreferencesManager.LocationProvider.PLAY_SERVICES)
+                        onProviderChange(LocationProvider.PLAY_SERVICES)
                     },
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 RadioButton(
-                    selected = locationProvider == PreferencesManager.LocationProvider.PLAY_SERVICES,
+                    selected = locationProvider == LocationProvider.PLAY_SERVICES,
                     onClick = {
-                        onProviderChange(PreferencesManager.LocationProvider.PLAY_SERVICES)
+                        onProviderChange(LocationProvider.PLAY_SERVICES)
                     }
                 )
                 Text(
@@ -53,14 +54,14 @@ internal fun LocationProviderCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable {
-                        onProviderChange(PreferencesManager.LocationProvider.PLATFORM)
+                        onProviderChange(LocationProvider.PLATFORM)
                     },
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 RadioButton(
-                    selected = locationProvider == PreferencesManager.LocationProvider.PLATFORM,
+                    selected = locationProvider == LocationProvider.PLATFORM,
                     onClick = {
-                        onProviderChange(PreferencesManager.LocationProvider.PLATFORM)
+                        onProviderChange(LocationProvider.PLATFORM)
                     }
                 )
                 Text(

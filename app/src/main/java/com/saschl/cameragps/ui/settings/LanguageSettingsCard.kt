@@ -28,13 +28,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.os.LocaleListCompat
 import com.saschl.cameragps.R
+import com.saschl.cameragps.shared.language.AppLanguage
 import com.saschl.cameragps.utils.LanguageManager
 import java.util.Locale
 
 @Composable
 internal fun LanguageSettingsCard(
-    currentLanguage: Locale?,
-    onLanguageSelected: (Locale) -> Unit
+    currentLanguage: AppLanguage?,
+    onLanguageSelected: (AppLanguage) -> Unit
 ) {
     var showLanguageDialog by remember { mutableStateOf(false) }
 
@@ -89,8 +90,8 @@ internal fun LanguageSettingsCard(
 
 @Composable
 private fun LanguageSelectionDialog(
-    currentLanguage: Locale?,
-    onLanguageSelected: (Locale) -> Unit,
+    currentLanguage: AppLanguage?,
+    onLanguageSelected: (AppLanguage) -> Unit,
     onLanguageUnset: () -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -123,7 +124,7 @@ private fun LanguageSelectionDialog(
                         )
                     }
                 }
-                items(LanguageManager.SupportedLanguage.getSupportedLocales()) { language ->
+                items(LanguageManager.getSupportedLanguages()) { language ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -132,7 +133,7 @@ private fun LanguageSelectionDialog(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         RadioButton(
-                            selected = language == currentLanguage,
+                            selected = language.tag == currentLanguage?.tag,
                             onClick = { onLanguageSelected(language) }
                         )
                         Text(

@@ -2,10 +2,11 @@ package com.saschl.cameragps.service
 
 import android.content.Context
 import android.util.Log
+import androidx.lifecycle.asLiveData
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.map
 import com.saschl.cameragps.database.logging.LogRepository
+import kotlinx.coroutines.flow.map
 import timber.log.Timber
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -17,7 +18,6 @@ class FileTree(context: Context, private val minPriority: Int) : Timber.Tree() {
     companion object {
         @Volatile
         private var logRepository: LogRepository? = null
-        private val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault())
 
         fun initialize(context: Context) {
             if (logRepository == null) {
@@ -30,17 +30,17 @@ class FileTree(context: Context, private val minPriority: Int) : Timber.Tree() {
         }
 
         fun getLogs(): LiveData<List<String>> {
-            Log.i("test", "Getting logs from FileTree")
+            Timber.d("Getting logs from FileTree")
             return logRepository?.let { repo ->
                     repo.getRecentLogs().map { logEntry ->
                         logEntry.map {
-                            val date = dateFormat.format(Date(it.timestamp))
+                            val date = formatTimestamp(it.timestamp)
                             "[$date] [${priorityToString(it.priority)}] ${it.tag ?: "App"}: ${it.message}" +
                                     (it.exception?.let { "\n$it" } ?: "")
                         }
 
                     }
-            } ?: MutableLiveData(emptyList())
+            }?.asLiveData() ?: MutableLiveData(emptyList())
         }
 
         suspend fun clearLogs() {
@@ -55,6 +55,10 @@ class FileTree(context: Context, private val minPriority: Int) : Timber.Tree() {
             Log.ERROR -> "E"
             Log.ASSERT -> "A"
             else -> priority.toString()
+        }
+
+        private fun formatTimestamp(timestamp: Long): String {
+            return SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault()).format(Date(timestamp))
         }
     }
 

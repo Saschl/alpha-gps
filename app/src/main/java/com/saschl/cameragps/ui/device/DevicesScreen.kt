@@ -14,15 +14,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -33,10 +30,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.saschl.cameragps.R
+import com.saschl.cameragps.shared.ui.device.SharedDevicesScreen
 import com.saschl.cameragps.service.AssociatedDeviceCompat
 import com.saschl.cameragps.ui.AssociatedDevicesList
 import com.saschl.cameragps.ui.HelpActivity
@@ -83,56 +80,42 @@ fun DevicesScreen(
         ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED
     }
 
-    Scaffold(
-        topBar = {
-            CenterAlignedTopAppBar(
-                title = {
-                    Text(
-                        text = stringResource(R.string.app_name_ui),
-                        fontWeight = FontWeight.SemiBold
+    SharedDevicesScreen(
+        title = stringResource(R.string.app_name_ui),
+        topBarActions = {
+            IconButton(
+                onClick = {
+                    context.startActivity(
+                        Intent(context, HelpActivity::class.java)
                     )
-                },
-
-                actions = {
-                    IconButton(
-                        onClick = {
-                            context.startActivity(
-                                Intent(context, HelpActivity::class.java)
-                            )
-                        }
-                    ) {
-                        Icon(
-                            painterResource(R.drawable.info_24px),
-                            contentDescription = stringResource(R.string.help_menu_item),
-                            tint = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                    IconButton(
-                        onClick = {
-                            context.startActivity(
-                                Intent(context, LogViewerActivity::class.java)
-                            )
-                        }
-                    ) {
-                        Icon(
-                            painterResource(R.drawable.baseline_view_list_24),
-                            contentDescription = "View Logs",
-                            tint = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                    IconButton(onClick = { onSettingsClick() }) {
-                        Icon(
-                            painterResource(R.drawable.settings_24px),
-                            contentDescription = "Settings",
-                            tint = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                }
+            ) {
+                Icon(
+                    painterResource(R.drawable.info_24px),
+                    contentDescription = stringResource(R.string.help_menu_item),
+                    tint = MaterialTheme.colorScheme.onSurface
                 )
-            )
+            }
+            IconButton(
+                onClick = {
+                    context.startActivity(
+                        Intent(context, LogViewerActivity::class.java)
+                    )
+                }
+            ) {
+                Icon(
+                    painterResource(R.drawable.baseline_view_list_24),
+                    contentDescription = "View Logs",
+                    tint = MaterialTheme.colorScheme.onSurface
+                )
+            }
+            IconButton(onClick = { onSettingsClick() }) {
+                Icon(
+                    painterResource(R.drawable.settings_24px),
+                    contentDescription = "Settings",
+                    tint = MaterialTheme.colorScheme.onSurface
+                )
+            }
         }
     ) { innerPadding ->
 
