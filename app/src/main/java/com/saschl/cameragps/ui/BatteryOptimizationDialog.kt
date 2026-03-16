@@ -14,13 +14,19 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
-import com.saschl.cameragps.R
+import cameragps.sharednew.generated.resources.Res
+import cameragps.sharednew.generated.resources.battery_optimization_cancel
+import cameragps.sharednew.generated.resources.battery_optimization_dont_show
+import cameragps.sharednew.generated.resources.battery_optimization_message
+import cameragps.sharednew.generated.resources.battery_optimization_proceed
+import cameragps.sharednew.generated.resources.battery_optimization_title
+import cameragps.sharednew.generated.resources.battery_optimization_xiaomi_autostart
 import com.saschl.cameragps.utils.BatteryOptimizationUtil
 import com.saschl.cameragps.utils.PreferencesManager
+import org.jetbrains.compose.resources.stringResource
 import timber.log.Timber
 
 @Composable
@@ -33,14 +39,14 @@ fun BatteryOptimizationDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = stringResource(R.string.battery_optimization_title),
+                text = stringResource(Res.string.battery_optimization_title),
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.SemiBold
             )
         },
         text = {
             Text(
-                text = stringResource(R.string.battery_optimization_message),
+                text = stringResource(Res.string.battery_optimization_message),
                 style = MaterialTheme.typography.bodyMedium
             )
         },
@@ -78,7 +84,7 @@ fun BatteryOptimizationDialog(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
-                        text = stringResource(R.string.battery_optimization_proceed),
+                        text = stringResource(Res.string.battery_optimization_proceed),
                         fontWeight = FontWeight.Medium
                     )
                 }
@@ -114,7 +120,7 @@ fun BatteryOptimizationDialog(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
-                        text = stringResource(R.string.battery_optimization_xiaomi_autostart),
+                        text = stringResource(Res.string.battery_optimization_xiaomi_autostart),
                         fontWeight = FontWeight.Medium
                     )
                 }
@@ -127,7 +133,7 @@ fun BatteryOptimizationDialog(
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(stringResource(R.string.battery_optimization_dont_show))
+                    Text(stringResource(Res.string.battery_optimization_dont_show))
                 }
                 
                 TextButton(
@@ -137,7 +143,7 @@ fun BatteryOptimizationDialog(
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(stringResource(R.string.battery_optimization_cancel))
+                    Text(stringResource(Res.string.battery_optimization_cancel))
                 }
             }
         }

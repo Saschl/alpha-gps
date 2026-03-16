@@ -7,10 +7,10 @@ import androidx.room.DeleteColumn
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.migration.AutoMigrationSpec
-import com.saschl.cameragps.database.devices.CameraDevice
-import com.saschl.cameragps.database.devices.CameraDeviceDAO
-import com.saschl.cameragps.database.logging.LogDao
-import com.saschl.cameragps.database.logging.LogEntry
+import com.sasch.cameragps.sharednew.database.devices.CameraDevice
+import com.sasch.cameragps.sharednew.database.devices.CameraDeviceDAO
+import com.sasch.cameragps.sharednew.database.logging.LogDao
+import com.sasch.cameragps.sharednew.database.logging.LogEntry
 
 @Database(
     entities = [LogEntry::class, CameraDevice::class],

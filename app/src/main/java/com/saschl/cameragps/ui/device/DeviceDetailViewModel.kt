@@ -9,7 +9,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
-import com.saschl.cameragps.database.devices.CameraDeviceDAO
+import com.sasch.cameragps.sharednew.database.devices.CameraDeviceDAO
 import com.saschl.cameragps.service.AssociatedDeviceCompat
 import com.saschl.cameragps.service.LocationSenderService
 import com.saschl.cameragps.service.SonyBluetoothConstants

@@ -27,8 +27,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.os.LocaleListCompat
+import com.sasch.cameragps.sharednew.language.AppLanguage
 import com.saschl.cameragps.R
-import com.saschl.cameragps.shared.language.AppLanguage
 import com.saschl.cameragps.utils.LanguageManager
 import java.util.Locale
 

@@ -32,8 +32,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import com.sasch.cameragps.sharednew.ui.device.SharedDevicesScreen
 import com.saschl.cameragps.R
-import com.saschl.cameragps.shared.ui.device.SharedDevicesScreen
 import com.saschl.cameragps.service.AssociatedDeviceCompat
 import com.saschl.cameragps.ui.AssociatedDevicesList
 import com.saschl.cameragps.ui.HelpActivity
@@ -117,11 +117,11 @@ fun DevicesScreen(
                 )
             }
         }
-    ) { innerPadding ->
+    ) {
 
         Column(
-            modifier = Modifier
-                .padding(innerPadding),
+            /* modifier = Modifier
+                 .padding(innerPadding),*/
             verticalArrangement = Arrangement.spacedBy(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {

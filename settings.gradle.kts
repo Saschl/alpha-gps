@@ -24,5 +24,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "CameraGps"
 include(":app")
-include(":shared")
- 
+include(":sharednew")

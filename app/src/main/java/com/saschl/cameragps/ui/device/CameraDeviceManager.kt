@@ -34,8 +34,8 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.google.android.play.core.review.ReviewException
 import com.google.android.play.core.review.ReviewManagerFactory
 import com.google.android.play.core.review.model.ReviewErrorCode
+import com.sasch.cameragps.sharednew.database.devices.CameraDevice
 import com.saschl.cameragps.database.LogDatabase
-import com.saschl.cameragps.database.devices.CameraDevice
 import com.saschl.cameragps.service.AssociatedDeviceCompat
 import com.saschl.cameragps.service.BluetoothStateBroadcastReceiver
 import com.saschl.cameragps.service.LocationSenderService

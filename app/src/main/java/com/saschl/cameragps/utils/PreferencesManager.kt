@@ -4,7 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
 import androidx.core.content.edit
-import com.saschl.cameragps.shared.ui.settings.LocationProvider
+import com.sasch.cameragps.sharednew.ui.settings.LocationProvider
 import java.time.Duration
 import java.time.Instant
 import java.time.temporal.ChronoUnit

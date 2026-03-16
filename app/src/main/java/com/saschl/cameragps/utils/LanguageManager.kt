@@ -4,8 +4,8 @@ import android.app.Activity
 import android.content.Context
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.os.LocaleListCompat
-import com.saschl.cameragps.shared.language.AppLanguage
-import com.saschl.cameragps.shared.language.SupportedLanguages
+import com.sasch.cameragps.sharednew.language.AppLanguage
+import com.sasch.cameragps.sharednew.language.SupportedLanguages
 import java.util.Locale
 
 object LanguageManager {

@@ -34,16 +34,16 @@ import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.LocationSettingsRequest
 import com.google.android.gms.location.Priority
+import com.sasch.cameragps.sharednew.database.devices.CameraDevice
+import com.sasch.cameragps.sharednew.database.devices.CameraDeviceDAO
+import com.sasch.cameragps.sharednew.ui.settings.LocationProvider
 import com.saschl.cameragps.R
 import com.saschl.cameragps.database.LogDatabase
-import com.saschl.cameragps.database.devices.CameraDevice
-import com.saschl.cameragps.database.devices.CameraDeviceDAO
 import com.saschl.cameragps.notification.NotificationsHelper
 import com.saschl.cameragps.service.SonyBluetoothConstants.CHARACTERISTIC_READ_UUID
 import com.saschl.cameragps.service.SonyBluetoothConstants.locationTransmissionNotificationId
 import com.saschl.cameragps.utils.PreferencesManager
 import com.saschl.cameragps.utils.SentryInit
-import com.saschl.cameragps.shared.ui.settings.LocationProvider
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
@@ -569,7 +569,7 @@ class LocationSenderService : LifecycleService() {
     @SuppressLint("MissingPermission")
     override fun onCreate() {
         super.onCreate()
-        cameraConnectionManager
+        NotificationsHelper.createNotificationChannel(this)
 
         if(!startAsForegroundService()) {
             return
@@ -642,7 +642,7 @@ class LocationSenderService : LifecycleService() {
 
         // create the notification channel
         // TODO no need to create every time
-        NotificationsHelper.createNotificationChannel(this)
+
 
         try {
             // promote service to foreground service

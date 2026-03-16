@@ -38,14 +38,20 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import cameragps.sharednew.generated.resources.Res
+import cameragps.sharednew.generated.resources.android_12_requires_keep_alive
+import cameragps.sharednew.generated.resources.associated_devices
+import cameragps.sharednew.generated.resources.no_devices_message
+import cameragps.sharednew.generated.resources.no_devices_title
+import cameragps.sharednew.generated.resources.not_paired_tap_to_pair_again
 import com.saschl.cameragps.R
 import com.saschl.cameragps.database.LogDatabase
 import com.saschl.cameragps.service.AssociatedDeviceCompat
 import com.saschl.cameragps.service.LocationSenderService
+import org.jetbrains.compose.resources.stringResource
 
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -66,7 +72,7 @@ fun AssociatedDevicesList(
         ) {
             stickyHeader {
                 Text(
-                    text = stringResource(R.string.associated_devices),
+                    text = stringResource(Res.string.associated_devices),
                     modifier = Modifier.padding(8.dp),
                     style = MaterialTheme.typography.titleMedium,
                 )
@@ -96,12 +102,12 @@ fun AssociatedDevicesList(
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
-                                text = stringResource(R.string.no_devices_title),
+                                text = stringResource(Res.string.no_devices_title),
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
-                                text = stringResource(R.string.no_devices_message),
+                                text = stringResource(Res.string.no_devices_message),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 textAlign = TextAlign.Center
@@ -169,7 +175,7 @@ fun AssociatedDevicesList(
                             Text(
                                 color = MaterialTheme.colorScheme.error,
                                 style = MaterialTheme.typography.bodySmall,
-                                text = stringResource(R.string.not_paired_tap_to_pair_again),
+                                text = stringResource(Res.string.not_paired_tap_to_pair_again),
                             )
                         }
 
@@ -179,7 +185,7 @@ fun AssociatedDevicesList(
                             Text(
                                 color = MaterialTheme.colorScheme.error,
                                 style = MaterialTheme.typography.bodySmall,
-                                text = stringResource(R.string.android_12_requires_keep_alive),
+                                text = stringResource(Res.string.android_12_requires_keep_alive),
                             )
                         }
                     }

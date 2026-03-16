@@ -19,12 +19,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.sasch.cameragps.sharednew.ui.settings.SharedSettingsScreen
 import com.saschl.cameragps.R
-import com.saschl.cameragps.shared.ui.settings.SharedSettingsScreen
 import com.saschl.cameragps.ui.ReviewHintDebugPanel
 import com.saschl.cameragps.utils.LanguageManager
 import com.saschl.cameragps.utils.PreferencesManager
-import com.saschl.cameragps.shared.ui.settings.LocationProvider
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

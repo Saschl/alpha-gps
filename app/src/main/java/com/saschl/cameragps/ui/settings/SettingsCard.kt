@@ -3,7 +3,7 @@ package com.saschl.cameragps.ui.settings
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import com.saschl.cameragps.shared.ui.settings.SharedSettingsCard
+import com.sasch.cameragps.sharednew.ui.settings.SharedSettingsCard
 
 /** Thin Android alias – delegates directly to the shared KMP implementation. */
 @Composable

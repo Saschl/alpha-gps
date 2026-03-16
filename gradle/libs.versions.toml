@@ -22,8 +22,12 @@ navigation3 = "1.0.1"
 kotlinxSerializationCore = "1.10.0"
 kotlinSerialization = "2.3.10"
 appCompat = "1.7.1"
-composeMultiplatform = "1.9.0"
+composeMultiplatform = "1.11.0-alpha04"
 coroutines = "1.10.2"
+kotlinStdlib = "2.3.10"
+kotlinTest = "2.3.10"
+runner = "1.5.2"
+core = "1.5.0"
 
 
 [libraries]
@@ -67,6 +71,10 @@ compose-runtime-multiplatform = { module = "org.jetbrains.compose.runtime:runtim
 compose-foundation-multiplatform = { module = "org.jetbrains.compose.foundation:foundation", version.ref = "composeMultiplatform" }
 compose-material3-multiplatform = { module = "org.jetbrains.compose.material3:material3", version.ref = "composeMultiplatform" }
 compose-ui-multiplatform = { module = "org.jetbrains.compose.ui:ui", version.ref = "composeMultiplatform" }
+kotlin-stdlib = { group = "org.jetbrains.kotlin", name = "kotlin-stdlib", version.ref = "kotlinStdlib" }
+kotlin-test = { group = "org.jetbrains.kotlin", name = "kotlin-test", version.ref = "kotlinTest" }
+androidx-runner = { group = "androidx.test", name = "runner", version.ref = "runner" }
+androidx-core = { group = "androidx.test", name = "core", version.ref = "core" }
 
 
 
@@ -78,4 +86,6 @@ kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref 
 jetbrains-compose = { id = "org.jetbrains.compose", version.ref = "composeMultiplatform" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 jetbrains-kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlinSerialization"}
+android-lint = { id = "com.android.lint", version.ref = "agp" }
+
 

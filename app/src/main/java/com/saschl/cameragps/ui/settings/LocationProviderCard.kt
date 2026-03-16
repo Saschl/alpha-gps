@@ -15,9 +15,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.sasch.cameragps.sharednew.ui.settings.LocationProvider
 import com.saschl.cameragps.R
-import com.saschl.cameragps.shared.ui.settings.LocationProvider
-import com.saschl.cameragps.utils.PreferencesManager
 
 @Composable
 internal fun LocationProviderCard(
