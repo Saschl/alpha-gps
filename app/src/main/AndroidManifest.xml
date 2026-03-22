@@ -75,11 +75,6 @@
             android:label="Log Viewer"
             android:theme="@style/Theme.CameraGps"
         />
-        <activity
-            android:name="com.saschl.cameragps.ui.HelpActivity"
-            android:exported="false"
-            android:theme="@style/Theme.CameraGps"
-        />
         <service
             android:name="com.saschl.cameragps.service.LocationSenderService"
             android:foregroundServiceType="location|connectedDevice">

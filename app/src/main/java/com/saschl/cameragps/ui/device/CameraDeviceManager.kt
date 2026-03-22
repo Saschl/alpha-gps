@@ -39,7 +39,6 @@ import com.saschl.cameragps.database.LogDatabase
 import com.saschl.cameragps.service.AssociatedDeviceCompat
 import com.saschl.cameragps.service.BluetoothStateBroadcastReceiver
 import com.saschl.cameragps.service.LocationSenderService
-import com.saschl.cameragps.service.SonyBluetoothConstants
 import com.saschl.cameragps.service.getAssociatedDevices
 import com.saschl.cameragps.ui.EnhancedLocationPermissionBox
 import com.saschl.cameragps.ui.pairing.startDevicePresenceObservation
@@ -51,7 +50,8 @@ import timber.log.Timber
 @SuppressLint("MissingPermission")
 @Composable
 fun CameraDeviceManager(
-    onSettingsClick: () -> Unit = {}
+    onSettingsClick: () -> Unit = {},
+    onHelpClick: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -199,7 +199,8 @@ fun CameraDeviceManager(
                         onConnect = { device ->
                             selectedDevice = device
                         },
-                        onSettingsClick = onSettingsClick
+                        onSettingsClick = onSettingsClick,
+                        onHelpClick = onHelpClick
                     )
                 }
             } else {
@@ -241,7 +242,7 @@ fun CameraDeviceManager(
                                                     LocationSenderService::class.java
                                                 ).apply {
                                                     action =
-                                                        SonyBluetoothConstants.ACTION_REQUEST_SHUTDOWN
+                                                        com.sasch.cameragps.sharednew.bluetooth.SonyBluetoothConstants.ACTION_REQUEST_SHUTDOWN
                                                 }
                                                 serviceIntent.putExtra(
                                                     "address",
@@ -257,7 +258,8 @@ fun CameraDeviceManager(
                                             selectedDevice = null
                                         }
                                 },
-                                onClose = { selectedDevice = null }
+                                onClose = { selectedDevice = null },
+                                onHelpClick = onHelpClick
                             )
                         }
                     }

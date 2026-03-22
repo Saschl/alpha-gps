@@ -16,23 +16,24 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ProcessLifecycleOwner
+import androidx.navigation3.runtime.NavEntry
+import androidx.navigation3.runtime.NavKey
+import androidx.navigation3.runtime.rememberNavBackStack
+import androidx.navigation3.ui.NavDisplay
 import com.saschl.cameragps.database.LogDatabase
 import com.saschl.cameragps.service.FileTree
 import com.saschl.cameragps.service.GlobalExceptionHandler
 import com.saschl.cameragps.service.LocationSenderService
+import com.saschl.cameragps.ui.HelpScreen
 import com.saschl.cameragps.ui.SentryConsentDialog
-import com.saschl.cameragps.ui.settings.SettingsScreen
 import com.saschl.cameragps.ui.WelcomeScreen
 import com.saschl.cameragps.ui.device.CameraDeviceManager
+import com.saschl.cameragps.ui.settings.SettingsScreen
 import com.saschl.cameragps.ui.theme.CameraGpsTheme
 import com.saschl.cameragps.utils.PreferencesManager
 import com.saschl.cameragps.utils.SentryInit
 import kotlinx.serialization.Serializable
 import timber.log.Timber
-import androidx.navigation3.runtime.NavEntry
-import androidx.navigation3.runtime.NavKey
-import androidx.navigation3.runtime.rememberNavBackStack
-import androidx.navigation3.ui.NavDisplay
 
 class MainActivity : AppCompatActivity() {
 
@@ -152,6 +153,16 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
 
+                AppDestination.Help -> {
+                    NavEntry(AppDestination.Help) {
+                        HelpScreen(
+                            onBackClick = {
+                                backStack.removeAt(backStack.lastIndex)
+                            }
+                        )
+                    }
+                }
+
                 AppDestination.Devices -> {
                     NavEntry(AppDestination.Devices) {
                         LaunchedEffect(Unit) {
@@ -162,6 +173,9 @@ class MainActivity : AppCompatActivity() {
                         CameraDeviceManager(
                             onSettingsClick = {
                                 backStack.add(AppDestination.Settings)
+                            },
+                            onHelpClick = {
+                                backStack.add(AppDestination.Help)
                             }
                         )
 
@@ -192,4 +206,7 @@ private sealed interface AppDestination : NavKey {
     data object Devices : AppDestination
     @Serializable
     data object Settings : AppDestination
+
+    @Serializable
+    data object Help : AppDestination
 }

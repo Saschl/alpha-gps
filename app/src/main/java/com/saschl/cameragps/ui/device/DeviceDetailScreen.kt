@@ -45,7 +45,6 @@ import com.saschl.cameragps.database.LogDatabase
 import com.saschl.cameragps.service.AssociatedDeviceCompat
 import com.saschl.cameragps.service.LocationSenderService
 import com.saschl.cameragps.service.SonyBluetoothConstants
-import com.saschl.cameragps.ui.HelpActivity
 import com.saschl.cameragps.ui.pairing.startDevicePresenceObservation
 import kotlinx.coroutines.launch
 import timber.log.Timber
@@ -58,7 +57,8 @@ fun DeviceDetailScreen(
     deviceManager: CompanionDeviceManager,
     onDisassociate: (device: AssociatedDeviceCompat) -> Unit,
     associationId: Int,
-    onClose: () -> Unit
+    onClose: () -> Unit,
+    onHelpClick: () -> Unit = {}
 ) {
 
     val scope = rememberCoroutineScope()
@@ -103,11 +103,7 @@ fun DeviceDetailScreen(
                 },
                 actions = {
                     IconButton(
-                        onClick = {
-                            context.startActivity(
-                                Intent(context, HelpActivity::class.java)
-                            )
-                        }
+                        onClick = onHelpClick
                     ) {
                         Icon(
                             painter = painterResource(R.drawable.info_24px),

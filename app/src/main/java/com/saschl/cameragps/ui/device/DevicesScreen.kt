@@ -36,7 +36,6 @@ import com.sasch.cameragps.sharednew.ui.device.SharedDevicesScreen
 import com.saschl.cameragps.R
 import com.saschl.cameragps.service.AssociatedDeviceCompat
 import com.saschl.cameragps.ui.AssociatedDevicesList
-import com.saschl.cameragps.ui.HelpActivity
 import com.saschl.cameragps.ui.LogViewerActivity
 import com.saschl.cameragps.ui.getPermissionDescription
 import com.saschl.cameragps.ui.pairing.PairingManager
@@ -52,7 +51,8 @@ fun DevicesScreen(
     associatedDevices: List<AssociatedDeviceCompat>,
     onDeviceAssociated: (AssociatedDeviceCompat) -> Unit,
     onConnect: (AssociatedDeviceCompat) -> Unit,
-    onSettingsClick: () -> Unit = {}
+    onSettingsClick: () -> Unit = {},
+    onHelpClick: () -> Unit = {}
 ) {
     val context = LocalContext.current
     // State for managing pairing after association
@@ -84,11 +84,7 @@ fun DevicesScreen(
         title = stringResource(R.string.app_name_ui),
         topBarActions = {
             IconButton(
-                onClick = {
-                    context.startActivity(
-                        Intent(context, HelpActivity::class.java)
-                    )
-                }
+                onClick = onHelpClick
             ) {
                 Icon(
                     painterResource(R.drawable.info_24px),

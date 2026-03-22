@@ -1,9 +1,5 @@
 package com.saschl.cameragps.ui
 
-import android.os.Bundle
-import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
-import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -42,29 +38,12 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.unit.dp
 import com.saschl.cameragps.R
-import com.saschl.cameragps.ui.theme.CameraGpsTheme
 
-data class FaqItem(
+private data class FaqItem(
     val questionRes: Int,
     val answerRes: Int,
     val containsLink: Boolean = false
 )
-
-class HelpActivity : AppCompatActivity() {
-    
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
-
-        setContent {
-            CameraGpsTheme {
-                HelpScreen(
-                    onBackClick = { finish() }
-                )
-            }
-        }
-    }
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -271,3 +250,4 @@ fun HelpScreen(
         }
     }
 }
+
