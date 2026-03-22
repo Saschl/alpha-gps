@@ -34,14 +34,16 @@ import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.LocationSettingsRequest
 import com.google.android.gms.location.Priority
+import com.sasch.cameragps.sharednew.bluetooth.SonyBluetoothConstants
+import com.sasch.cameragps.sharednew.bluetooth.SonyBluetoothConstants.CHARACTERISTIC_READ_UUID
+import com.sasch.cameragps.sharednew.bluetooth.SonyBluetoothConstants.LOCATION_UPDATE_INTERVAL_MS
+import com.sasch.cameragps.sharednew.bluetooth.SonyBluetoothConstants.locationTransmissionNotificationId
 import com.sasch.cameragps.sharednew.database.devices.CameraDevice
 import com.sasch.cameragps.sharednew.database.devices.CameraDeviceDAO
 import com.sasch.cameragps.sharednew.ui.settings.LocationProvider
 import com.saschl.cameragps.R
 import com.saschl.cameragps.database.LogDatabase
 import com.saschl.cameragps.notification.NotificationsHelper
-import com.saschl.cameragps.service.SonyBluetoothConstants.CHARACTERISTIC_READ_UUID
-import com.saschl.cameragps.service.SonyBluetoothConstants.locationTransmissionNotificationId
 import com.saschl.cameragps.utils.PreferencesManager
 import com.saschl.cameragps.utils.SentryInit
 import kotlinx.coroutines.launch
@@ -57,42 +59,7 @@ import java.util.concurrent.atomic.AtomicInteger
  * Constants for Sony camera Bluetooth communication
  */
 object SonyBluetoothConstants {
-    // Service UUID of the sony cameras
-    val SERVICE_UUID: UUID = UUID.fromString("8000dd00-dd00-ffff-ffff-ffffffffffff")
 
-    val CONTROL_SERVICE_UUID: UUID = UUID.fromString("8000CC00-CC00-FFFF-FFFF-FFFFFFFFFFFF")
-
-    // Characteristic for the location services
-    val CHARACTERISTIC_UUID: UUID = UUID.fromString("0000dd11-0000-1000-8000-00805f9b34fb")
-    val CHARACTERISTIC_READ_UUID: UUID = UUID.fromString("0000dd21-0000-1000-8000-00805f9b34fb")
-
-    // needed for some cameras to enable the functionality
-    val CHARACTERISTIC_ENABLE_UNLOCK_GPS_COMMAND: UUID =
-        UUID.fromString("0000dd30-0000-1000-8000-00805f9b34fb")
-    val CHARACTERISTIC_ENABLE_LOCK_GPS_COMMAND: UUID =
-        UUID.fromString("0000dd31-0000-1000-8000-00805f9b34fb")
-
-    val CHARACTERISTIC_LOCATION_ENABLED_IN_CAMERA: UUID =
-        UUID.fromString("0000dd01-0000-1000-8000-00805f9b34fb")
-
-    val TIME_SYNC_CHARACTERISTIC_UUID: UUID =
-        UUID.fromString("0000cc13-0000-1000-8000-00805f9b34fb")
-
-    const val ACTION_REQUEST_SHUTDOWN = "com.saschl.cameragps.ACTION_REQUEST_SHUTDOWN"
-
-    // GPS enable command bytes
-    val GPS_ENABLE_COMMAND = byteArrayOf(0x01)
-
-    // Location update interval
-    const val LOCATION_UPDATE_INTERVAL_MS = 10000L
-
-    // Accuracy threshold for location updates
-    const val ACCURACY_THRESHOLD_METERS = 200.0
-
-    // Time threshold for old location updates (5 minutes)
-    const val OLD_LOCATION_THRESHOLD_MS = 1000 * 60 * 5
-
-    const val locationTransmissionNotificationId = 404
 }
 
 
@@ -211,7 +178,7 @@ class LocationSenderService : LifecycleService() {
 
         val locationRequest = LocationRequest.Builder(
             Priority.PRIORITY_HIGH_ACCURACY,
-            SonyBluetoothConstants.LOCATION_UPDATE_INTERVAL_MS,
+            com.sasch.cameragps.sharednew.bluetooth.SonyBluetoothConstants.LOCATION_UPDATE_INTERVAL_MS,
         )
             .setWaitForAccurateLocation(false)
             .build()
@@ -287,7 +254,7 @@ class LocationSenderService : LifecycleService() {
             if (locManager.isProviderEnabled(LocationManager.FUSED_PROVIDER)) {
                 locManager.requestLocationUpdates(
                     LocationManager.FUSED_PROVIDER,
-                    SonyBluetoothConstants.LOCATION_UPDATE_INTERVAL_MS,
+                    LOCATION_UPDATE_INTERVAL_MS,
                     0f,
                     listener,
                     Looper.getMainLooper()
@@ -767,11 +734,12 @@ class LocationSenderService : LifecycleService() {
 
         override fun onServicesDiscovered(gatt: BluetoothGatt, status: Int) {
             super.onServicesDiscovered(gatt, status)
-            val service = gatt.services?.find { it.uuid == SonyBluetoothConstants.SERVICE_UUID }
+            val service =
+                gatt.services?.find { it.uuid == constructBleUUID(SonyBluetoothConstants.SERVICE_UUID) }
 
 
             val writeLocationCharacteristic =
-                service?.getCharacteristic(SonyBluetoothConstants.CHARACTERISTIC_UUID)
+                service?.getCharacteristic(constructBleUUID(SonyBluetoothConstants.CHARACTERISTIC_UUID))
 
             cameraConnectionManager.setWriteCharacteristic(
                 gatt.device.address.uppercase(),
@@ -796,7 +764,7 @@ class LocationSenderService : LifecycleService() {
                             enableGpsTransmission(gatt)
                         } else {*/
             val readCharacteristic =
-                service?.getCharacteristic(CHARACTERISTIC_READ_UUID)
+                service?.getCharacteristic(constructBleUUID(CHARACTERISTIC_READ_UUID))
             if (readCharacteristic != null) {
                 Timber.i("Reading characteristic for timezone and DST support: ${readCharacteristic.uuid}")
                 gatt.readCharacteristic(readCharacteristic)
@@ -805,9 +773,10 @@ class LocationSenderService : LifecycleService() {
 
         @RequiresPermission(allOf = [Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION])
         private fun enableGpsTransmission(gatt: BluetoothGatt) {
-            val service = gatt.services?.find { it.uuid == SonyBluetoothConstants.SERVICE_UUID }
+            val service =
+                gatt.services?.find { it.uuid == constructBleUUID(SonyBluetoothConstants.SERVICE_UUID) }
             val gpsEnableCharacteristic =
-                service?.getCharacteristic(SonyBluetoothConstants.CHARACTERISTIC_ENABLE_UNLOCK_GPS_COMMAND)
+                service?.getCharacteristic(constructBleUUID(SonyBluetoothConstants.CHARACTERISTIC_ENABLE_UNLOCK_GPS_COMMAND))
 
             if (gpsEnableCharacteristic != null) {
                 Timber.i("Enabling GPS characteristic: ${gpsEnableCharacteristic.uuid}")
@@ -831,21 +800,21 @@ class LocationSenderService : LifecycleService() {
             super.onCharacteristicWrite(gatt, writtenCharacteristic, status)
 
             when (writtenCharacteristic?.uuid) {
-                SonyBluetoothConstants.CHARACTERISTIC_ENABLE_UNLOCK_GPS_COMMAND -> {
+                constructBleUUID(SonyBluetoothConstants.CHARACTERISTIC_ENABLE_UNLOCK_GPS_COMMAND) -> {
                     handleGpsEnableResponse(gatt)
                 }
 
-                SonyBluetoothConstants.CHARACTERISTIC_ENABLE_LOCK_GPS_COMMAND -> {
+                constructBleUUID(SonyBluetoothConstants.CHARACTERISTIC_ENABLE_LOCK_GPS_COMMAND) -> {
                     Timber.i("GPS flag enabled on device, will now send time sync data if feature exists, status was $status")
                     sendTimeSyncData(gatt)
                 }
 
-                SonyBluetoothConstants.TIME_SYNC_CHARACTERISTIC_UUID -> {
+                constructBleUUID(SonyBluetoothConstants.TIME_SYNC_CHARACTERISTIC_UUID) -> {
                     Timber.i("Time sync data sent to device, will now start location transmission, status was $status")
                     startLocationTransmission()
                 }
 
-                SonyBluetoothConstants.CHARACTERISTIC_UUID -> {
+                constructBleUUID(SonyBluetoothConstants.CHARACTERISTIC_UUID) -> {
                     Timber.d("Location data sent to device, status was $status")
                     gattErrorCount.set(0)
                 }
@@ -869,9 +838,9 @@ class LocationSenderService : LifecycleService() {
         @RequiresPermission(allOf = [Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION])
         private fun sendTimeSyncData(gatt: BluetoothGatt) {
             val service =
-                gatt.services?.find { it.uuid == SonyBluetoothConstants.CONTROL_SERVICE_UUID }
+                gatt.services?.find { it.uuid == constructBleUUID(SonyBluetoothConstants.CONTROL_SERVICE_UUID) }
             val timeSyncCharacteristic =
-                service?.getCharacteristic(SonyBluetoothConstants.TIME_SYNC_CHARACTERISTIC_UUID)
+                service?.getCharacteristic(constructBleUUID(SonyBluetoothConstants.TIME_SYNC_CHARACTERISTIC_UUID))
 
             if (timeSyncCharacteristic == null) {
                 Timber.i("Time sync characteristic not found, starting location transmission directly")
@@ -900,7 +869,7 @@ class LocationSenderService : LifecycleService() {
             // The GPS command has been unlocked, now lock it for us
             val lockCharacteristic = BluetoothGattUtils.findCharacteristic(
                 gatt,
-                SonyBluetoothConstants.CHARACTERISTIC_ENABLE_LOCK_GPS_COMMAND
+                constructBleUUID(SonyBluetoothConstants.CHARACTERISTIC_ENABLE_LOCK_GPS_COMMAND)
             )
 
             lockCharacteristic?.let {
@@ -1020,6 +989,10 @@ class LocationSenderService : LifecycleService() {
         val gpsEnabled = manager?.isProviderEnabled(LocationManager.GPS_PROVIDER) == true
         val networkEnabled = manager?.isProviderEnabled(LocationManager.NETWORK_PROVIDER) == true
         return gpsEnabled || networkEnabled
+    }
+
+    private fun constructBleUUID(characteristic: String): UUID {
+        return UUID.fromString(characteristic)
     }
 
 }
