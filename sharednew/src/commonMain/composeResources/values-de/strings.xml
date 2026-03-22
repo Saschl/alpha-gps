@@ -88,6 +88,9 @@
     <string name="help_menu_item">Hilfe</string>
     <!-- Additional missing strings for device management -->
     <string name="associated_devices">Verbundene Geräte</string>
+    <string name="saved_devices">Gespeicherte Geräte</string>
+
+    <string name="nearby_cameras">Kameras in der Nähe</string>
     <string name="no_devices_title">Keine Kameras verbunden</string>
     <string name="no_devices_message">Tippen Sie auf die Schaltfläche oben, um mit der Kopplung Ihres Kamerageräts zu beginnen.</string>
     <!-- Error messages for device association -->

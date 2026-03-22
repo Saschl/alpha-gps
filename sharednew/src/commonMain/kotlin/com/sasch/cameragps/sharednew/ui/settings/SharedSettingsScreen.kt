@@ -11,6 +11,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.text.font.FontWeight
+import androidx.navigationevent.NavigationEventInfo
+import androidx.navigationevent.compose.NavigationBackHandler
+import androidx.navigationevent.compose.rememberNavigationEventState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -37,6 +40,7 @@ fun SharedSettingsScreen(
                         navigationIcon()
                     }
                 },
+
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface,
                     titleContentColor = MaterialTheme.colorScheme.onSurface,
@@ -44,6 +48,13 @@ fun SharedSettingsScreen(
             )
         }
     ) { paddingValues ->
+        NavigationBackHandler(
+            state = rememberNavigationEventState(NavigationEventInfo.None),
+            isBackEnabled = true,
+            onBackCompleted = {
+                onBackClick()
+            }
+        )
         content(paddingValues)
     }
 }

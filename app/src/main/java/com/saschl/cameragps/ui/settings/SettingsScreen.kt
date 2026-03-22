@@ -1,6 +1,5 @@
 package com.saschl.cameragps.ui.settings
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -51,9 +50,6 @@ fun SettingsScreen(
             )
         }
     ) { paddingValues ->
-        BackHandler {
-            onBackClick()
-        }
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()

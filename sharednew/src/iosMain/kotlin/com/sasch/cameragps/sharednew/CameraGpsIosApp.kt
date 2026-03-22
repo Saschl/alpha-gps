@@ -102,6 +102,11 @@ internal fun CameraGpsIosApp() {
                             }
                         }
                     },
+                    onDelete = { device ->
+                        scope.launch {
+                            bluetoothController.forgetDevice(device.identifier)
+                        }
+                    },
                 )
             }
         }

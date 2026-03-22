@@ -142,6 +142,9 @@
 
     <!-- Additional missing strings for device management -->
     <string name="associated_devices">Associated Devices</string>
+    <string name="nearby_cameras">Nearby Cameras</string>
+    <string name="saved_devices">Saved Devices</string>
+
     <string name="no_devices_title">No cameras connected</string>
     <string name="no_devices_message">Tap the button above to start pairing your camera device.</string>
     <string name="tap_to_connect">Tap to connect</string>

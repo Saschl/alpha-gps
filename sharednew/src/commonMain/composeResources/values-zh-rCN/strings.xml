@@ -109,6 +109,7 @@
     <string name="help_menu_item">帮助</string>
     <!-- Additional missing strings for device management -->
     <string name="associated_devices">关联设备</string>
+    <string name="nearby_cameras">附近的相机</string>
     <string name="no_devices_title">未连接相机</string>
     <string name="no_devices_message">点击上方按钮开始配对您的相机设备。</string>
     <!-- Error messages for device association -->

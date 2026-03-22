@@ -4,6 +4,7 @@ data class BluetoothDeviceInfo(
     val identifier: String,
     val name: String,
     val isConnected: Boolean,
+    val isSaved: Boolean = false,
 )
 
 enum class BluetoothCapability {

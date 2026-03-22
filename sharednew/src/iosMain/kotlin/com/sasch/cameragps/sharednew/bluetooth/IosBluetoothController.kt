@@ -582,6 +582,16 @@ object IosBluetoothController : BluetoothController {
         }
     }
 
+    override suspend fun forgetDevice(identifier: String) {
+        // Disconnect first (also removes from persistence and connected map).
+        // disconnect() is a no-op if the peripheral isn't currently connected.
+        disconnect(identifier)
+        // Remove the peripheral from the discovered pool so it vanishes from the UI.
+        discovered.remove(identifier)
+        sessions.remove(identifier)
+        refreshDeviceList()
+    }
+
     // ---------------------------------------------------------------------------
     // Helpers
     // ---------------------------------------------------------------------------
@@ -799,6 +809,7 @@ object IosBluetoothController : BluetoothController {
                     identifier = id,
                     name = peripheral.name ?: "Unknown device",
                     isConnected = connected.containsKey(id),
+                    isSaved = id in autoReconnectIds,
                 )
             }
         }

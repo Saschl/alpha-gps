@@ -84,8 +84,7 @@ kotlin {
                 //     implementation(libs.components.resources)
                 implementation(libs.androidx.room.runtime)
                 implementation(compose.components.resources)
-
-
+                implementation(libs.androidx.activity.compose)
             }
         }
 

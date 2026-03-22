@@ -14,5 +14,7 @@ interface BluetoothController {
     suspend fun connect(identifier: String): Boolean
 
     suspend fun disconnect(identifier: String)
+
+    suspend fun forgetDevice(identifier: String)
 }
 
