@@ -1,4 +1,4 @@
-package com.saschl.cameragps.ui.theme
+package com.sasch.cameragps.sharednew.ui.theme
 
 import androidx.compose.ui.graphics.Color
 

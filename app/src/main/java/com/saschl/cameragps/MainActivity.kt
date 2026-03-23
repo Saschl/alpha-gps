@@ -24,6 +24,7 @@ import com.sasch.cameragps.sharednew.database.LogDatabase
 import com.sasch.cameragps.sharednew.database.getDatabaseBuilder
 import com.sasch.cameragps.sharednew.database.logging.LogRepository
 import com.sasch.cameragps.sharednew.ui.logs.SharedLogViewerScreen
+import com.sasch.cameragps.sharednew.ui.theme.CameraGpsTheme
 import com.saschl.cameragps.service.FileTree
 import com.saschl.cameragps.service.GlobalExceptionHandler
 import com.saschl.cameragps.service.LocationSenderService
@@ -32,7 +33,6 @@ import com.saschl.cameragps.ui.SentryConsentDialog
 import com.saschl.cameragps.ui.WelcomeScreen
 import com.saschl.cameragps.ui.device.CameraDeviceManager
 import com.saschl.cameragps.ui.settings.SettingsScreen
-import com.saschl.cameragps.ui.theme.CameraGpsTheme
 import com.saschl.cameragps.utils.PreferencesManager
 import com.saschl.cameragps.utils.SentryInit
 import kotlinx.serialization.Serializable

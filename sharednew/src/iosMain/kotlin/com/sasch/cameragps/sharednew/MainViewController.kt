@@ -1,7 +1,7 @@
 package com.sasch.cameragps.sharednew
 
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.window.ComposeUIViewController
+import com.sasch.cameragps.sharednew.ui.theme.CameraGpsTheme
 import platform.UIKit.UIViewController
 
 /**
@@ -14,7 +14,7 @@ import platform.UIKit.UIViewController
 @Suppress("FunctionName", "unused")
 fun MainViewController(): UIViewController =
     ComposeUIViewController {
-        MaterialTheme {
+        CameraGpsTheme {
             CameraGpsIosApp()
         }
 }

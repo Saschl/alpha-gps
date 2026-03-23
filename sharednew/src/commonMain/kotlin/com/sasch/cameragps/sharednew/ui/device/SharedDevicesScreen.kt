@@ -32,6 +32,7 @@ fun SharedDevicesScreen(
                 },
                 actions = {
                     topBarActions()
+
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface,
