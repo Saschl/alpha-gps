@@ -69,7 +69,7 @@
     <string name="welcome_feature_connect_title">Connect Your Camera</string>
     <string name="welcome_feature_connect_description">Pair your Sony camera with your phone via Bluetooth for seamless GPS data transfer</string>
     <string name="welcome_feature_gps_sync_title">Real-time GPS Sync</string>
-    <string name="welcome_feature_gps_sync_description">Automatically sync your phone\'s GPS coordinates to your camera for accurate geotagging</string>
+    <string name="welcome_feature_gps_sync_description">Automatically sync your phone's GPS coordinates to your camera for accurate geotagging</string>
     <string name="welcome_feature_device_management_title">Device Management</string>
     <string name="welcome_get_started_button">Get Started</string>
     <string name="welcome_settings_note">You can access these settings later from the main menu</string>
@@ -129,7 +129,7 @@
     <string name="faq_permissions_answer">The app requires:\n• Location permissions (for GPS data)\n• Bluetooth permissions (to connect to camera)\n• Battery optimization exemption (for continuous service)\n• Nearby devices permission (for device discovery)</string>
 
     <string name="faq_gps_accuracy_question">How accurate is the GPS data?</string>
-    <string name="faq_gps_accuracy_answer">GPS accuracy depends on:\n• Satellite visibility (better outdoors)\n• Weather conditions\n• Your phone\'s GPS capabilities\n• Typical accuracy is 3–5 meters under good conditions</string>
+    <string name="faq_gps_accuracy_answer">GPS accuracy depends on:\n• Satellite visibility (better outdoors)\n• Weather conditions\n• Your phone's GPS capabilities\n• Typical accuracy is 3–5 meters under good conditions</string>
 
     <string name="faq_background_work_question">Does the app work in the background?</string>
     <string name="faq_background_work_answer">Yes, once properly configured:\n• The service runs in the background to maintain GPS sync\n• Make sure to disable battery optimization\n• The app will show a persistent notification when active\n• GPS data is continuously sent to your connected camera</string>
@@ -169,7 +169,7 @@
     <string name="battery_optimization_message">To ensure reliable GPS sync with your camera, please disable battery optimization for this app. This prevents the system from limiting background activity. You can also choose to ignore this dialog and the app may function just as fine. This heavily depends on the device manufacturer and Android version</string>
     <string name="battery_optimization_proceed">Open Settings</string>
     <string name="battery_optimization_cancel">Cancel</string>
-    <string name="battery_optimization_dont_show">Don\'t show again</string>
+    <string name="battery_optimization_dont_show">Don't show again</string>
 
     <!-- Xiaomi-specific battery optimization strings -->
     <string name="battery_optimization_xiaomi_title">Xiaomi Battery Optimization</string>
@@ -260,9 +260,9 @@
 
     <!-- Tip Jar -->
     <string name="tip_jar">Tip Jar</string>
-    <string name="tip_jar_description">Enjoying the app? Tips help cover the Apple Developer Program fee ($99/year) required to keep this app on the App Store. It\'s completely optional — thank you for using Alpha GPS! ❤️</string>
+    <string name="tip_jar_description">Enjoying the app? Tips help cover the Apple Developer Program fee ($99/year) required to keep this app on the App Store. It's completely optional — thank you for using Alpha GPS! ❤️</string>
     <string name="tip_jar_loading">Loading…</string>
-    <string name="tip_jar_thank_you">Thank you so much for your support! ❤️</string>
+    <string name="tip_jar_thank_you">Thank you so much for your support! ️</string>
     <string name="tip_jar_unavailable">Tip options are not available right now.</string>
     <string name="tip_jar_error_prefix">Something went wrong:</string>
     <string name="tip_jar_dismiss">Dismiss</string>

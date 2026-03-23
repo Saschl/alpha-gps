@@ -86,6 +86,9 @@ fun SharedWelcomeScreen(
             onClick = {
                 if (step1) {
                     step1 = false
+                    if (secondStepFeatures.isEmpty()) {
+                        onGetStarted()
+                    }
                 } else {
                     onGetStarted()
                 }

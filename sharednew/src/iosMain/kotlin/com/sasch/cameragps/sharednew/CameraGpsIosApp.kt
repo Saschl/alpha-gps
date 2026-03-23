@@ -31,6 +31,7 @@ internal enum class IosScreen {
     Welcome,
     Devices,
     Settings,
+    Help,
 }
 
 @Composable
@@ -62,7 +63,7 @@ internal fun CameraGpsIosApp() {
                 getStartedText = stringResource(Res.string.welcome_get_started_button),
                 settingsNote = stringResource(Res.string.welcome_settings_note),
                 firstStepFeatures = firstStepFeatures(),
-                secondStepFeatures = secondStepFeatures(),
+                secondStepFeatures = emptyList(),
                 onGetStarted = {
                     IosAppPreferences.setShowWelcomeOnLaunch(false)
                     currentScreen = IosScreen.Devices
@@ -116,6 +117,7 @@ internal fun CameraGpsIosApp() {
                 isAppEnabled = isAppEnabled,
                 autoScanEnabled = autoScanEnabled,
                 onBackClick = { currentScreen = IosScreen.Devices },
+                onOpenHelp = { currentScreen = IosScreen.Help },
                 onAppEnabledChange = { enabled ->
                     isAppEnabled = enabled
                     IosAppPreferences.setAppEnabled(enabled)
@@ -128,6 +130,12 @@ internal fun CameraGpsIosApp() {
                     IosAppPreferences.setShowWelcomeOnLaunch(true)
                     currentScreen = IosScreen.Welcome
                 },
+            )
+        }
+
+        IosScreen.Help -> {
+            com.sasch.cameragps.sharednew.IosHelpScreen(
+                onBackClick = { currentScreen = IosScreen.Settings }
             )
         }
     }

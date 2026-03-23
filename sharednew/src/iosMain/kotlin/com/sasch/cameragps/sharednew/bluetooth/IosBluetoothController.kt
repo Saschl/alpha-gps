@@ -346,8 +346,12 @@ object IosBluetoothController : BluetoothController {
         override fun locationManager(manager: CLLocationManager, didUpdateLocations: List<*>) {
             val location = didUpdateLocations.lastOrNull() as? CLLocation ?: return
             if (!shouldUpdateLocation(location)) return
+
+            // send initial location immediately
+            if (latestLocation == null) {
+                sendLocationToReadyPeripherals(location)
+            }
             latestLocation = location
-            //sendLocationToReadyPeripherals(location)
         }
 
         override fun locationManager(manager: CLLocationManager, didFailWithError: NSError) {

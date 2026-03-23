@@ -44,7 +44,6 @@ import com.saschl.cameragps.R
 import com.saschl.cameragps.database.LogDatabase
 import com.saschl.cameragps.service.AssociatedDeviceCompat
 import com.saschl.cameragps.service.LocationSenderService
-import com.saschl.cameragps.service.SonyBluetoothConstants
 import com.saschl.cameragps.ui.pairing.startDevicePresenceObservation
 import kotlinx.coroutines.launch
 import timber.log.Timber
@@ -192,7 +191,8 @@ fun DeviceDetailScreen(
 
                                 val shutdownIntent =
                                     Intent(context, LocationSenderService::class.java).apply {
-                                        action = SonyBluetoothConstants.ACTION_REQUEST_SHUTDOWN
+                                        action =
+                                            com.sasch.cameragps.sharednew.bluetooth.SonyBluetoothConstants.ACTION_REQUEST_SHUTDOWN
                                         putExtra("address", device.address.uppercase())
                                     }
                                 context.startService(shutdownIntent)

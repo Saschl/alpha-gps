@@ -34,13 +34,7 @@ import cameragps.sharednew.generated.resources.auto_scan_description
 import cameragps.sharednew.generated.resources.back
 import cameragps.sharednew.generated.resources.enable_app
 import cameragps.sharednew.generated.resources.enable_app_description
-import cameragps.sharednew.generated.resources.help_menu_item
-import cameragps.sharednew.generated.resources.ios_shared_components_help_text
-import cameragps.sharednew.generated.resources.is_there_documenation
-import cameragps.sharednew.generated.resources.is_there_documenation_answer
-import cameragps.sharednew.generated.resources.reset_welcome
 import cameragps.sharednew.generated.resources.settings
-import cameragps.sharednew.generated.resources.show_welcome_again_description
 import cameragps.sharednew.generated.resources.tip_jar
 import cameragps.sharednew.generated.resources.tip_jar_description
 import cameragps.sharednew.generated.resources.tip_jar_dismiss
@@ -48,7 +42,6 @@ import cameragps.sharednew.generated.resources.tip_jar_error_prefix
 import cameragps.sharednew.generated.resources.tip_jar_loading
 import cameragps.sharednew.generated.resources.tip_jar_thank_you
 import cameragps.sharednew.generated.resources.tip_jar_unavailable
-import cameragps.sharednew.generated.resources.welcome_get_started_button
 import com.sasch.cameragps.sharednew.ui.settings.SharedSettingsCard
 import com.sasch.cameragps.sharednew.ui.settings.SharedSettingsScreen
 import com.sasch.cameragps.sharednew.ui.settings.SharedToggleRow
@@ -60,6 +53,7 @@ internal fun IosSettingsScreen(
     isAppEnabled: Boolean,
     autoScanEnabled: Boolean,
     onBackClick: () -> Unit,
+    onOpenHelp: () -> Unit,
     onAppEnabledChange: (Boolean) -> Unit,
     onAutoScanEnabledChange: (Boolean) -> Unit,
     onShowWelcomeAgain: () -> Unit,
@@ -97,29 +91,27 @@ internal fun IosSettingsScreen(
                         checked = autoScanEnabled,
                         onCheckedChange = onAutoScanEnabledChange,
                     )
-                    SharedToggleRow(
-                        title = stringResource(Res.string.reset_welcome),
-                        description = stringResource(Res.string.show_welcome_again_description),
-                        checked = false,
-                        onCheckedChange = { if (it) onShowWelcomeAgain() },
-                        trailing = {
-                            TextButton(onClick = onShowWelcomeAgain) {
-                                Text(stringResource(Res.string.welcome_get_started_button))
-                            }
-                        },
-                    )
+                    /* SharedToggleRow(
+                         title = stringResource(Res.string.reset_welcome),
+                         description = stringResource(Res.string.show_welcome_again_description),
+                         checked = false,
+                         onCheckedChange = { if (it) onShowWelcomeAgain() },
+                         trailing = {
+                             TextButton(onClick = onShowWelcomeAgain) {
+                                 Text(stringResource(Res.string.welcome_get_started_button))
+                             }
+                         },
+                     )*/
                 }
             }
-            item {
-                SharedSettingsCard(title = stringResource(Res.string.help_menu_item)) {
-                    Text(
-                        text = stringResource(Res.string.ios_shared_components_help_text),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-            item {
+            /* item {
+                 SharedSettingsCard(title = stringResource(Res.string.help_menu_item)) {
+                     TextButton(onClick = onOpenHelp) {
+                         Text(stringResource(Res.string.help_faq_title))
+                     }
+                 }
+             }*/
+            /*item {
                 SharedSettingsCard(title = stringResource(Res.string.is_there_documenation)) {
                     Text(
                         text = stringResource(Res.string.is_there_documenation_answer),
@@ -127,7 +119,7 @@ internal fun IosSettingsScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-            }
+            }*/
             item {
                 IosTipJarCard()
             }

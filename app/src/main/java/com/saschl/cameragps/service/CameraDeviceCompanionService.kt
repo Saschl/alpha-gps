@@ -12,7 +12,7 @@ import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.core.app.ActivityCompat
 import androidx.core.content.getSystemService
-import com.saschl.cameragps.service.SonyBluetoothConstants.ACTION_REQUEST_SHUTDOWN
+import com.sasch.cameragps.sharednew.bluetooth.SonyBluetoothConstants
 import com.saschl.cameragps.utils.PreferencesManager
 import com.saschl.cameragps.utils.SentryInit
 import timber.log.Timber
@@ -128,7 +128,7 @@ class CameraDeviceCompanionService : CompanionDeviceService() {
 
     private fun stopServiceOnDeviceDisappeared(address: String) {
         val shutdownIntent = Intent(this, LocationSenderService::class.java).apply {
-            action = ACTION_REQUEST_SHUTDOWN
+            action = SonyBluetoothConstants.ACTION_REQUEST_SHUTDOWN
         }
         shutdownIntent.putExtra("address", address.uppercase())
         startService(shutdownIntent)
@@ -152,7 +152,7 @@ class CameraDeviceCompanionService : CompanionDeviceService() {
     override fun onUnbind(intent: Intent?): Boolean {
         Timber.i("CompanionDeviceService onUnbind called. Will request shutdown of FGS")
         val shutdownIntent = Intent(this, LocationSenderService::class.java).apply {
-            action = ACTION_REQUEST_SHUTDOWN
+            action = SonyBluetoothConstants.ACTION_REQUEST_SHUTDOWN
 
         }
      /*   shutdownIntent.putExtra("address", "all")

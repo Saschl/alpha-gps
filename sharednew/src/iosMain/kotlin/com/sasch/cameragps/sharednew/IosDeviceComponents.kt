@@ -124,6 +124,7 @@ internal fun DeviceListContent(
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.padding(horizontal = 16.dp),
                 ) {
                     CircularProgressIndicator()
                     Text(

@@ -52,8 +52,8 @@ internal object IosTipJarController {
     // These product IDs must exist in App Store Connect as consumable IAPs.
     private val tipProductIds = listOf(
         "com.saschl.cameragps.tip.small",
-        "com.saschl.cameragps.tip.medium",
-        "com.saschl.cameragps.tip.large",
+        /* "com.saschl.cameragps.tip.medium",
+         "com.saschl.cameragps.tip.large",*/
     )
 
     private val _products = MutableStateFlow<List<TipProduct>>(emptyList())
@@ -83,16 +83,16 @@ internal object IosTipJarController {
                 updatedTransactions.forEach { any ->
                     val tx = any as? SKPaymentTransaction ?: return@forEach
                     val productId = tx.payment.productIdentifier
-                    NSLog(
-                        "TipJar: transaction update state=%@ product=%@ error=%@",
-                        tx.transactionState.toString(),
-                        productId,
-                        tx.error?.localizedDescription ?: "none",
-                    )
+                    /*  NSLog(
+                          "TipJar: transaction update state=%@ product=%@ error=%@",
+                          tx.transactionState.toString(),
+                          productId,
+                          tx.error?.localizedDescription ?: "none",
+                      )*/
                     when (tx.transactionState) {
                         SKPaymentTransactionState.SKPaymentTransactionStatePurchased,
                         SKPaymentTransactionState.SKPaymentTransactionStateRestored -> {
-                            NSLog("TipJar: purchase success for %@", productId)
+                            // NSLog("TipJar: purchase success for %@", productId)
                             queue.finishTransaction(tx)
                             _purchaseState.update { TipPurchaseState.Success }
                         }
@@ -102,13 +102,13 @@ internal object IosTipJarController {
                             // SKErrorPaymentCancelled = 2 — treat user cancellation as a no-op.
                             val wasCancelled = tx.error!!.code == 2L
                             if (wasCancelled) {
-                                NSLog("TipJar: purchase cancelled by user for %@", productId)
+                                // NSLog("TipJar: purchase cancelled by user for %@", productId)
                             } else {
-                                NSLog(
-                                    "TipJar: purchase failed for %@ - %@",
-                                    productId,
-                                    tx.error!!.localizedDescription,
-                                )
+                                /* NSLog(
+                                     "TipJar: purchase failed for %@ - %@",
+                                     productId,
+                                     tx.error!!.localizedDescription,
+                                 )*/
                             }
                             _purchaseState.update {
                                 if (wasCancelled) {
@@ -121,7 +121,7 @@ internal object IosTipJarController {
 
                         // .purchasing / .deferred — wait for the next callback.
                         else -> {
-                            NSLog("TipJar: waiting for terminal state for %@", productId)
+                            // NSLog("TipJar: waiting for terminal state for %@", productId)
                         }
                     }
                 }
@@ -143,10 +143,12 @@ internal object IosTipJarController {
                 request: SKProductsRequest,
                 didReceiveResponse: SKProductsResponse,
             ) {
+
                 val formatter = NSNumberFormatter().apply {
                     numberStyle = NSNumberFormatterCurrencyStyle
                 }
                 val tipProducts = didReceiveResponse.products.mapNotNull { any ->
+
                     val product = any as? SKProduct ?: return@mapNotNull null
                     formatter.locale = product.priceLocale
                     val priceString = formatter.stringFromNumber(product.price)
