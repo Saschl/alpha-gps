@@ -1,11 +1,14 @@
 package com.sasch.cameragps.sharednew
 
+import com.diamondedge.logging.LogLevel
 import platform.Foundation.NSUserDefaults
 
 internal object IosAppPreferences {
     private const val keyShowWelcome = "ios.showWelcome"
     private const val keyAppEnabled = "ios.appEnabled"
     private const val keyAutoScanEnabled = "ios.autoScanEnabled"
+
+    private const val logLevel = "ios.logLevel"
 
     private val defaults: NSUserDefaults
         get() = NSUserDefaults.standardUserDefaults
@@ -32,6 +35,11 @@ internal object IosAppPreferences {
 
     fun setAutoScanEnabled(enabled: Boolean) {
         defaults.setBool(enabled, forKey = keyAutoScanEnabled)
+    }
+
+    fun getLogLevel(): String = defaults.stringForKey(logLevel) ?: LogLevel.Info.name
+    fun setLogLevel(level: String) {
+        defaults.setObject(level, forKey = logLevel)
     }
 }
 

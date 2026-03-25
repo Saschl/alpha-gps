@@ -24,6 +24,8 @@ import cameragps.sharednew.generated.resources.welcome_settings_note
 import cameragps.sharednew.generated.resources.welcome_subtitle
 import cameragps.sharednew.generated.resources.welcome_title
 import com.diamondedge.logging.KmLogging
+import com.diamondedge.logging.LogLevel
+import com.diamondedge.logging.VariableLogLevel
 import com.sasch.cameragps.sharednew.bluetooth.IosBluetoothController
 import com.sasch.cameragps.sharednew.database.getDatabaseBuilder
 import com.sasch.cameragps.sharednew.database.logging.DatabaseLogger
@@ -59,7 +61,12 @@ internal fun CameraGpsIosApp() {
     var autoScanEnabled by remember { mutableStateOf(IosAppPreferences.isAutoScanEnabled()) }
 
     LaunchedEffect(Unit) {
-        KmLogging.addLogger(DatabaseLogger(logRepository))
+        KmLogging.setLoggers(
+            DatabaseLogger(
+                logRepository,
+                VariableLogLevel(LogLevel.valueOf(IosAppPreferences.getLogLevel()))
+            )
+        )
     }
     LaunchedEffect(currentScreen, isAppEnabled, autoScanEnabled) {
         if (SCREENSHOT_MODE) return@LaunchedEffect
@@ -157,6 +164,9 @@ internal fun CameraGpsIosApp() {
                     IosAppPreferences.setShowWelcomeOnLaunch(true)
                     currentScreen = IosScreen.Welcome
                 },
+                onChangeLogLevel = { level ->
+                    KmLogging.setLoggers(DatabaseLogger(logRepository, VariableLogLevel(level)))
+                }
             )
         }
 

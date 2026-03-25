@@ -1,9 +1,13 @@
 package com.sasch.cameragps.sharednew.database.logging
 
 import com.diamondedge.logging.Logger
+import com.diamondedge.logging.VariableLogLevel
 import kotlin.time.Clock
 
-class DatabaseLogger(private val logRepository: LogRepository) : Logger {
+class DatabaseLogger(
+    private val logRepository: LogRepository,
+    private val logController: VariableLogLevel
+) : Logger {
     override fun verbose(tag: String, msg: String) {
         logRepository.insertLog(
             timestamp = Clock.System.now().toEpochMilliseconds(),
@@ -54,14 +58,14 @@ class DatabaseLogger(private val logRepository: LogRepository) : Logger {
         )
     }
 
-    override fun isLoggingVerbose(): Boolean = false
+    override fun isLoggingVerbose(): Boolean = logController.isLoggingVerbose()
 
-    override fun isLoggingDebug(): Boolean = false
+    override fun isLoggingDebug(): Boolean = logController.isLoggingDebug()
 
-    override fun isLoggingInfo(): Boolean = true
+    override fun isLoggingInfo(): Boolean = logController.isLoggingInfo()
 
-    override fun isLoggingWarning(): Boolean = true
+    override fun isLoggingWarning(): Boolean = logController.isLoggingWarning()
 
-    override fun isLoggingError(): Boolean = true
+    override fun isLoggingError(): Boolean = logController.isLoggingError()
 
 }
