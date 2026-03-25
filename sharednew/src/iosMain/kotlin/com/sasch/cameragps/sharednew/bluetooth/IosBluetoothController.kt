@@ -38,6 +38,7 @@ import platform.CoreLocation.CLLocation
 import platform.CoreLocation.CLLocationManager
 import platform.CoreLocation.CLLocationManagerDelegateProtocol
 import platform.Foundation.NSData
+import platform.Foundation.NSDate
 import platform.Foundation.NSError
 import platform.Foundation.NSNumber
 import platform.Foundation.NSUUID
@@ -106,6 +107,7 @@ object IosBluetoothController : BluetoothController {
     private val autoReconnectIds = mutableSetOf<String>()
     private val userDefaults = NSUserDefaults.standardUserDefaults
     private val persistedPeripheralsKey = "com.saschl.cameragps.persistedPeripherals"
+    private const val MAX_IMMEDIATE_FIX_AGE_SECONDS = 5 * 60L
     // ------------------------------------------------------------------------
 
     private var latestLocation: CLLocation? = null
@@ -348,7 +350,7 @@ object IosBluetoothController : BluetoothController {
             val location = didUpdateLocations.lastOrNull() as? CLLocation ?: return
             if (!shouldUpdateLocation(location)) return
 
-            // send initial location immediately
+            // send initial location immediately if none was cached yet
             if (latestLocation == null) {
                 sendLocationToReadyPeripherals(location)
             }
@@ -703,7 +705,12 @@ object IosBluetoothController : BluetoothController {
         session.phase = PeripheralPhase.Ready
         updateLocationTracking()
         refreshDeviceList()
-        latestLocation?.let { sendLocationToPeripheral(session, it) }
+
+        latestLocation?.let {
+            if (isFreshFix(it)) {
+                sendLocationToPeripheral(session, it)
+            }
+        }
     }
 
     private fun updateLocationTracking() {
@@ -846,6 +853,13 @@ object IosBluetoothController : BluetoothController {
         val ageMs =
             (newLocation.timestamp.timeIntervalSince1970 - current.timestamp.timeIntervalSince1970) * 1000.0
         return ageMs > SonyBluetoothConstants.OLD_LOCATION_THRESHOLD_MS
+    }
+
+    private fun isFreshFix(location: CLLocation): Boolean {
+        val nowSeconds = NSDate().timeIntervalSince1970.toLong()
+        val locationSeconds = location.timestamp.timeIntervalSince1970.toLong()
+        val ageSeconds = nowSeconds - locationSeconds
+        return ageSeconds <= MAX_IMMEDIATE_FIX_AGE_SECONDS
     }
 }
 
