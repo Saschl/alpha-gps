@@ -13,6 +13,9 @@ It makes use of the companion device manager APIs of Android which *should* prov
 
 ## How to install?
 
+*A first version of the iOS App can be tested via TestFlight! You can join via the following link:* https://testflight.apple.com/join/TsEFE2Gw
+
+Happy for any feedback!
 
 <a href="https://play.google.com/store/apps/details?id=com.saschl.cameragps"><img width="270" height="80" alt="GetItOnGooglePlay_Badge_Web_color_English" src="https://github.com/user-attachments/assets/775cb6fc-a297-4208-9249-43291c52d045" /></a>
 
