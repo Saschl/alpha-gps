@@ -6,7 +6,7 @@ plugins {
     alias(libs.plugins.jetbrains.kotlin.serialization)
     id("androidx.room")
     id("com.google.devtools.ksp")
-    id("io.sentry.android.gradle") version "6.1.0"
+    id("io.sentry.android.gradle") version "6.3.0"
 }
 
 room {
