@@ -16,23 +16,29 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ProcessLifecycleOwner
-import com.saschl.cameragps.database.LogDatabase
-import com.saschl.cameragps.service.FileTree
-import com.saschl.cameragps.service.GlobalExceptionHandler
-import com.saschl.cameragps.service.LocationSenderService
-import com.saschl.cameragps.ui.SentryConsentDialog
-import com.saschl.cameragps.ui.settings.SettingsScreen
-import com.saschl.cameragps.ui.WelcomeScreen
-import com.saschl.cameragps.ui.device.CameraDeviceManager
-import com.saschl.cameragps.ui.theme.CameraGpsTheme
-import com.saschl.cameragps.utils.PreferencesManager
-import com.saschl.cameragps.utils.SentryInit
-import kotlinx.serialization.Serializable
-import timber.log.Timber
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
+import com.sasch.cameragps.sharednew.database.LogDatabase
+import com.sasch.cameragps.sharednew.database.getDatabaseBuilder
+import com.sasch.cameragps.sharednew.database.logging.LogRepository
+import com.sasch.cameragps.sharednew.ui.logs.SharedLogViewerScreen
+import com.sasch.cameragps.sharednew.ui.theme.CameraGpsTheme
+import com.saschl.cameragps.service.FileTree
+import com.saschl.cameragps.service.GlobalExceptionHandler
+import com.saschl.cameragps.service.LocationSenderService
+import com.saschl.cameragps.ui.EnhancedLocationPermissionBox
+import com.saschl.cameragps.ui.HelpScreen
+import com.saschl.cameragps.ui.SentryConsentDialog
+import com.saschl.cameragps.ui.WelcomeScreen
+import com.saschl.cameragps.ui.device.CameraDeviceManager
+import com.saschl.cameragps.ui.settings.SettingsScreen
+import com.saschl.cameragps.utils.PreferencesManager
+import com.saschl.cameragps.utils.SentryInit
+import com.saschl.cameragps.utils.logging.AndroidLogFormatter
+import kotlinx.serialization.Serializable
+import timber.log.Timber
 
 class MainActivity : AppCompatActivity() {
 
@@ -69,7 +75,9 @@ class MainActivity : AppCompatActivity() {
     @Composable
     private fun AppContent() {
         val context = LocalContext.current
-        val cameraDeviceDAO = LogDatabase.getDatabase(context).cameraDeviceDao()
+        val cameraDeviceDAO =
+            LogDatabase.getRoomDatabase(getDatabaseBuilder(context)).cameraDeviceDao()
+        val logRepository = remember(context) { LogRepository(getDatabaseBuilder(context)) }
         val lifecycleState by ProcessLifecycleOwner.get().lifecycle.currentStateFlow.collectAsState()
 
         val startDestination = remember {
@@ -152,6 +160,16 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
 
+                AppDestination.Help -> {
+                    NavEntry(AppDestination.Help) {
+                        HelpScreen(
+                            onBackClick = {
+                                backStack.removeAt(backStack.lastIndex)
+                            }
+                        )
+                    }
+                }
+
                 AppDestination.Devices -> {
                     NavEntry(AppDestination.Devices) {
                         LaunchedEffect(Unit) {
@@ -159,11 +177,21 @@ class MainActivity : AppCompatActivity() {
                                 !PreferencesManager.isSentryConsentDialogDismissed(context)
                         }
 
-                        CameraDeviceManager(
-                            onSettingsClick = {
-                                backStack.add(AppDestination.Settings)
-                            }
-                        )
+
+                        EnhancedLocationPermissionBox {
+                            CameraDeviceManager(
+                                onSettingsClick = {
+                                    backStack.add(AppDestination.Settings)
+                                },
+                                onHelpClick = {
+                                    backStack.add(AppDestination.Help)
+                                },
+                                onLogsClick = {
+                                    backStack.add(AppDestination.Logs)
+                                }
+                            )
+                        }
+
 
                         if (showSentryDialog) {
                             SentryConsentDialog(
@@ -172,6 +200,20 @@ class MainActivity : AppCompatActivity() {
                                 }
                             )
                         }
+                    }
+                }
+
+                AppDestination.Logs -> {
+                    NavEntry(AppDestination.Logs) {
+                        val logFormatter =
+                            remember(logRepository) { AndroidLogFormatter(logRepository) }
+                        SharedLogViewerScreen(
+                            logFormatter,
+                            logRepository = logRepository,
+                            onBackClick = {
+                                backStack.removeAt(backStack.lastIndex)
+                            }
+                        )
                     }
                 }
 
@@ -192,4 +234,10 @@ private sealed interface AppDestination : NavKey {
     data object Devices : AppDestination
     @Serializable
     data object Settings : AppDestination
+
+    @Serializable
+    data object Help : AppDestination
+
+    @Serializable
+    data object Logs : AppDestination
 }

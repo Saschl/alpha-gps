@@ -45,13 +45,12 @@
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
-        android:label="@string/app_name"
+        android:label="AlphaGPS"
         android:supportsRtl="true"
         android:theme="@style/Theme.App.Starting">
         <activity
             android:name="com.saschl.cameragps.MainActivity"
             android:exported="true"
-            android:label="@string/app_name"
             android:theme="@style/Theme.App.Starting">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -70,18 +69,6 @@
             </intent-filter>
         </service>
 
-        <activity
-            android:name="com.saschl.cameragps.ui.LogViewerActivity"
-            android:exported="false"
-            android:label="Log Viewer"
-            android:theme="@style/Theme.CameraGps"
-        />
-        <activity
-            android:name="com.saschl.cameragps.ui.HelpActivity"
-            android:exported="false"
-            android:label="@string/help_faq_title"
-            android:theme="@style/Theme.CameraGps"
-        />
         <service
             android:name="com.saschl.cameragps.service.LocationSenderService"
             android:foregroundServiceType="location|connectedDevice">

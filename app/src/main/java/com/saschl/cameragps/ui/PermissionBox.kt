@@ -370,6 +370,92 @@ private fun EnhancedPermissionScreen(
 }
 
 /**
+ * Gates [content] behind the BLUETOOTH_CONNECT runtime permission (API 31+).
+ * On older API levels the content is shown directly.
+ * Shows a permission-request UI when the permission is missing, with an optional
+ * "continue anyway" escape hatch (consistent with [EnhancedLocationPermissionBox]).
+ */
+@OptIn(ExperimentalPermissionsApi::class)
+@Composable
+fun BluetoothConnectPermissionGate(
+    modifier: Modifier = Modifier,
+    content: @Composable BoxScope.() -> Unit,
+) {
+    val context = LocalContext.current
+
+    var ignorePermissions by remember {
+        mutableStateOf(PreferencesManager.isPermissionsIgnored(context))
+    }
+
+    // Always call rememberPermissionState unconditionally (Compose rule).
+    // On API < 31 the permission is auto-granted, so isGranted == true there.
+    val bluetoothConnectPermission = rememberPermissionState(
+        permission = Manifest.permission.BLUETOOTH_CONNECT
+    )
+
+    val isGranted = Build.VERSION.SDK_INT < Build.VERSION_CODES.S
+            || bluetoothConnectPermission.status.isGranted
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .then(modifier),
+        contentAlignment = if (isGranted || ignorePermissions) Alignment.TopStart else Alignment.Center,
+    ) {
+        if (isGranted || ignorePermissions) {
+            content()
+        } else {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(
+                    text = stringResource(R.string.bluetooth_connect_required_title),
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.padding(bottom = 16.dp),
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Text(
+                    text = stringResource(R.string.bluetooth_connect_required_desc),
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(bottom = 24.dp),
+                )
+                Button(
+                    onClick = { bluetoothConnectPermission.launchPermissionRequest() },
+                ) {
+                    Text(text = stringResource(R.string.bluetooth_connect_grant_button))
+                }
+                // Permanently denied – show explanation and offer opening app settings
+                if (!bluetoothConnectPermission.status.shouldShowRationale) {
+                    Text(
+                        text = stringResource(R.string.bluetooth_connect_permanently_denied),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(top = 16.dp, bottom = 4.dp),
+                    )
+                    TextButton(
+                        onClick = {
+                            val intent =
+                                Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                    data = Uri.fromParts("package", context.packageName, null)
+                                }
+                            context.startActivity(intent)
+                        },
+                        modifier = Modifier.padding(top = 8.dp),
+                    ) {
+                        Text(text = stringResource(R.string.app_settings))
+                    }
+                }
+
+            }
+        }
+    }
+}
+
+/**
  * Gets a user-friendly description for what the permission is used for
  */
 fun getPermissionDescription(permission: String): Int {

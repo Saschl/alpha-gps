@@ -18,11 +18,9 @@
     <string name="step2_granted">✓ Permitido</string>
     <string name="view_logs">Ver registros</string>
     <string name="camera_gps_permissions">Permisos de Alpha GPS</string>
-    <string name="grant_permissions">Conceder permisos</string>
     <string name="permissions_missing_title">Faltan permisos</string>
     <string name="permissions_missing_description">Es posible que algunas funciones no funcionen hasta que se concedan estos permisos:\n%1$s</string>
     <string name="continue_button">Continuar</string>
-    <string name="dismiss_button">Omitir</string>
     <string name="cancel_button">Cancelar</string>
     <string name="app_settings">Configuración de la aplicación</string>
     <string name="location_bluetooth_access_title">Acceso a la Ubicación y al Bluetooth Requerido</string>

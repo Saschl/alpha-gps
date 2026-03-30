@@ -16,7 +16,6 @@
     <string name="step2_granted">許可済み</string>
     <string name="view_logs">ログを参照</string>
     <string name="camera_gps_permissions">Alpha GPSの権限</string>
-    <string name="grant_permissions">権限を付与</string>
     <string name="permissions_missing_title">権限なし</string>
     <string name="continue_button">進む</string>
     <string name="cancel_button">キャンセル</string>
@@ -52,13 +51,10 @@
     <string name="help_close_description">閉じる</string>
     <string name="help_about_title">Alpha GPSについて</string>
     <string name="log_level">ログレベル</string>
-    <string name="log_level_description">最小のログを記録</string>
     <string name="location_provider_title">位置情報プロバイダー</string>
     <string name="location_provider_play_services">Google Play サービス(推奨)</string>
-    <string name="welcome_feature_device_management_title">デバイスマネージャー</string>
     <string name="welcome_get_started_button">はじめよう</string>
     <string name="welcome_settings_note">あとでメインメニューの設定からそれらを許可することができる</string>
-    <string name="welcome_app_icon_description">Alpha GPS アプリアイコン</string>
     <string name="enable_sentry">エラーレポートを有効にする</string>
     <string name="help_need_more_title">もっと助けが必要ですか?</string>
     <string name="sentry_settings">エラーレポート設定</string>

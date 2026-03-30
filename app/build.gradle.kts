@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.jetbrains.kotlin.serialization)
+    alias(libs.plugins.jetbrains.compose)
     id("androidx.room")
     id("com.google.devtools.ksp")
     id("io.sentry.android.gradle") version "6.1.0"
@@ -77,9 +78,12 @@ kotlin {
     compilerOptions {
         jvmTarget.set(JvmTarget.JVM_11)
     }
+
 }
 
 dependencies {
+
+    implementation(project(":sharednew"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
@@ -128,6 +132,9 @@ dependencies {
     implementation(libs.androidx.navigation3.ui)
     implementation(libs.kotlinx.serialization.core)
     implementation(libs.androidx.appcompat)
+
+    implementation(compose.components.resources)
+
 }
 
 

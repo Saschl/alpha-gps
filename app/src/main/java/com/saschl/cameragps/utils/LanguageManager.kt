@@ -4,46 +4,39 @@ import android.app.Activity
 import android.content.Context
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.os.LocaleListCompat
+import com.sasch.cameragps.sharednew.language.AppLanguage
+import com.sasch.cameragps.sharednew.language.SupportedLanguages
 import java.util.Locale
 
 object LanguageManager {
-    
-    /**
-     * Supported languages
-     */
-    enum class SupportedLanguage(val locale: Locale, val displayName: String) {
-        ENGLISH(Locale.ENGLISH, "English"),
-        GERMAN(Locale.GERMAN, "Deutsch"),
-        CHINESE(Locale.SIMPLIFIED_CHINESE, "中文"),
-        SPANISH(Locale.forLanguageTag("es-*"), "Español"),
-        JAPANESE(Locale.JAPANESE, "日本語");
 
-        companion object {
-            fun getSupportedLocales(): List<Locale> {
-                return entries.map { it.locale }
-            }
-        }
-    }
+    fun getSupportedLanguages(): List<AppLanguage> = SupportedLanguages.entries
 
 
     /**
      * Apply language immediately to the current activity
      */
-    fun applyLanguageToActivity(activity: Activity, locale: Locale?) {
-        // PreferencesManager.setLanguageCode(activity, languageCode)
+    fun applyLanguageToActivity(activity: Activity, language: AppLanguage?) {
+        if (language == null) {
+            AppCompatDelegate.setApplicationLocales(LocaleListCompat.getEmptyLocaleList())
+            return
+        }
+        val locale = Locale.forLanguageTag(language.tag)
         AppCompatDelegate.setApplicationLocales(LocaleListCompat.create(locale))
-        AppCompatDelegate.getApplicationLocales()
     }
 
     /**
      * Get the currently selected language
      */
-    fun getCurrentLanguage(context: Context): Locale? {
+    fun getCurrentLanguage(context: Context): AppLanguage? {
         val locale = if (AppCompatDelegate.getApplicationLocales().isEmpty) {
             null
         } else {
             AppCompatDelegate.getApplicationLocales()[0] ?: Locale.getDefault()
         }
-        return locale
+        locale ?: return null
+
+        return SupportedLanguages.fromTag(locale.toLanguageTag())
+            ?: AppLanguage(tag = locale.toLanguageTag(), displayName = locale.displayName)
     }
 }

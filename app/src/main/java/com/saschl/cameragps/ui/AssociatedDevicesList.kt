@@ -1,17 +1,9 @@
 package com.saschl.cameragps.ui
 
 import android.os.Build
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -19,7 +11,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -34,18 +25,24 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import cameragps.sharednew.generated.resources.Res
+import cameragps.sharednew.generated.resources.android_12_requires_keep_alive
+import cameragps.sharednew.generated.resources.associated_devices
+import cameragps.sharednew.generated.resources.no_devices_message
+import cameragps.sharednew.generated.resources.no_devices_title
+import cameragps.sharednew.generated.resources.not_paired_tap_to_pair_again
+import com.sasch.cameragps.sharednew.database.LogDatabase
+import com.sasch.cameragps.sharednew.database.getDatabaseBuilder
+import com.sasch.cameragps.sharednew.ui.TransmissionDot
 import com.saschl.cameragps.R
-import com.saschl.cameragps.database.LogDatabase
 import com.saschl.cameragps.service.AssociatedDeviceCompat
 import com.saschl.cameragps.service.LocationSenderService
+import org.jetbrains.compose.resources.stringResource
 
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -55,7 +52,9 @@ fun AssociatedDevicesList(
     onConnect: (AssociatedDeviceCompat) -> Unit,
 ) {
     val context = LocalContext.current
-    val cameraDeviceDAO = LogDatabase.getDatabase(context.applicationContext).cameraDeviceDao()
+    val cameraDeviceDAO = LogDatabase.getRoomDatabase(
+        getDatabaseBuilder(context.applicationContext)
+    ).cameraDeviceDao()
 
     val enableServer = remember {
         LocationSenderService.activeTransmissions
@@ -66,7 +65,7 @@ fun AssociatedDevicesList(
         ) {
             stickyHeader {
                 Text(
-                    text = stringResource(R.string.associated_devices),
+                    text = stringResource(Res.string.associated_devices),
                     modifier = Modifier.padding(8.dp),
                     style = MaterialTheme.typography.titleMedium,
                 )
@@ -96,12 +95,12 @@ fun AssociatedDevicesList(
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
-                                text = stringResource(R.string.no_devices_title),
+                                text = stringResource(Res.string.no_devices_title),
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
-                                text = stringResource(R.string.no_devices_message),
+                                text = stringResource(Res.string.no_devices_message),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 textAlign = TextAlign.Center
@@ -169,7 +168,7 @@ fun AssociatedDevicesList(
                             Text(
                                 color = MaterialTheme.colorScheme.error,
                                 style = MaterialTheme.typography.bodySmall,
-                                text = stringResource(R.string.not_paired_tap_to_pair_again),
+                                text = stringResource(Res.string.not_paired_tap_to_pair_again),
                             )
                         }
 
@@ -179,7 +178,7 @@ fun AssociatedDevicesList(
                             Text(
                                 color = MaterialTheme.colorScheme.error,
                                 style = MaterialTheme.typography.bodySmall,
-                                text = stringResource(R.string.android_12_requires_keep_alive),
+                                text = stringResource(Res.string.android_12_requires_keep_alive),
                             )
                         }
                     }
@@ -204,54 +203,6 @@ fun AssociatedDevicesList(
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun TransmissionDot(
-    isRunning: Boolean,
-    modifier: Modifier = Modifier,
-) {
-    Box(
-        modifier = modifier
-            .size(12.dp), // fixed layout size so nothing moves
-        contentAlignment = Alignment.Center
-    ) {
-        if (!isRunning) {  // Static red dot when disabled
-            Box(
-                modifier = Modifier
-                    .size(8.dp)
-                    .background(
-                        color = Color.Red,
-                        shape = CircleShape
-                    )
-            )
-            return
-        }
-
-        val infiniteTransition = rememberInfiniteTransition(label = "txDot")
-        val scale by infiniteTransition.animateFloat(
-            initialValue = 0.8f,
-            targetValue = 1.2f,
-            animationSpec = infiniteRepeatable(
-                animation = tween(durationMillis = 800, easing = LinearEasing),
-                repeatMode = RepeatMode.Reverse
-            ),
-            label = "txDotScale"
-        )
-
-        Box(
-            modifier = modifier
-                .size(10.dp)
-                .graphicsLayer {
-                    scaleX = scale
-                    scaleY = scale
-                }
-                .background(
-                    color = Color.Green,
-                    shape = CircleShape
-                )
-        )
     }
 }
 

@@ -21,7 +21,6 @@
     <string name="permissions_missing_title">Fehlende Berechtigungen</string>
     <string name="permissions_missing_description">Einige Features funktionieren möglicherweise nicht, bis folgende Berechtigungen erteilt wurden:\n%1$s</string>
     <string name="continue_button">Weiter</string>
-    <string name="dismiss_button">Beenden</string>
     <string name="cancel_button">Abbrechen</string>
     <string name="app_settings">App Einstellungen</string>
     <string name="location_bluetooth_access_title">Standort &amp; Bluetooth Zugriff benötigt</string>
@@ -44,7 +43,6 @@
     <string name="location_services_disabled_title">Standortdienste sind deaktiviert</string>
     <string name="location_services_disabled_message">Bitte aktiviere die Standortdienste für GPS-Funktionalität.</string>
     <string name="open_location_settings">Standort-Einstellungen öffnen</string>
-    <string name="not_paired_tap_to_pair_again">Nicht gekoppelt. Bitte das Gerät erneut in den Bluetooth Einstellungen koppeln</string>
     <string name="to_pair_with_your_camera_please">Um die Kamera \'%1$s\' zu koppeln, bitte:</string>
     <string name="_1_turn_on_your_camera">1. Schalte die Kamera ein</string>
     <string name="_2_go_to_camera_settings_and_enable_bluetooth_pairing_mode">2. Gehe in die Einstellungen und schalte Bluetooth ein.</string>
@@ -57,7 +55,6 @@
     <string name="unknown_error">Unbekannter Fehler</string>
     <string name="welcome_get_started_button">Los geht\'s</string>
     <string name="welcome_settings_note">Diese Einstellungen können jederzeit angepasst werden</string>
-    <string name="welcome_app_icon_description">Kamera-GPS-App-Symbol</string>
     <string name="welcome_title">Willkommen bei Alpha GPS</string>
     <string name="welcome_subtitle">GPS-Koordinaten in Echtzeit für Ihre Kamera über Bluetooth</string>
     <!-- Help & FAQ strings -->
@@ -87,9 +84,6 @@
     <!-- Help menu item -->
     <string name="help_menu_item">Hilfe</string>
     <!-- Additional missing strings for device management -->
-    <string name="associated_devices">Verbundene Geräte</string>
-    <string name="no_devices_title">Keine Kameras verbunden</string>
-    <string name="no_devices_message">Tippen Sie auf die Schaltfläche oben, um mit der Kopplung Ihres Kamerageräts zu beginnen.</string>
     <!-- Error messages for device association -->
     <string name="the_request_was_canceled">Die Anfrage wurde abgebrochen</string>
     <string name="internal_error_happened">Ein interner Fehler ist aufgetreten</string>
@@ -100,25 +94,10 @@
     <string name="enable_device">Gerät aktivieren</string>
     <string name="enableConstantly">Always On (Dauerbetrieb)</string>
     <!-- Device limitation hint -->
-    <string name="single_device_limitation_hint">Derzeit wird nur eine Kamera gleichzeitig unterstützt. Unterstützung für mehrere Geräte wird in einem zukünftigen Update hinzugefügt.</string>
-    <string name="android_12_requires_keep_alive">Smartphones mit Android 11 oder niedriger müssen den Immer An Modus aktivieren. Tippen sie auf die Kamera und aktivieren sie die Einstellung</string>
     <string name="always_on_description">Lässt die App im Vordergrund laufen. Nützliich, wenn die Verbindung nicht verlässlich automatisch hergestellt werden kann (z.B. durch aggressive Batteriesparmaßen bei Xiaomi Geräten und möglicherweise weiteren)</string>
     <!-- Battery optimization dialog strings -->
-    <string name="battery_optimization_title">Akkuoptimierung</string>
-    <string name="battery_optimization_message">Um eine zuverlässige GPS-Synchronisierung mit Ihrer Kamera sicherzustellen, deaktivieren Sie bitte die Akkuoptimierung für diese App. Dadurch wird verhindert, dass das System die Hintergrundaktivität einschränkt. Sie können diesen Dialog auch ignorieren und die App kann trotzdem funktionieren. Dies hängt jedoch stark vom Gerätehersteller und der Android-Version ab.</string>
-    <string name="battery_optimization_proceed">Einstellungen öffnen</string>
-    <string name="battery_optimization_cancel">Abbrechen</string>
-    <string name="battery_optimization_dont_show">Nicht mehr anzeigen</string>
     <!-- Xiaomi-specific battery optimization strings -->
-    <string name="battery_optimization_xiaomi_title">Xiaomi Akkuoptimierung</string>
-    <string name="battery_optimization_xiaomi_message">Auf Xiaomi-Geräten sind zusätzliche Schritte nötig, damit die App im Hintergrund zuverlässig funktioniert:\n\n1. Akkuoptimierung öffnen\n2. Diese App auf Nicht optimieren setzen\n3. Zu Einstellungen &gt; Apps &gt; Apps verwalten gehen\n4. Diese App finden und Autostart aktivieren\n5. Hintergrund-App-Limits auf Keine Einschränkungen stellen</string>
-    <string name="battery_optimization_xiaomi_autostart">Autostart-Einstellungen öffnen</string>
-    <string name="battery_optimization_xiaomi_battery">Akku-Einstellungen öffnen</string>
     <!-- Oppo-specific battery optimization strings -->
-    <string name="battery_optimization_oppo_title">OPPO Akkuoptimierung</string>
-    <string name="battery_optimization_oppo_message">Auf OPPO-Geräten (einschließlich Realme und OnePlus) sind zusätzliche Schritte nötig, damit die App im Hintergrund zuverlässig funktioniert:\n\n1. Akkuoptimierung öffnen\n2. Dieser App erlauben, im Hintergrund zu laufen\n3. Autostart für diese App aktivieren\n4. Akkuoptimierung für diese App deaktivieren\n5. Hintergrund-App-Verwaltung auf uneingeschränkte Hintergrundaktivität setzen</string>
-    <string name="battery_optimization_oppo_autostart">Autostart-Einstellungen öffnen</string>
-    <string name="battery_optimization_oppo_battery">Akku-Einstellungen öffnen</string>
     <!-- Battery optimization settings screen strings -->
     <string name="battery_optimization_settings_title">Akku &amp; Hintergrund-Einstellungen</string>
     <string name="battery_optimization_settings_short"><![CDATA[Passen Sie diese Einstellungen an, falls die App im Hintergrund nicht zuverlässig funktioniert. <b>Hinweis: Dies ändert nicht das Verhalten App selbst, sondern versucht nur zu verhindern, dass sie vom Betriebssystem beendet wird. Nur bei Problemen verwenden.</b>]]></string>
@@ -142,36 +121,24 @@
     <!-- Language settings -->
     <string name="language_settings">Spracheinstellungen</string>
     <string name="language_selection">Sprache auswählen</string>
-    <string name="language_system">System</string>
-    <string name="language_english">English</string>
     <!-- Log settings -->
     <string name="log_settings">Log Level Einstellungen</string>
     <string name="log_level">Log Level</string>
-    <string name="log_level_description">Minimaler Log Level welcher aufgezeichntet wird</string>
     <!-- Sentry Settings -->
     <string name="sentry_settings">Fehlerberichterstattung Einstellungen</string>
     <string name="enable_sentry">Fehlerberichterstattung aktivieren</string>
     <string name="enable_sentry_description">Anonyme Absturzberichte senden, um die App zu verbessern</string>
     <string name="sentry_restart_required">App-Neustart erforderlich, damit die Änderungen wirksam werden</string>
-    <string name="language_german">Deutsch</string>
-    <string name="language_chinese">简体中文</string>
     <string name="settings">Einstellungen</string>
     <string name="app_controls">App Einstellungen</string>
     <string name="enable_app">App aktivieren</string>
     <string name="welcome_feature_gps_sync_description">Automatische Übertragung der Standortdaten zu deiner Sony Kamera</string>
-    <string name="welcome_feature_device_management_title">Geräteverwaltung</string>
     <string name="welcome_feature_connect_description">Kopple deine Sony Kamera via Bluetooth für nahtlose Standortübertragung</string>
     <string name="welcome_feature_gps_sync_title">Echtzeit Standortübertragung</string>
     <string name="welcome_feature_connect_title">Verbinde die Kamera</string>
     <string name="how_about_privacy">Wie sieht es mit dem Datenschutz aus?</string>
     <string name="how_about_privacy_answer">Die App überträgt keine personenbezogenen Daten an den Entwickler und/oder Drittparteien. Sämtliche erhobenen Informationen (Standortdaten) werden nur für die Übertragung der Standortdaten zu der verbundenen Kamera verwendet und nicht dauerhaft gespeichert. Die Standorterfassung wird beendet, sobald die Verbindung zur Kamera getrennt wird. Zur Analyse von Problemen und Abstürzen können anonymisierte Logs an Sentry gesendet werden. Sie können diese Funktion jederzeit in den App-Einstellungen unter „Fehlerberichterstattung Einstellungen“ deaktivieren. Bei Fragen und Bedenken melden Sie sich bitte bei der oben genannten E-Mail-Adresse.</string>
     <!-- Device management strings -->
-    <string name="device_management">Geräteverwaltung</string>
-    <string name="no_devices_found">Keine Geräte gefunden</string>
-    <string name="delete_device">Gerät löschen</string>
-    <string name="delete_device_confirmation">Möchten Sie %1$s wirklich löschen?</string>
-    <string name="delete">Löschen</string>
-    <string name="always_on_enabled">Immer An aktiviert</string>
     <string name="enable_auto_start_description">Startet die App nach einem Geräte-Neustart automatisch für Kameras, für die der „Immer an\"-Modus konfiguriert ist.</string>
     <string name="hint_if_issues_after_switching">Hinweis: Aufgrund von kürzlichen Änderungen in der App kann es nach dem Deaktivieren des „Immer an\"-Modus erforderlich sein, einmalig eine Aktion durchzuführen. Deaktivieren und reaktivieren Sie das Gerät einfach einmal in diesen Einstellungen. Dies ist nur einmal nach dem App-Update nötig – nachfolgende Moduswechsel funktionieren sofort.</string>
     <!-- Pairing dialog strings -->
@@ -193,7 +160,6 @@
     <string name="sentry_consent_decline">Ablehnen</string>
     <string name="sentry_consent_dont_show">Nicht mehr anzeigen</string>
     <string name="notification_channel_name">Transmission state</string>
-    <string name="grant_permissions">Berechtigugnen erteilen</string>
     <string name="location_provider_title">Standortanbieter</string>
     <string name="location_provider_play_services">Google Play Services (empfohlen)</string>
     <string name="location_provider_platform">Android Platform (LocationManager)</string>

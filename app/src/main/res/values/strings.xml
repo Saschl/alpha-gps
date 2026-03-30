@@ -1,5 +1,4 @@
 <resources>
-    <string name="app_name" translatable="false">AlphaGPS</string>
     <string name="app_name_ui" translatable="false">Alpha GPS</string>
     <string name="foreground_service_notification">Transmitting location data to %d cameras</string>
     <string name="scan_for_devices">Click to find &amp; associate your camera</string>
@@ -21,11 +20,9 @@
     <string name="camera_gps_permissions">Alpha GPS Permissions</string>
 
     <!-- Permission request strings -->
-    <string name="grant_permissions">Grant permissions</string>
     <string name="permissions_missing_title">Permissions missing</string>
     <string name="permissions_missing_description">Some features may not work until these permissions are granted:\n%1$s</string>
     <string name="continue_button">Continue</string>
-    <string name="dismiss_button">Dismiss</string>
     <string name="cancel_button">Cancel</string>
     <string name="app_settings">App settings</string>
 
@@ -64,10 +61,8 @@
     <string name="welcome_feature_connect_description">Pair your Sony camera with your phone via Bluetooth for seamless GPS data transfer</string>
     <string name="welcome_feature_gps_sync_title">Real-time GPS Sync</string>
     <string name="welcome_feature_gps_sync_description">Automatically sync your phone\'s GPS coordinates to your camera for accurate geotagging</string>
-    <string name="welcome_feature_device_management_title">Device Management</string>
     <string name="welcome_get_started_button">Get Started</string>
     <string name="welcome_settings_note">You can access these settings later from the main menu</string>
-    <string name="welcome_app_icon_description">Alpha GPS App Icon</string>
 
     <!-- Settings screen strings -->
     <string name="settings">Settings</string>
@@ -77,7 +72,6 @@
     <string name="enable_app_description">Allow the app to run and sync GPS data with connected cameras</string>
     <string name="log_settings">Log Settings</string>
     <string name="log_level">Log Level</string>
-    <string name="log_level_description">Minimum log level to record</string>
     <string name="location_provider_title">Location Provider</string>
     <string name="location_provider_play_services">Google Play Services (recommended)</string>
     <string name="location_provider_platform">Android platform (LocationManager)</string>
@@ -131,9 +125,6 @@
     <string name="help_menu_item">Help</string>
 
     <!-- Additional missing strings for device management -->
-    <string name="associated_devices">Associated Devices</string>
-    <string name="no_devices_title">No cameras connected</string>
-    <string name="no_devices_message">Tap the button above to start pairing your camera device.</string>
 
     <!-- Error messages for device association -->
     <string name="the_request_was_canceled">The request was canceled</string>
@@ -147,26 +138,12 @@
     <string name="enableConstantly">Keep alive (Always On)</string>
 
     <!-- Device limitation hint -->
-    <string name="single_device_limitation_hint">Currently only one camera device is supported. Multiple device support will be added in a future update.</string>
 
     <!-- Battery optimization dialog strings -->
-    <string name="battery_optimization_title">Battery Optimization</string>
-    <string name="battery_optimization_message">To ensure reliable GPS sync with your camera, please disable battery optimization for this app. This prevents the system from limiting background activity. You can also choose to ignore this dialog and the app may function just as fine. This heavily depends on the device manufacturer and Android version</string>
-    <string name="battery_optimization_proceed">Open Settings</string>
-    <string name="battery_optimization_cancel">Cancel</string>
-    <string name="battery_optimization_dont_show">Don\'t show again</string>
 
     <!-- Xiaomi-specific battery optimization strings -->
-    <string name="battery_optimization_xiaomi_title">Xiaomi Battery Optimization</string>
-    <string name="battery_optimization_xiaomi_message">Xiaomi devices require additional steps to ensure the app works reliably in the background:\n\n1. Open Battery Optimization settings\n2. Set this app to "Don\'t optimize"\n3. Go to Settings > Apps > Manage apps\n4. Find this app and enable "Autostart"\n5. Set "Background app limits" to "No restrictions"</string>
-    <string name="battery_optimization_xiaomi_autostart">Open Autostart Settings</string>
-    <string name="battery_optimization_xiaomi_battery">Open Battery Settings</string>
 
     <!-- Oppo-specific battery optimization strings -->
-    <string name="battery_optimization_oppo_title">OPPO Battery Optimization</string>
-    <string name="battery_optimization_oppo_message">OPPO devices (including Realme and OnePlus) require additional steps to ensure the app works reliably in the background:\n\n1. Open Battery Optimization settings\n2. Allow this app to run in the background\n3. Enable "Autostart" for this app\n4. Disable "Battery Optimization" for this app\n5. Set "Background app management" to allow unrestricted background activity</string>
-    <string name="battery_optimization_oppo_autostart">Open Autostart Settings</string>
-    <string name="battery_optimization_oppo_battery">Open Battery Settings</string>
 
     <!-- Battery optimization settings screen strings -->
     <string name="battery_optimization_settings_title">Battery &amp; Background Settings</string>
@@ -180,13 +157,11 @@
     <string name="battery_optimization_open_failed">Failed to open settings</string>
 
 
-    <string name="not_paired_tap_to_pair_again">Not paired, please pair the device in the bluetooth settings</string>
     <string name="to_pair_with_your_camera_please">To pair with your camera \'%1$s\', please:</string>
     <string name="_1_turn_on_your_camera">\n1. Turn on your camera</string>
     <string name="_2_go_to_camera_settings_and_enable_bluetooth_pairing_mode">2. Go to camera settings and enable Bluetooth/Pairing mode</string>
     <string name="_3_make_sure_the_camera_is_discoverable">3. Make sure the camera is discoverable</string>
     <string name="once_your_camera_is_ready_tap_continue_to_start_pairing">\nOnce your camera is ready, tap \'Continue\' to start pairing.</string>
-    <string name="android_12_requires_keep_alive">Devices running Android 11 and below must enable keepalive mode. Tap the device and enable the setting</string>
     <string name="always_on_description">Runs the app in the foreground. Useful if the connection cannot be established reliably on devices with aggressive battery saving measures (e.g. Xiaomi and probably more)</string>
     <string name="quick_start_feature_title">Quickstart</string>
     <string name="quick_start_feature_description">On the next screen, follow the instructions to pair your camera. Once pairing is complete, the app will automatically connect to your camera and start transmitting location data. If it does not start immediately, try restarting your camera.</string>
@@ -196,6 +171,8 @@
     <string name="will_show_welcome">Will show welcome screen on next launch!</string>
     <string name="is_there_documenation">Is there any documentation?</string>
     <string name="is_there_documenation_answer">Yes! Please visit the Github page \nYou can also report issues with the App there or contact us via email:</string>
+    <string name="is_there_documenation_answer_coffee">If you like the app and want to support development, you can buy me a coffee ☕️</string>
+
 
     <string name="app_standby_title">Standby</string>
     <string name="app_standby_content">Waiting for camera to connect</string>
@@ -203,20 +180,10 @@
     <!-- Language settings -->
     <string name="language_settings">Language Settings</string>
     <string name="language_selection">Language Selection</string>
-    <string name="language_system">System</string>
-    <string name="language_english">English</string>
-    <string name="language_german">Deutsch</string>
-    <string name="language_chinese">简体中文</string>
     <string name="how_about_privacy">How about privacy?</string>
     <string name="how_about_privacy_answer">The app does not transmit any personal data to the developer or third parties. All collected information (location data) is only used to transfer GPS coordinates to your connected camera and is not permanently stored. Location collection stops as soon as the connection to the camera is disconnected. To analyze problems and crashes, anonymized logs may be sent to the Sentry error reporting service. You can disable this feature at any time in the app settings under \"Error Reporting Settings\". If you have any questions or concerns, please contact us via the email address mentioned above.</string>
 
     <!-- Device management strings -->
-    <string name="device_management">Device Management</string>
-    <string name="no_devices_found">No devices found</string>
-    <string name="delete_device">Delete Device</string>
-    <string name="delete_device_confirmation">Are you sure you want to delete %1$s?</string>
-    <string name="delete">Delete</string>
-    <string name="always_on_enabled">Always On Enabled</string>
 
     <!-- Pairing dialog strings -->
     <string name="pairing_camera_title">Pairing Camera</string>
@@ -242,4 +209,10 @@
     <string name="notification_channel_name">Transmission state</string>
     <string name="disconnect_notification_channel_name">device disconnected</string>
     <string name="continue_anyway">Continue anyway</string>
+
+    <!-- Bluetooth Connect permission gate -->
+    <string name="bluetooth_connect_required_title">Bluetooth Permission Required</string>
+    <string name="bluetooth_connect_required_desc">This app requires Bluetooth Connect permission to discover and communicate with your camera device.</string>
+    <string name="bluetooth_connect_grant_button">Grant Bluetooth Permission</string>
+    <string name="bluetooth_connect_permanently_denied">Bluetooth permission has been permanently denied. Please open App Settings, navigate to Permissions → Nearby devices, and grant the permission manually.</string>
 </resources>

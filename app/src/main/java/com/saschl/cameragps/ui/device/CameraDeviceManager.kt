@@ -34,12 +34,12 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.google.android.play.core.review.ReviewException
 import com.google.android.play.core.review.ReviewManagerFactory
 import com.google.android.play.core.review.model.ReviewErrorCode
-import com.saschl.cameragps.database.LogDatabase
-import com.saschl.cameragps.database.devices.CameraDevice
+import com.sasch.cameragps.sharednew.database.LogDatabase
+import com.sasch.cameragps.sharednew.database.devices.CameraDevice
+import com.sasch.cameragps.sharednew.database.getDatabaseBuilder
 import com.saschl.cameragps.service.AssociatedDeviceCompat
 import com.saschl.cameragps.service.BluetoothStateBroadcastReceiver
 import com.saschl.cameragps.service.LocationSenderService
-import com.saschl.cameragps.service.SonyBluetoothConstants
 import com.saschl.cameragps.service.getAssociatedDevices
 import com.saschl.cameragps.ui.EnhancedLocationPermissionBox
 import com.saschl.cameragps.ui.pairing.startDevicePresenceObservation
@@ -51,12 +51,16 @@ import timber.log.Timber
 @SuppressLint("MissingPermission")
 @Composable
 fun CameraDeviceManager(
-    onSettingsClick: () -> Unit = {}
+    onSettingsClick: () -> Unit = {},
+    onHelpClick: () -> Unit = {},
+    onLogsClick: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val deviceManager = context.getSystemService<CompanionDeviceManager>()
-    val devicesDao = LogDatabase.getDatabase(context).cameraDeviceDao()
+    val devicesDao = LogDatabase.getRoomDatabase(
+        getDatabaseBuilder(context)
+    ).cameraDeviceDao()
     val adapter = context.getSystemService<BluetoothManager>()?.adapter
     val locationManager = context.getSystemService<LocationManager>()
     var selectedDevice by remember {
@@ -199,14 +203,17 @@ fun CameraDeviceManager(
                         onConnect = { device ->
                             selectedDevice = device
                         },
-                        onSettingsClick = onSettingsClick
+                        onSettingsClick = onSettingsClick,
+                        onHelpClick = onHelpClick,
+                        onLogsClick = onLogsClick
                     )
                 }
             } else {
+                EnhancedLocationPermissionBox {
                 deviceManager.getAssociatedDevices(adapter)
                     .find { it.address == selectedDevice?.address }?.id?.let {
-                        EnhancedLocationPermissionBox {
-                            DeviceDetailScreen(
+
+                    DeviceDetailScreen(
                                 device = selectedDevice!!,
                                 deviceManager = deviceManager,
                                 associationId = it,
@@ -241,7 +248,7 @@ fun CameraDeviceManager(
                                                     LocationSenderService::class.java
                                                 ).apply {
                                                     action =
-                                                        SonyBluetoothConstants.ACTION_REQUEST_SHUTDOWN
+                                                        com.sasch.cameragps.sharednew.bluetooth.SonyBluetoothConstants.ACTION_REQUEST_SHUTDOWN
                                                 }
                                                 serviceIntent.putExtra(
                                                     "address",
@@ -257,7 +264,8 @@ fun CameraDeviceManager(
                                             selectedDevice = null
                                         }
                                 },
-                                onClose = { selectedDevice = null }
+                                onClose = { selectedDevice = null },
+                                onHelpClick = onHelpClick
                             )
                         }
                     }

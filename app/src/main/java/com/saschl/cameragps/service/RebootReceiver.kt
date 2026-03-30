@@ -3,7 +3,6 @@ package com.saschl.cameragps.service
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.util.Log
 import androidx.core.content.ContextCompat
 import com.saschl.cameragps.utils.PreferencesManager
 import com.saschl.cameragps.utils.SentryInit
@@ -22,7 +21,7 @@ class RebootReceiver : BroadcastReceiver() {
         if (Timber.forest().find { it is FileTree } == null) {
             val logLevel = PreferencesManager.logLevel(context)
             FileTree.initialize(context)
-            Timber.plant( FileTree(context, logLevel))
+            Timber.plant(FileTree(context, logLevel))
 
             // Set up global exception handler to log crashes
             val defaultHandler = Thread.getDefaultUncaughtExceptionHandler()

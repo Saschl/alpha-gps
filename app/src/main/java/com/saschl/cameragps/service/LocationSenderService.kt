@@ -34,13 +34,17 @@ import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.LocationSettingsRequest
 import com.google.android.gms.location.Priority
+import com.sasch.cameragps.sharednew.bluetooth.SonyBluetoothConstants
+import com.sasch.cameragps.sharednew.bluetooth.SonyBluetoothConstants.CHARACTERISTIC_READ_UUID
+import com.sasch.cameragps.sharednew.bluetooth.SonyBluetoothConstants.LOCATION_UPDATE_INTERVAL_MS
+import com.sasch.cameragps.sharednew.bluetooth.SonyBluetoothConstants.locationTransmissionNotificationId
+import com.sasch.cameragps.sharednew.database.LogDatabase
+import com.sasch.cameragps.sharednew.database.devices.CameraDevice
+import com.sasch.cameragps.sharednew.database.devices.CameraDeviceDAO
+import com.sasch.cameragps.sharednew.database.getDatabaseBuilder
+import com.sasch.cameragps.sharednew.ui.settings.LocationProvider
 import com.saschl.cameragps.R
-import com.saschl.cameragps.database.LogDatabase
-import com.saschl.cameragps.database.devices.CameraDevice
-import com.saschl.cameragps.database.devices.CameraDeviceDAO
 import com.saschl.cameragps.notification.NotificationsHelper
-import com.saschl.cameragps.service.SonyBluetoothConstants.CHARACTERISTIC_READ_UUID
-import com.saschl.cameragps.service.SonyBluetoothConstants.locationTransmissionNotificationId
 import com.saschl.cameragps.utils.PreferencesManager
 import com.saschl.cameragps.utils.SentryInit
 import kotlinx.coroutines.launch
@@ -51,48 +55,6 @@ import timber.log.Timber
 import java.time.ZonedDateTime
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicInteger
-
-/**
- * Constants for Sony camera Bluetooth communication
- */
-object SonyBluetoothConstants {
-    // Service UUID of the sony cameras
-    val SERVICE_UUID: UUID = UUID.fromString("8000dd00-dd00-ffff-ffff-ffffffffffff")
-
-    val CONTROL_SERVICE_UUID: UUID = UUID.fromString("8000CC00-CC00-FFFF-FFFF-FFFFFFFFFFFF")
-
-    // Characteristic for the location services
-    val CHARACTERISTIC_UUID: UUID = UUID.fromString("0000dd11-0000-1000-8000-00805f9b34fb")
-    val CHARACTERISTIC_READ_UUID: UUID = UUID.fromString("0000dd21-0000-1000-8000-00805f9b34fb")
-
-    // needed for some cameras to enable the functionality
-    val CHARACTERISTIC_ENABLE_UNLOCK_GPS_COMMAND: UUID =
-        UUID.fromString("0000dd30-0000-1000-8000-00805f9b34fb")
-    val CHARACTERISTIC_ENABLE_LOCK_GPS_COMMAND: UUID =
-        UUID.fromString("0000dd31-0000-1000-8000-00805f9b34fb")
-
-    val CHARACTERISTIC_LOCATION_ENABLED_IN_CAMERA: UUID =
-        UUID.fromString("0000dd01-0000-1000-8000-00805f9b34fb")
-
-    val TIME_SYNC_CHARACTERISTIC_UUID: UUID =
-        UUID.fromString("0000cc13-0000-1000-8000-00805f9b34fb")
-
-    const val ACTION_REQUEST_SHUTDOWN = "com.saschl.cameragps.ACTION_REQUEST_SHUTDOWN"
-
-    // GPS enable command bytes
-    val GPS_ENABLE_COMMAND = byteArrayOf(0x01)
-
-    // Location update interval
-    const val LOCATION_UPDATE_INTERVAL_MS = 10000L
-
-    // Accuracy threshold for location updates
-    const val ACCURACY_THRESHOLD_METERS = 200.0
-
-    // Time threshold for old location updates (5 minutes)
-    const val OLD_LOCATION_THRESHOLD_MS = 1000 * 60 * 5
-
-    const val locationTransmissionNotificationId = 404
-}
 
 
 /**
@@ -114,6 +76,7 @@ class LocationSenderService : LifecycleService() {
     private var fallbackLocationRunnable: Runnable? = null
 
     private var locationResult: Location? = null
+    private var hasSessionLocation: Boolean = false
 
     private lateinit var deviceDao: CameraDeviceDAO
 
@@ -148,6 +111,26 @@ class LocationSenderService : LifecycleService() {
 
     //data class CommandData(val intent: Intent?, val startId: Int)
 
+    private fun resetLocationIfTooOld() {
+        // Once we received a live fix during this session, keep using it even if no
+        // newer updates arrive while the user is stationary.
+        if (hasSessionLocation) return
+
+        val currentLocation = locationResult ?: return
+        if (isLocationTooOld(currentLocation)) {
+            Timber.e("Last known location is older than 5 minutes, will try to get a fresh location before transmitting")
+            locationResult = null
+        }
+    }
+
+    private fun isLocationTooOld(location: Location): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            location.elapsedRealtimeAgeMillis > SonyBluetoothConstants.OLD_LOCATION_THRESHOLD_MS
+        } else {
+            (System.currentTimeMillis() - location.time) > SonyBluetoothConstants.OLD_LOCATION_THRESHOLD_MS
+        }
+    }
+
     @RequiresPermission(allOf = [Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION])
     private fun startLocationTransmission() {
         if (!hasLocationPermissions()) {
@@ -158,7 +141,9 @@ class LocationSenderService : LifecycleService() {
             Timber.e("No location providers enabled, cannot start location transmission")
             return
         }
+
         if (!isLocationTransmitting) {
+            resetLocationIfTooOld()
             Timber.i("Starting location transmission")
             if (locationResult != null) {
                 Timber.i("Sending last known location to all active connections")
@@ -198,10 +183,14 @@ class LocationSenderService : LifecycleService() {
 
         fusedLocationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null).addOnSuccessListener { location ->
             if (location != null) {
-                locationResult = location
-                Timber.d("Sending initial location to all active connections")
-                cameraConnectionManager.getActiveConnections().forEach { device ->
-                    sendData(device.gatt, device.writeCharacteristic, device.locationDataConfig)
+                if (isLocationTooOld(location)) {
+                    Timber.w("Ignoring stale initial location from Play Services")
+                } else {
+                    locationResult = location
+                    Timber.d("Sending initial location to all active connections")
+                    cameraConnectionManager.getActiveConnections().forEach { device ->
+                        sendData(device.gatt, device.writeCharacteristic, device.locationDataConfig)
+                    }
                 }
             }
         }.addOnFailureListener { e ->
@@ -210,9 +199,11 @@ class LocationSenderService : LifecycleService() {
 
         val locationRequest = LocationRequest.Builder(
             Priority.PRIORITY_HIGH_ACCURACY,
-            SonyBluetoothConstants.LOCATION_UPDATE_INTERVAL_MS,
+            LOCATION_UPDATE_INTERVAL_MS,
         )
             .setWaitForAccurateLocation(false)
+            .setMinUpdateDistanceMeters(10f)
+            //.setMaxUpdateDelayMillis(60000)
             .build()
 
         val locationSettings = LocationSettingsRequest.Builder().addLocationRequest(locationRequest)
@@ -248,10 +239,14 @@ class LocationSenderService : LifecycleService() {
             ?: locManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
 
         if (lastKnownLocation != null) {
-            locationResult = lastKnownLocation
-            Timber.d("Sending initial location from fallback provider to all active connections")
-            cameraConnectionManager.getActiveConnections().forEach { device ->
-                sendData(device.gatt, device.writeCharacteristic, device.locationDataConfig)
+            if (isLocationTooOld(lastKnownLocation)) {
+                Timber.w("Ignoring stale initial location from fallback provider")
+            } else {
+                locationResult = lastKnownLocation
+                Timber.d("Sending initial location from fallback provider to all active connections")
+                cameraConnectionManager.getActiveConnections().forEach { device ->
+                    sendData(device.gatt, device.writeCharacteristic, device.locationDataConfig)
+                }
             }
         }
 
@@ -260,6 +255,7 @@ class LocationSenderService : LifecycleService() {
             override fun onLocationChanged(location: Location) {
                 Timber.d("Got a new location from fallback provider")
                 if (shouldUpdateLocation(location)) {
+                    hasSessionLocation = true
                     locationResult = location
                     /* Timber.d("Will update cameras with new location")
                      cameraConnectionManager.getActiveConnections().forEach {
@@ -286,8 +282,8 @@ class LocationSenderService : LifecycleService() {
             if (locManager.isProviderEnabled(LocationManager.FUSED_PROVIDER)) {
                 locManager.requestLocationUpdates(
                     LocationManager.FUSED_PROVIDER,
-                    SonyBluetoothConstants.LOCATION_UPDATE_INTERVAL_MS,
-                    0f,
+                    LOCATION_UPDATE_INTERVAL_MS,
+                    10f,
                     listener,
                     Looper.getMainLooper()
                 )
@@ -346,8 +342,7 @@ class LocationSenderService : LifecycleService() {
                         Timber.w("Periodic: No location available to send")
                     }
 
-                    // Schedule next run
-                    handler.postDelayed(this, SonyBluetoothConstants.LOCATION_UPDATE_INTERVAL_MS)
+                    handler.postDelayed(this, LOCATION_UPDATE_INTERVAL_MS)
                 }
             }
         }
@@ -356,8 +351,8 @@ class LocationSenderService : LifecycleService() {
         fallbackLocationRunnable = runnable
 
         // Start periodic updates
-        handler.postDelayed(runnable, SonyBluetoothConstants.LOCATION_UPDATE_INTERVAL_MS)
-        Timber.i("Started periodic location transmission every ${SonyBluetoothConstants.LOCATION_UPDATE_INTERVAL_MS}ms")
+        handler.postDelayed(runnable, LOCATION_UPDATE_INTERVAL_MS)
+        Timber.d("Started periodic location transmission every ${LOCATION_UPDATE_INTERVAL_MS}ms")
     }
 
     private fun stopFallbackPeriodicTransmission() {
@@ -443,7 +438,12 @@ class LocationSenderService : LifecycleService() {
         }
 
         // TODO, if a camera is still on and connected it will not shutdown the service, maybe we should disconnect the camera in that case and shut down if no active connections remain?
-         cameraConnectionManager.pauseDevice(address)
+
+
+        // sometimes false "disappeared" events appear, so keep the device active if it was always on
+        if (!deviceDao.isDeviceAlwaysOnEnabled(address)) {
+            cameraConnectionManager.pauseDevice(address)
+        }
         if (cameraConnectionManager.getActiveCameras().isEmpty() && deviceDao.getAlwaysOnEnabledDeviceCount() == 0) {
             Timber.d("No connected or always on cameras remaining, shutting down service")
             requestShutdown(startId)
@@ -560,6 +560,7 @@ class LocationSenderService : LifecycleService() {
         }
         stopFallbackPeriodicTransmission()
         isLocationTransmitting = false
+        hasSessionLocation = false
 
         cameraConnectionManager.disconnectAll()
         Timber.i("Destroyed service")
@@ -568,29 +569,23 @@ class LocationSenderService : LifecycleService() {
     @SuppressLint("MissingPermission")
     override fun onCreate() {
         super.onCreate()
-        cameraConnectionManager
+        NotificationsHelper.createNotificationChannel(this)
+
+        deviceDao = LogDatabase.getRoomDatabase(
+            getDatabaseBuilder(this)
+        ).cameraDeviceDao()
 
         if(!startAsForegroundService()) {
             return
         }
 
-
-        deviceDao = LogDatabase.getDatabase(this).cameraDeviceDao()
         initializeLogging()
         initializeLocationServices()
-
-
-        /*lifecycleScope.launch {
-            for (command in commandChannel) {
-                handleStartCommand(command.intent, command.startId)
-                Timber.i("processed start command ${command.startId}")
-            }
-        }*/
     }
 
     private fun initializeLocationServices() {
         val provider = PreferencesManager.getLocationProvider(this)
-        usePlayServices = provider == PreferencesManager.LocationProvider.PLAY_SERVICES
+        usePlayServices = provider == LocationProvider.PLAY_SERVICES
         locationCallback = LocationUpdateHandler()
 
         if (usePlayServices) {
@@ -627,11 +622,12 @@ class LocationSenderService : LifecycleService() {
         @SuppressLint("MissingPermission")
         override fun onLocationResult(fetchedLocation: LocationResult) {
             super.onLocationResult(fetchedLocation)
-            Timber.d("Got a new location, is ${fetchedLocation.lastLocation ?: "empty"}")
+            Timber.d("Got a new location")
 
             val lastLocation = fetchedLocation.lastLocation ?: return
 
             if (shouldUpdateLocation(lastLocation)) {
+                hasSessionLocation = true
                 locationResult = lastLocation
             }
         }
@@ -641,8 +637,6 @@ class LocationSenderService : LifecycleService() {
 
         // create the notification channel
         // TODO no need to create every time
-        NotificationsHelper.createNotificationChannel(this)
-
         try {
             // promote service to foreground service
             ServiceCompat.startForeground(
@@ -688,6 +682,7 @@ class LocationSenderService : LifecycleService() {
             }
             stopFallbackPeriodicTransmission()
             isLocationTransmitting = false
+            hasSessionLocation = false
         } else {
             Timber.d("Active cameras remaining, updating notification")
             val notification = NotificationsHelper.buildNotification(
@@ -712,7 +707,8 @@ class LocationSenderService : LifecycleService() {
         NotificationsHelper.showNotification(this, locationTransmissionNotificationId, notification)
 
         // value from official Sony app,  might be unused on Android >= 14
-        gatt.requestMtu(158)
+        //gatt.requestMtu(158)
+        gatt.discoverServices()
     }
 
 
@@ -743,11 +739,11 @@ class LocationSenderService : LifecycleService() {
             }
         }
 
-        @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
-        override fun onMtuChanged(gatt: BluetoothGatt, mtu: Int, status: Int) {
-            super.onMtuChanged(gatt, mtu, status)
-            gatt.discoverServices()
-        }
+        /*     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
+             override fun onMtuChanged(gatt: BluetoothGatt, mtu: Int, status: Int) {
+                 super.onMtuChanged(gatt, mtu, status)
+                 gatt.discoverServices()
+             }*/
 
         override fun onCharacteristicChanged(
             gatt: BluetoothGatt,
@@ -766,20 +762,18 @@ class LocationSenderService : LifecycleService() {
 
         override fun onServicesDiscovered(gatt: BluetoothGatt, status: Int) {
             super.onServicesDiscovered(gatt, status)
-            val service = gatt.services?.find { it.uuid == SonyBluetoothConstants.SERVICE_UUID }
+            val service =
+                gatt.services?.find { it.uuid == constructBleUUID(SonyBluetoothConstants.SERVICE_UUID) }
 
 
             val writeLocationCharacteristic =
-                service?.getCharacteristic(SonyBluetoothConstants.CHARACTERISTIC_UUID)
+                service?.getCharacteristic(constructBleUUID(SonyBluetoothConstants.CHARACTERISTIC_UUID))
 
             cameraConnectionManager.setWriteCharacteristic(
                 gatt.device.address.uppercase(),
                 writeLocationCharacteristic
             )
-
-           // lifecycleScope.launch {
             handleServicesDiscovered(gatt, service)
-          //  }
         }
 
         @SuppressLint("MissingPermission")
@@ -787,15 +781,8 @@ class LocationSenderService : LifecycleService() {
             gatt: BluetoothGatt,
             service: BluetoothGattService?
         ) {
-            // TODO seems like this can be changed on the fly, so we should read it every time
-            /*            val dstTimeZoneFlag = deviceDao.getTimezoneDstFlag(gatt.device.address.uppercase());
-                        if (dstTimeZoneFlag != TimeZoneDSTState.UNDEFINED) {
-                            locationDataConfig =
-                                locationDataConfig.copy(shouldSendTimeZoneAndDst = TimeZoneDSTState.ENABLED == dstTimeZoneFlag)
-                            enableGpsTransmission(gatt)
-                        } else {*/
             val readCharacteristic =
-                service?.getCharacteristic(CHARACTERISTIC_READ_UUID)
+                service?.getCharacteristic(constructBleUUID(CHARACTERISTIC_READ_UUID))
             if (readCharacteristic != null) {
                 Timber.i("Reading characteristic for timezone and DST support: ${readCharacteristic.uuid}")
                 gatt.readCharacteristic(readCharacteristic)
@@ -804,9 +791,10 @@ class LocationSenderService : LifecycleService() {
 
         @RequiresPermission(allOf = [Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION])
         private fun enableGpsTransmission(gatt: BluetoothGatt) {
-            val service = gatt.services?.find { it.uuid == SonyBluetoothConstants.SERVICE_UUID }
+            val service =
+                gatt.services?.find { it.uuid == constructBleUUID(SonyBluetoothConstants.SERVICE_UUID) }
             val gpsEnableCharacteristic =
-                service?.getCharacteristic(SonyBluetoothConstants.CHARACTERISTIC_ENABLE_UNLOCK_GPS_COMMAND)
+                service?.getCharacteristic(constructBleUUID(SonyBluetoothConstants.CHARACTERISTIC_ENABLE_UNLOCK_GPS_COMMAND))
 
             if (gpsEnableCharacteristic != null) {
                 Timber.i("Enabling GPS characteristic: ${gpsEnableCharacteristic.uuid}")
@@ -830,21 +818,21 @@ class LocationSenderService : LifecycleService() {
             super.onCharacteristicWrite(gatt, writtenCharacteristic, status)
 
             when (writtenCharacteristic?.uuid) {
-                SonyBluetoothConstants.CHARACTERISTIC_ENABLE_UNLOCK_GPS_COMMAND -> {
+                constructBleUUID(SonyBluetoothConstants.CHARACTERISTIC_ENABLE_UNLOCK_GPS_COMMAND) -> {
                     handleGpsEnableResponse(gatt)
                 }
 
-                SonyBluetoothConstants.CHARACTERISTIC_ENABLE_LOCK_GPS_COMMAND -> {
+                constructBleUUID(SonyBluetoothConstants.CHARACTERISTIC_ENABLE_LOCK_GPS_COMMAND) -> {
                     Timber.i("GPS flag enabled on device, will now send time sync data if feature exists, status was $status")
                     sendTimeSyncData(gatt)
                 }
 
-                SonyBluetoothConstants.TIME_SYNC_CHARACTERISTIC_UUID -> {
+                constructBleUUID(SonyBluetoothConstants.TIME_SYNC_CHARACTERISTIC_UUID) -> {
                     Timber.i("Time sync data sent to device, will now start location transmission, status was $status")
                     startLocationTransmission()
                 }
 
-                SonyBluetoothConstants.CHARACTERISTIC_UUID -> {
+                constructBleUUID(SonyBluetoothConstants.CHARACTERISTIC_UUID) -> {
                     Timber.d("Location data sent to device, status was $status")
                     gattErrorCount.set(0)
                 }
@@ -868,9 +856,9 @@ class LocationSenderService : LifecycleService() {
         @RequiresPermission(allOf = [Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION])
         private fun sendTimeSyncData(gatt: BluetoothGatt) {
             val service =
-                gatt.services?.find { it.uuid == SonyBluetoothConstants.CONTROL_SERVICE_UUID }
+                gatt.services?.find { it.uuid == constructBleUUID(SonyBluetoothConstants.CONTROL_SERVICE_UUID) }
             val timeSyncCharacteristic =
-                service?.getCharacteristic(SonyBluetoothConstants.TIME_SYNC_CHARACTERISTIC_UUID)
+                service?.getCharacteristic(constructBleUUID(SonyBluetoothConstants.TIME_SYNC_CHARACTERISTIC_UUID))
 
             if (timeSyncCharacteristic == null) {
                 Timber.i("Time sync characteristic not found, starting location transmission directly")
@@ -899,7 +887,7 @@ class LocationSenderService : LifecycleService() {
             // The GPS command has been unlocked, now lock it for us
             val lockCharacteristic = BluetoothGattUtils.findCharacteristic(
                 gatt,
-                SonyBluetoothConstants.CHARACTERISTIC_ENABLE_LOCK_GPS_COMMAND
+                constructBleUUID(SonyBluetoothConstants.CHARACTERISTIC_ENABLE_LOCK_GPS_COMMAND)
             )
 
             lockCharacteristic?.let {
@@ -942,24 +930,7 @@ class LocationSenderService : LifecycleService() {
             value: ByteArray,
             gatt: BluetoothGatt,
             characteristic: BluetoothGattCharacteristic
-        ) {/*
-            val service = gatt.services?.find { it.uuid == SonyBluetoothConstants.SERVICE_UUID }
-            val locationEnabledCharacteristic =
-                service?.getCharacteristic(CHARACTERISTIC_LOCATION_ENABLED_IN_CAMERA)
-
-            if (locationEnabledCharacteristic != null && characteristic.uuid.equals(CHARACTERISTIC_READ_UUID)) {
-
-                val locEnabled = gatt.readCharacteristic(locationEnabledCharacteristic)
-
-                Timber.i("Read request for location enabled characteristic: ${locEnabled}")
-                if (locEnabled) {
-                    return
-                }
-
-
-            } else if (characteristic.uuid.equals(CHARACTERISTIC_LOCATION_ENABLED_IN_CAMERA)) {
-                Timber.w("Received characteristic read from camera (location status): ${characteristic.uuid}, $value")
-            }*/
+        ) {
             cameraConnectionManager.setLocationDataConfig(
                 gatt.device.address.uppercase(),
                 LocationDataConfig(hasTimeZoneDstFlag(value))
@@ -967,7 +938,6 @@ class LocationSenderService : LifecycleService() {
 
             Timber.i("Characteristic read, shouldSendTimeZoneAndDst: ${hasTimeZoneDstFlag(value)}")
             enableGpsTransmission(gatt)
-
         }
     }
 
@@ -985,9 +955,8 @@ class LocationSenderService : LifecycleService() {
         val locationPacket =
             LocationDataConverter.buildLocationDataPacket(locationDataConfig, locationResult!!)
 
-        if (!BluetoothGattUtils.writeCharacteristic(gatt, characteristic, locationPacket)) {
-            //Timber.e("Failed to send location data to camera")
-        }
+        BluetoothGattUtils.writeCharacteristic(gatt, characteristic, locationPacket)
+
     }
 
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
@@ -1021,4 +990,7 @@ class LocationSenderService : LifecycleService() {
         return gpsEnabled || networkEnabled
     }
 
+    private fun constructBleUUID(characteristic: String): UUID {
+        return UUID.fromString(characteristic)
+    }
 }

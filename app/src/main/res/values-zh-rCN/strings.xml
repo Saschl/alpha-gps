@@ -19,9 +19,7 @@
     <string name="view_logs">查看日志</string>
     <string name="camera_gps_permissions">Alpha GPS 权限</string>
     <!-- Permission request strings -->
-    <string name="grant_permissions">授予权限</string>
     <string name="continue_button">继续</string>
-    <string name="dismiss_button">关闭</string>
     <string name="cancel_button">取消</string>
     <string name="app_settings">应用设置</string>
     <!-- Permission rationale strings -->
@@ -55,10 +53,8 @@
     <string name="welcome_feature_connect_description">通过蓝牙将您的索尼相机与手机配对，实现无缝GPS数据传输</string>
     <string name="welcome_feature_gps_sync_title">实时GPS同步</string>
     <string name="welcome_feature_gps_sync_description">自动将手机的GPS坐标同步到相机，以实现准确的地理标记</string>
-    <string name="welcome_feature_device_management_title">设备管理</string>
     <string name="welcome_get_started_button">开始使用</string>
     <string name="welcome_settings_note">您可以稍后从主菜单访问这些设置</string>
-    <string name="welcome_app_icon_description">Alpha GPS 应用图标</string>
     <!-- Settings screen strings -->
     <string name="settings">设置</string>
     <string name="app_controls">应用控制</string>
@@ -66,14 +62,9 @@
     <string name="enable_app_description">允许应用运行并与已连接的相机同步GPS数据</string>
     <string name="language_settings">语言设置</string>
     <string name="language_selection">选择语言</string>
-    <string name="language_system">跟随系统</string>
-    <string name="language_english">English</string>
-    <string name="language_german">Deutsch</string>
-    <string name="language_chinese">简体中文</string>
     <!-- Log settings -->
     <string name="log_settings">日志设置</string>
     <string name="log_level">日志级别</string>
-    <string name="log_level_description">要记录的最低日志级别</string>
     <!-- Sentry Settings -->
     <string name="sentry_settings">错误报告设置</string>
     <string name="enable_sentry">启用错误报告</string>
@@ -108,9 +99,6 @@
     <!-- Help menu item -->
     <string name="help_menu_item">帮助</string>
     <!-- Additional missing strings for device management -->
-    <string name="associated_devices">关联设备</string>
-    <string name="no_devices_title">未连接相机</string>
-    <string name="no_devices_message">点击上方按钮开始配对您的相机设备。</string>
     <!-- Error messages for device association -->
     <string name="the_request_was_canceled">请求已取消</string>
     <string name="internal_error_happened">发生内部错误</string>
@@ -121,23 +109,9 @@
     <string name="enable_device">启用设备</string>
     <string name="enableConstantly">保持活跃（始终开启）</string>
     <!-- Device limitation hint -->
-    <string name="single_device_limitation_hint">目前仅支持一台相机设备。多设备支持将在未来更新中添加。</string>
     <!-- Battery optimization dialog strings -->
-    <string name="battery_optimization_title">电池优化</string>
-    <string name="battery_optimization_message">为确保与相机的可靠GPS同步，请为此应用禁用电池优化。这可防止系统限制后台活动。您也可以选择忽略此对话框，应用可能同样运行良好。这很大程度上取决于设备制造商和Android版本</string>
-    <string name="battery_optimization_proceed">打开设置</string>
-    <string name="battery_optimization_cancel">取消</string>
-    <string name="battery_optimization_dont_show">不再显示</string>
     <!-- Xiaomi-specific battery optimization strings -->
-    <string name="battery_optimization_xiaomi_title">小米电池优化</string>
-    <string name="battery_optimization_xiaomi_message">小米设备需要额外步骤以确保应用在后台可靠工作：\n\n1. 打开电池优化设置\n2. 将此应用设置为不优化\n3. 进入设置 &gt; 应用 &gt; 应用管理\n4. 找到此应用并启用自启动\n5. 将后台应用限制设置为无限制</string>
-    <string name="battery_optimization_xiaomi_autostart">打开自启动设置</string>
-    <string name="battery_optimization_xiaomi_battery">打开电池设置</string>
     <!-- Oppo-specific battery optimization strings -->
-    <string name="battery_optimization_oppo_title">OPPO电池优化</string>
-    <string name="battery_optimization_oppo_message">OPPO设备（包括真我和一加）需要额外步骤以确保应用在后台可靠工作：\n\n1. 打开电池优化设置\n2. 允许此应用在后台运行\n3. 为此应用启用自启动\n4. 为此应用禁用电池优化\n5. 将后台应用管理设置为允许无限制后台活动</string>
-    <string name="battery_optimization_oppo_autostart">打开自启动设置</string>
-    <string name="battery_optimization_oppo_battery">打开电池设置</string>
     <!-- Battery optimization settings screen strings -->
     <string name="battery_optimization_settings_title">电池和后台设置</string>
     <string name="battery_optimization_settings_short"><![CDATA[如果应用在后台无法可靠运行，请调整这些设置。<b>注意：这不会改变应用本身的行为，只是尝试防止被系统终止。仅在遇到问题时使用。</b>]]></string>
@@ -148,13 +122,11 @@
     <string name="battery_optimization_open_autostart">打开自启动设置</string>
     <string name="battery_optimization_open_app_settings">打开应用设置</string>
     <string name="battery_optimization_open_failed">无法打开设置</string>
-    <string name="not_paired_tap_to_pair_again">未配对，请在蓝牙设置中配对设备</string>
     <string name="to_pair_with_your_camera_please">要与相机%1$s配对，请：</string>
     <string name="_1_turn_on_your_camera">\n1. 打开相机</string>
     <string name="_2_go_to_camera_settings_and_enable_bluetooth_pairing_mode">2. 进入相机设置并启用蓝牙/配对模式</string>
     <string name="_3_make_sure_the_camera_is_discoverable">3. 确保相机可被发现</string>
     <string name="once_your_camera_is_ready_tap_continue_to_start_pairing">\n相机准备就绪后，点击继续开始配对。</string>
-    <string name="android_12_requires_keep_alive">运行Android 11及以下版本的设备必须启用保持活跃模式。点击设备并启用该设置</string>
     <string name="always_on_description">在前台运行应用。如果在有激进省电措施的设备上无法可靠建立连接，这会很有用（例如小米等机型）</string>
     <string name="quick_start_feature_title">快速开始</string>
     <string name="quick_start_feature_description">在下一个屏幕上，按照说明配对您的相机。配对完成后，应用将自动连接到您的相机并开始传输位置数据。如果没有立即开始，请尝试重启相机。</string>
@@ -169,12 +141,6 @@
     <string name="app_standby_title">待机</string>
     <string name="app_standby_content">等待相机连接</string>
     <!-- Device management strings -->
-    <string name="device_management">设备管理</string>
-    <string name="no_devices_found">未找到设备</string>
-    <string name="delete_device">删除设备</string>
-    <string name="delete_device_confirmation">确定要删除 %1$s 吗？</string>
-    <string name="delete">删除</string>
-    <string name="always_on_enabled">始终开启已启用</string>
     <string name="enable_auto_start_description">在设备重启后，为已配置始终开启模式的设备自动启动此应用。</string>
     <string name="hint_if_issues_after_switching">注意：由于应用近期的更新，在禁用始终开启模式后如遇到问题，您可能需要执行一次性操作。只需在此设置中将设备停用再重新启用一次即可。这仅在应用更新后需要操作一次，之后的模式切换将立即生效。</string>
     <!-- Pairing dialog strings -->

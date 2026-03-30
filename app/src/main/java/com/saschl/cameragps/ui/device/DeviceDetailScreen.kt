@@ -40,12 +40,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.MutableCreationExtras
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.sasch.cameragps.sharednew.database.LogDatabase
+import com.sasch.cameragps.sharednew.database.getDatabaseBuilder
 import com.saschl.cameragps.R
-import com.saschl.cameragps.database.LogDatabase
 import com.saschl.cameragps.service.AssociatedDeviceCompat
 import com.saschl.cameragps.service.LocationSenderService
-import com.saschl.cameragps.service.SonyBluetoothConstants
-import com.saschl.cameragps.ui.HelpActivity
 import com.saschl.cameragps.ui.pairing.startDevicePresenceObservation
 import kotlinx.coroutines.launch
 import timber.log.Timber
@@ -58,7 +57,8 @@ fun DeviceDetailScreen(
     deviceManager: CompanionDeviceManager,
     onDisassociate: (device: AssociatedDeviceCompat) -> Unit,
     associationId: Int,
-    onClose: () -> Unit
+    onClose: () -> Unit,
+    onHelpClick: () -> Unit = {}
 ) {
 
     val scope = rememberCoroutineScope()
@@ -67,7 +67,7 @@ fun DeviceDetailScreen(
     val extras = MutableCreationExtras().apply {
         set(
             DeviceDetailViewModel.MY_REPOSITORY_KEY,
-            LogDatabase.getDatabase(context).cameraDeviceDao()
+            LogDatabase.getRoomDatabase(getDatabaseBuilder(context)).cameraDeviceDao()
         )
     }
     val viewModel: DeviceDetailViewModel = viewModel(
@@ -103,11 +103,7 @@ fun DeviceDetailScreen(
                 },
                 actions = {
                     IconButton(
-                        onClick = {
-                            context.startActivity(
-                                Intent(context, HelpActivity::class.java)
-                            )
-                        }
+                        onClick = onHelpClick
                     ) {
                         Icon(
                             painter = painterResource(R.drawable.info_24px),
@@ -196,7 +192,8 @@ fun DeviceDetailScreen(
 
                                 val shutdownIntent =
                                     Intent(context, LocationSenderService::class.java).apply {
-                                        action = SonyBluetoothConstants.ACTION_REQUEST_SHUTDOWN
+                                        action =
+                                            com.sasch.cameragps.sharednew.bluetooth.SonyBluetoothConstants.ACTION_REQUEST_SHUTDOWN
                                         putExtra("address", device.address.uppercase())
                                     }
                                 context.startService(shutdownIntent)
