@@ -12,6 +12,7 @@ object SupportedLanguages {
         AppLanguage(tag = "zh-Hans", displayName = "中文"),
         AppLanguage(tag = "es", displayName = "Español"),
         AppLanguage(tag = "ja", displayName = "日本語"),
+        AppLanguage(tag = "id", displayName = "Indonesia"),
     )
 
     fun fromTag(tag: String): AppLanguage? {
