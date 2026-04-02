@@ -139,7 +139,7 @@
 
     <string name="no_devices_title">No cameras connected</string>
     <string name="no_devices_message">Tap the button above to start pairing your camera device.</string>
-    <string name="tap_to_connect">Tap to connect</string>
+    <string name="tap_to_connect">Disconnected</string>
     <string name="connected">Connected</string>
     <string name="transmission_active">Transmission active</string>
     <string name="transmission_inactive">Transmission inactive</string>

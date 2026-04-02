@@ -133,8 +133,6 @@ internal fun CameraGpsIosApp() {
                         scope.launch {
                             if (device.isConnected) {
                                 bluetoothController.disconnect(device.identifier)
-                            } else {
-                                bluetoothController.connect(device.identifier)
                             }
                         }
                     },
