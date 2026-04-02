@@ -1,6 +1,6 @@
 <resources>
     <string name="app_name" translatable="false">AlphaGPS</string>
-    <string name="app_name_ui" translatable="false">Geotagging for Sony Alpha</string>
+    <string name="app_name_ui" translatable="false">Alpha GPS Geotagging</string>
     <string name="header_device_list">My Cameras</string>
     <string name="foreground_service_notification">Transmitting location data to %d cameras</string>
     <string name="scan_for_devices">Click to find &amp; associate your camera</string>
@@ -51,9 +51,16 @@
     <string name="scanning_paused_message">Turn on automatic scanning in Settings to look for nearby cameras.</string>
     <string name="scanning_for_cameras">Scanning for cameras...</string>
     <string name="ios_no_devices_message">Make sure your camera is powered on and in Bluetooth pairing or discovery mode.</string>
+    <string name="ios_troubleshooting_need_help">Need help?</string>
+    <string name="ios_troubleshooting_title">Having trouble connecting?</string>
+    <string name="ios_troubleshooting_step_1_bluetooth">1. Turn on Bluetooth on both your iPhone and camera.</string>
+    <string name="ios_troubleshooting_step_2_pairing_mode">2. If the camera is not paired yet, enable pairing mode on the camera before tapping connect.</string>
+    <string name="ios_troubleshooting_step_3_location_linking">3. On the camera, open Network/Smartphone settings and enable location information link so GPS data can be received from the phone.</string>
+    <string name="ios_troubleshooting_step_4_location_permission">4. Make sure Location Services are enabled on iPhone and this app is allowed to access location.</string>
+    <string name="ios_troubleshooting_got_it">Got it</string>
 
     <!-- Welcome screen strings -->
-    <string name="welcome_title">Welcome to Geotagging for Sony Alpha</string>
+    <string name="welcome_title">Welcome to Alpha GPS Geotagging</string>
     <string name="welcome_subtitle">Real-time GPS coordinates for your camera via Bluetooth</string>
     <string name="welcome_feature_connect_title">Connect Your Camera</string>
     <string name="welcome_feature_connect_description">Pair your Sony camera with your phone via Bluetooth for seamless GPS data transfer</string>

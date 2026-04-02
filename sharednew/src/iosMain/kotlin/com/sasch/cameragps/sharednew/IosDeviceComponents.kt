@@ -51,6 +51,13 @@ import cameragps.sharednew.generated.resources.enable_pairing_mode_continue
 import cameragps.sharednew.generated.resources.enable_pairing_mode_message
 import cameragps.sharednew.generated.resources.enable_pairing_mode_title
 import cameragps.sharednew.generated.resources.ios_no_devices_message
+import cameragps.sharednew.generated.resources.ios_troubleshooting_got_it
+import cameragps.sharednew.generated.resources.ios_troubleshooting_need_help
+import cameragps.sharednew.generated.resources.ios_troubleshooting_step_1_bluetooth
+import cameragps.sharednew.generated.resources.ios_troubleshooting_step_2_pairing_mode
+import cameragps.sharednew.generated.resources.ios_troubleshooting_step_3_location_linking
+import cameragps.sharednew.generated.resources.ios_troubleshooting_step_4_location_permission
+import cameragps.sharednew.generated.resources.ios_troubleshooting_title
 import cameragps.sharednew.generated.resources.nearby_cameras
 import cameragps.sharednew.generated.resources.saved_devices
 import cameragps.sharednew.generated.resources.scanning_for_cameras
@@ -75,6 +82,7 @@ internal fun DeviceListContent(
 ) {
     var deviceToDelete by remember { mutableStateOf<BluetoothDeviceInfo?>(null) }
     var deviceToPair by remember { mutableStateOf<BluetoothDeviceInfo?>(null) }
+    var showTroubleshootingDialog by remember { mutableStateOf(false) }
 
     // Pairing mode hint dialog for first-time connections
     deviceToPair?.let { device ->
@@ -132,92 +140,125 @@ internal fun DeviceListContent(
         )
     }
 
-    when {
-        !isAppEnabled -> {
-            EmptyStateCard(
-                title = stringResource(Res.string.app_disabled_title),
-                message = stringResource(Res.string.app_disabled_message),
-                actionLabel = stringResource(Res.string.app_settings),
-                onAction = onOpenSettings,
+    showTroubleshootingDialog.let { isVisible ->
+        if (isVisible) {
+            AlertDialog(
+                onDismissRequest = { showTroubleshootingDialog = false },
+                title = { Text(stringResource(Res.string.ios_troubleshooting_title)) },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(stringResource(Res.string.ios_troubleshooting_step_1_bluetooth))
+                        Text(stringResource(Res.string.ios_troubleshooting_step_2_pairing_mode))
+                        Text(stringResource(Res.string.ios_troubleshooting_step_3_location_linking))
+                        Text(stringResource(Res.string.ios_troubleshooting_step_4_location_permission))
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { showTroubleshootingDialog = false }) {
+                        Text(stringResource(Res.string.ios_troubleshooting_got_it))
+                    }
+                },
             )
         }
+    }
 
-        devices.isEmpty() && !isScanning -> {
-            EmptyStateCard(
-                title = stringResource(Res.string.scanning_paused_title),
-                message = stringResource(Res.string.scanning_paused_message),
-                actionLabel = stringResource(Res.string.app_settings),
-                onAction = onOpenSettings,
-            )
-        }
+    Box(modifier = Modifier.fillMaxSize()) {
+        when {
+            !isAppEnabled -> {
+                EmptyStateCard(
+                    title = stringResource(Res.string.app_disabled_title),
+                    message = stringResource(Res.string.app_disabled_message),
+                    actionLabel = stringResource(Res.string.app_settings),
+                    onAction = onOpenSettings,
+                )
+            }
 
-        devices.isEmpty() -> {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center,
-            ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.padding(horizontal = 16.dp),
+            devices.isEmpty() && !isScanning -> {
+                EmptyStateCard(
+                    title = stringResource(Res.string.scanning_paused_title),
+                    message = stringResource(Res.string.scanning_paused_message),
+                    actionLabel = stringResource(Res.string.app_settings),
+                    onAction = onOpenSettings,
+                )
+            }
+
+            devices.isEmpty() -> {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center,
                 ) {
-                    CircularProgressIndicator()
-                    Text(
-                        text = stringResource(Res.string.scanning_for_cameras),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Text(
-                        text = stringResource(Res.string.ios_no_devices_message),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                    ) {
+                        CircularProgressIndicator()
+                        Text(
+                            text = stringResource(Res.string.scanning_for_cameras),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Text(
+                            text = stringResource(Res.string.ios_no_devices_message),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+
+            else -> {
+                val savedDevices = devices.filter { it.isSaved }
+                val nearbyDevices = devices.filter { !it.isSaved }
+
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = PaddingValues(top = 16.dp, bottom = 84.dp),
+                ) {
+                    if (savedDevices.isNotEmpty()) {
+                        item(key = "header_saved") {
+                            SectionHeader(title = stringResource(Res.string.saved_devices))
+                        }
+                        items(savedDevices, key = { it.identifier }) { device ->
+                            SwipeToDeleteDeviceCard(
+                                device = device,
+                                onConnect = { onConnect(device) },
+                                onDeleteRequest = { deviceToDelete = device },
+                            )
+                        }
+                    }
+
+                    if (savedDevices.isNotEmpty() && nearbyDevices.isNotEmpty()) {
+                        item(key = "divider") {
+                            HorizontalDivider(
+                                modifier = Modifier.padding(vertical = 8.dp),
+                                color = MaterialTheme.colorScheme.outlineVariant,
+                            )
+                        }
+                    }
+
+                    if (nearbyDevices.isNotEmpty()) {
+                        item(key = "header_nearby") {
+                            SectionHeader(title = stringResource(Res.string.nearby_cameras))
+                        }
+                        items(nearbyDevices, key = { it.identifier }) { device ->
+                            DeviceCard(device = device, onConnect = { deviceToPair = device })
+                        }
+                    }
                 }
             }
         }
 
-        else -> {
-            val savedDevices = devices.filter { it.isSaved }
-            val nearbyDevices = devices.filter { !it.isSaved }
-
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(vertical = 16.dp),
-            ) {
-                if (savedDevices.isNotEmpty()) {
-                    item(key = "header_saved") {
-                        SectionHeader(title = stringResource(Res.string.saved_devices))
-                    }
-                    items(savedDevices, key = { it.identifier }) { device ->
-                        SwipeToDeleteDeviceCard(
-                            device = device,
-                            onConnect = { onConnect(device) },
-                            onDeleteRequest = { deviceToDelete = device },
-                        )
-                    }
-                }
-
-                if (savedDevices.isNotEmpty() && nearbyDevices.isNotEmpty()) {
-                    item(key = "divider") {
-                        HorizontalDivider(
-                            modifier = Modifier.padding(vertical = 8.dp),
-                            color = MaterialTheme.colorScheme.outlineVariant,
-                        )
-                    }
-                }
-
-                if (nearbyDevices.isNotEmpty()) {
-                    item(key = "header_nearby") {
-                        SectionHeader(title = stringResource(Res.string.nearby_cameras))
-                    }
-                    items(nearbyDevices, key = { it.identifier }) { device ->
-                        DeviceCard(device = device, onConnect = { deviceToPair = device })
-                    }
-                }
-            }
+        TextButton(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            onClick = { showTroubleshootingDialog = true },
+        ) {
+            Text(stringResource(Res.string.ios_troubleshooting_need_help))
         }
     }
 }
@@ -373,5 +414,3 @@ private fun DeviceCard(
         }
     }
 }
-
-
