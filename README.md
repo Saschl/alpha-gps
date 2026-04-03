@@ -13,16 +13,13 @@ It makes use of the companion device manager APIs of Android which *should* prov
 
 ## How to install?
 
-*A first version of the iOS App can be tested via TestFlight! You can join via the following link:* https://testflight.apple.com/join/TsEFE2Gw
 
-Happy for any feedback!
+<a href="https://apps.apple.com/us/app/alpha-gps-geotagging/id6760982303"><img width="200" alt="Download_on_the_App_Store_Badge_US" src="Download_on_the_App_Store_Badge_US-UK_RGB_blk_092917.svg"/></a>
 
-<a href="https://apps.apple.com/us/app/alpha-gps-geotagging/id6760982303"><img width="270" height="80" alt="Download_on_the_App_Store_Badge_US" src=""/></a>
-
-<a href="https://play.google.com/store/apps/details?id=com.saschl.cameragps"><img width="270" height="80" alt="GetItOnGooglePlay_Badge_Web_color_English" src="https://github.com/user-attachments/assets/775cb6fc-a297-4208-9249-43291c52d045" /></a>
+<a href="https://play.google.com/store/apps/details?id=com.saschl.cameragps"><img width="200" alt="GetItOnGooglePlay_Badge_Web_color_English" src="https://github.com/user-attachments/assets/775cb6fc-a297-4208-9249-43291c52d045" /></a>
 
 
-Get the APK from the releases and install it directly on your phone. Or use Obtainium and enter the repo URL for a more seamless experience.
+You can also get the APK for Android from the releases and install it directly on your phone. Or use Obtainium and enter the repo URL for a more seamless experience.
   
 
 ## How can I contribute?
