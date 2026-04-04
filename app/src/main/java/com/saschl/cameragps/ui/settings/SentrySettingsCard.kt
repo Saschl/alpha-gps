@@ -16,17 +16,21 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.saschl.cameragps.R
+import cameragps.sharednew.generated.resources.Res
+import cameragps.sharednew.generated.resources.enable_sentry
+import cameragps.sharednew.generated.resources.enable_sentry_description
+import cameragps.sharednew.generated.resources.sentry_restart_required
+import cameragps.sharednew.generated.resources.sentry_settings
 import com.saschl.cameragps.utils.PreferencesManager
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 internal fun SentrySettingsCard() {
     val context = LocalContext.current
 
-    SettingsCard(title = stringResource(R.string.sentry_settings)) {
+    SettingsCard(title = stringResource(Res.string.sentry_settings)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -36,12 +40,12 @@ internal fun SentrySettingsCard() {
                 modifier = Modifier.weight(1f)
             ) {
                 Text(
-                    text = stringResource(R.string.enable_sentry),
+                    text = stringResource(Res.string.enable_sentry),
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Medium
                 )
                 Text(
-                    text = stringResource(R.string.enable_sentry_description),
+                    text = stringResource(Res.string.enable_sentry_description),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -62,7 +66,7 @@ internal fun SentrySettingsCard() {
 
         // Restart hint
         Text(
-            text = stringResource(R.string.sentry_restart_required),
+            text = stringResource(Res.string.sentry_restart_required),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.primary,
             fontWeight = FontWeight.Medium,

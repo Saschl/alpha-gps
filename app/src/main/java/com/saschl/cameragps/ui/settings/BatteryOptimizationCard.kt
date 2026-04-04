@@ -28,7 +28,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -36,19 +35,31 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.core.text.HtmlCompat
+import cameragps.sharednew.generated.resources.Res
+import cameragps.sharednew.generated.resources.battery_optimization_open_app_settings
+import cameragps.sharednew.generated.resources.battery_optimization_open_autostart
+import cameragps.sharednew.generated.resources.battery_optimization_open_failed
+import cameragps.sharednew.generated.resources.battery_optimization_open_settings
+import cameragps.sharednew.generated.resources.battery_optimization_settings_description
+import cameragps.sharednew.generated.resources.battery_optimization_settings_short
+import cameragps.sharednew.generated.resources.battery_optimization_settings_title
+import cameragps.sharednew.generated.resources.learn_more
+import cameragps.sharednew.generated.resources.show_less
 import com.saschl.cameragps.R
 import com.saschl.cameragps.utils.BatteryOptimizationUtil
+import org.jetbrains.compose.resources.stringResource
 import timber.log.Timber
 
 @Composable
 internal fun BatteryOptimizationCard() {
     val context = LocalContext.current
     var isBatteryInfoExpanded by remember { mutableStateOf(false) }
+    val openFailedText = stringResource(Res.string.battery_optimization_open_failed)
 
-    SettingsCard(title = stringResource(R.string.battery_optimization_settings_title)) {
+    SettingsCard(title = stringResource(Res.string.battery_optimization_settings_title)) {
         // Short description always visible (with HTML bold support)
         val shortDescHtml =
-            stringResource(R.string.battery_optimization_settings_short)
+            stringResource(Res.string.battery_optimization_settings_short)
         val shortDescSpanned = remember(shortDescHtml) {
             HtmlCompat.fromHtml(shortDescHtml, HtmlCompat.FROM_HTML_MODE_COMPACT)
         }
@@ -76,8 +87,8 @@ internal fun BatteryOptimizationCard() {
             )
             Text(
                 text = stringResource(
-                    if (isBatteryInfoExpanded) R.string.show_less
-                    else R.string.learn_more
+                    if (isBatteryInfoExpanded) Res.string.show_less
+                    else Res.string.learn_more
                 ),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.primary,
@@ -92,7 +103,7 @@ internal fun BatteryOptimizationCard() {
             exit = shrinkVertically()
         ) {
             Text(
-                text = stringResource(R.string.battery_optimization_settings_description),
+                text = stringResource(Res.string.battery_optimization_settings_description),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 8.dp)
@@ -134,7 +145,7 @@ internal fun BatteryOptimizationCard() {
                         )
                         Toast.makeText(
                             context,
-                            R.string.battery_optimization_open_failed,
+                            openFailedText,
                             Toast.LENGTH_SHORT
                         ).show()
                     }
@@ -143,7 +154,7 @@ internal fun BatteryOptimizationCard() {
             modifier = Modifier.fillMaxWidth()
         ) {
             Text(
-                text = stringResource(R.string.battery_optimization_open_settings),
+                text = stringResource(Res.string.battery_optimization_open_settings),
                 fontWeight = FontWeight.Medium
             )
         }
@@ -186,7 +197,7 @@ internal fun BatteryOptimizationCard() {
                             )
                             Toast.makeText(
                                 context,
-                                R.string.battery_optimization_open_failed,
+                                openFailedText,
                                 Toast.LENGTH_SHORT
                             ).show()
                         }
@@ -195,7 +206,7 @@ internal fun BatteryOptimizationCard() {
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
-                    text = stringResource(R.string.battery_optimization_open_autostart),
+                    text = stringResource(Res.string.battery_optimization_open_autostart),
                     fontWeight = FontWeight.Medium
                 )
             }
@@ -217,7 +228,7 @@ internal fun BatteryOptimizationCard() {
                     Timber.e(e, "Failed to open app details settings")
                     Toast.makeText(
                         context,
-                        R.string.battery_optimization_open_failed,
+                        openFailedText,
                         Toast.LENGTH_SHORT
                     ).show()
                 }
@@ -225,7 +236,7 @@ internal fun BatteryOptimizationCard() {
             modifier = Modifier.fillMaxWidth()
         ) {
             Text(
-                text = stringResource(R.string.battery_optimization_open_app_settings),
+                text = stringResource(Res.string.battery_optimization_open_app_settings),
                 fontWeight = FontWeight.Medium
             )
         }

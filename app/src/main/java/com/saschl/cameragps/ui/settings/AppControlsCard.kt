@@ -20,12 +20,19 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.saschl.cameragps.R
+import cameragps.sharednew.generated.resources.Res
+import cameragps.sharednew.generated.resources.app_controls
+import cameragps.sharednew.generated.resources.enable_app
+import cameragps.sharednew.generated.resources.enable_app_description
+import cameragps.sharednew.generated.resources.enable_auto_start
+import cameragps.sharednew.generated.resources.enable_auto_start_description
+import cameragps.sharednew.generated.resources.reset_welcome
+import cameragps.sharednew.generated.resources.will_show_welcome
 import com.saschl.cameragps.service.LocationSenderService
 import com.saschl.cameragps.utils.PreferencesManager
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 internal fun AppControlsCard(
@@ -33,8 +40,9 @@ internal fun AppControlsCard(
     onAppEnabledChange: (Boolean) -> Unit
 ) {
     val context = LocalContext.current
+    val willShowWelcomeText = stringResource(Res.string.will_show_welcome)
 
-    SettingsCard(title = stringResource(R.string.app_controls)) {
+    SettingsCard(title = stringResource(Res.string.app_controls)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -44,12 +52,12 @@ internal fun AppControlsCard(
                 modifier = Modifier.weight(1f)
             ) {
                 Text(
-                    text = stringResource(R.string.enable_app),
+                    text = stringResource(Res.string.enable_app),
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Medium
                 )
                 Text(
-                    text = stringResource(R.string.enable_app_description),
+                    text = stringResource(Res.string.enable_app_description),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -83,12 +91,12 @@ internal fun AppControlsCard(
                 modifier = Modifier.weight(0.6f),
             ) {
                 Text(
-                    text = stringResource(R.string.enable_auto_start),
+                    text = stringResource(Res.string.enable_auto_start),
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Medium
                 )
                 Text(
-                    text = stringResource(R.string.enable_auto_start_description),
+                    text = stringResource(Res.string.enable_auto_start_description),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -125,7 +133,7 @@ internal fun AppControlsCard(
                 Button(
                     onClick = {
                         val toast = Toast.makeText(
-                            context, R.string.will_show_welcome,
+                            context, willShowWelcomeText,
                             Toast.LENGTH_SHORT
                         )
                         toast.show()
@@ -133,7 +141,7 @@ internal fun AppControlsCard(
                         PreferencesManager.setPermissionsIgnored(context, false)
                     },
                 ) {
-                    Text(text = stringResource(R.string.reset_welcome))
+                    Text(text = stringResource(Res.string.reset_welcome))
                 }
             }
         }

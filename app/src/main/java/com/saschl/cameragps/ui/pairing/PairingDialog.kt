@@ -13,10 +13,26 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.saschl.cameragps.R
+import cameragps.sharednew.generated.resources.Res
+import cameragps.sharednew.generated.resources._1_turn_on_your_camera
+import cameragps.sharednew.generated.resources._2_go_to_camera_settings_and_enable_bluetooth_pairing_mode
+import cameragps.sharednew.generated.resources._3_make_sure_the_camera_is_discoverable
+import cameragps.sharednew.generated.resources.camera_pairing_required_title
+import cameragps.sharednew.generated.resources.cancel
+import cameragps.sharednew.generated.resources.continue_label
+import cameragps.sharednew.generated.resources.done
+import cameragps.sharednew.generated.resources.failed_to_pair_with_device
+import cameragps.sharednew.generated.resources.once_your_camera_is_ready_tap_continue_to_start_pairing
+import cameragps.sharednew.generated.resources.pairing_camera_title
+import cameragps.sharednew.generated.resources.pairing_complete_title
+import cameragps.sharednew.generated.resources.pairing_failed_title
+import cameragps.sharednew.generated.resources.pairing_with_device_please_wait
+import cameragps.sharednew.generated.resources.successfully_paired_with_device
+import cameragps.sharednew.generated.resources.to_pair_with_your_camera_please
+import cameragps.sharednew.generated.resources.try_again
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun PairingConfirmationDialogWithLoading(
@@ -32,10 +48,10 @@ fun PairingConfirmationDialogWithLoading(
         title = {
             Text(
                 text = when {
-                    isPairing -> stringResource(R.string.pairing_camera_title)
-                    pairingResult == PairingResult.SUCCESS -> stringResource(R.string.pairing_complete_title)
-                    pairingResult == PairingResult.FAILED -> stringResource(R.string.pairing_failed_title)
-                    else -> stringResource(R.string.camera_pairing_required_title)
+                    isPairing -> stringResource(Res.string.pairing_camera_title)
+                    pairingResult == PairingResult.SUCCESS -> stringResource(Res.string.pairing_complete_title)
+                    pairingResult == PairingResult.FAILED -> stringResource(Res.string.pairing_failed_title)
+                    else -> stringResource(Res.string.camera_pairing_required_title)
                 },
                 style = MaterialTheme.typography.headlineSmall
             )
@@ -58,7 +74,7 @@ fun PairingConfirmationDialogWithLoading(
                             )
                             Text(
                                 text = stringResource(
-                                    R.string.pairing_with_device_please_wait,
+                                    Res.string.pairing_with_device_please_wait,
                                     deviceName
                                 ),
                                 style = MaterialTheme.typography.bodyMedium,
@@ -70,7 +86,7 @@ fun PairingConfirmationDialogWithLoading(
                         // Show success state
                         Text(
                             text = stringResource(
-                                R.string.successfully_paired_with_device,
+                                Res.string.successfully_paired_with_device,
                                 deviceName
                             ),
                             style = MaterialTheme.typography.bodyMedium,
@@ -82,7 +98,10 @@ fun PairingConfirmationDialogWithLoading(
                     pairingResult == PairingResult.FAILED -> {
                         // Show failure state
                         Text(
-                            text = stringResource(R.string.failed_to_pair_with_device, deviceName),
+                            text = stringResource(
+                                Res.string.failed_to_pair_with_device,
+                                deviceName
+                            ),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.error,
                             modifier = Modifier.fillMaxWidth()
@@ -92,25 +111,25 @@ fun PairingConfirmationDialogWithLoading(
                         // Show initial instructions
                         Text(
                             text = stringResource(
-                                R.string.to_pair_with_your_camera_please,
+                                Res.string.to_pair_with_your_camera_please,
                                 deviceName
                             ),
                             style = MaterialTheme.typography.bodyMedium
                         )
                         Text(
-                            text = stringResource(R.string._1_turn_on_your_camera),
+                            text = stringResource(Res.string._1_turn_on_your_camera),
                             style = MaterialTheme.typography.bodyMedium
                         )
                         Text(
-                            text = stringResource(R.string._2_go_to_camera_settings_and_enable_bluetooth_pairing_mode),
+                            text = stringResource(Res.string._2_go_to_camera_settings_and_enable_bluetooth_pairing_mode),
                             style = MaterialTheme.typography.bodyMedium
                         )
                         Text(
-                            text = stringResource(R.string._3_make_sure_the_camera_is_discoverable),
+                            text = stringResource(Res.string._3_make_sure_the_camera_is_discoverable),
                             style = MaterialTheme.typography.bodyMedium
                         )
                         Text(
-                            text = stringResource(R.string.once_your_camera_is_ready_tap_continue_to_start_pairing),
+                            text = stringResource(Res.string.once_your_camera_is_ready_tap_continue_to_start_pairing),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.primary
                         )
@@ -125,17 +144,17 @@ fun PairingConfirmationDialogWithLoading(
                 }
                 pairingResult == PairingResult.SUCCESS -> {
                     TextButton(onClick = onDismiss) {
-                        Text(stringResource(R.string.done))
+                        Text(stringResource(Res.string.done))
                     }
                 }
                 pairingResult == PairingResult.FAILED -> {
                     TextButton(onClick = onRetry) {
-                        Text(stringResource(R.string.try_again))
+                        Text(stringResource(Res.string.try_again))
                     }
                 }
                 else -> {
                     TextButton(onClick = onConfirm) {
-                        Text(stringResource(R.string.continue_label))
+                        Text(stringResource(Res.string.continue_label))
                     }
                 }
             }
@@ -143,7 +162,7 @@ fun PairingConfirmationDialogWithLoading(
         dismissButton = {
             if (!isPairing && pairingResult != PairingResult.SUCCESS) {
                 TextButton(onClick = onDismiss) {
-                    Text(stringResource(R.string.cancel))
+                    Text(stringResource(Res.string.cancel))
                 }
             }
         }

@@ -25,16 +25,25 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.getSystemService
-import com.saschl.cameragps.R
+import cameragps.sharednew.generated.resources.Res
+import cameragps.sharednew.generated.resources.device_already_associated
+import cameragps.sharednew.generated.resources.device_association_removed_retry
+import cameragps.sharednew.generated.resources.internal_error_happened
+import cameragps.sharednew.generated.resources.no_device_matching_the_given_filter_were_found
+import cameragps.sharednew.generated.resources.scan_for_devices
+import cameragps.sharednew.generated.resources.start
+import cameragps.sharednew.generated.resources.the_request_was_canceled
+import cameragps.sharednew.generated.resources.the_user_explicitly_declined_the_request
+import cameragps.sharednew.generated.resources.unknown_error
 import com.saschl.cameragps.service.AssociatedDeviceCompat
 import com.saschl.cameragps.ui.BluetoothWarningCard
 import com.saschl.cameragps.ui.LocationWarningCard
 import com.saschl.cameragps.ui.pairing.isDevicePaired
 import com.saschl.cameragps.utils.DeviceAssociationUtils
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
 import timber.log.Timber
 
 @SuppressLint("MissingPermission")
@@ -53,6 +62,14 @@ fun ScanForDevicesMenu(
     var errorMessage by remember {
         mutableStateOf("")
     }
+    val requestCanceledText = stringResource(Res.string.the_request_was_canceled)
+    val internalErrorText = stringResource(Res.string.internal_error_happened)
+    val discoveryTimeoutText =
+        stringResource(Res.string.no_device_matching_the_given_filter_were_found)
+    val userDeclinedText = stringResource(Res.string.the_user_explicitly_declined_the_request)
+    val unknownErrorText = stringResource(Res.string.unknown_error)
+    val duplicateAssociatedText = stringResource(Res.string.device_already_associated)
+    val duplicateRemovedText = stringResource(Res.string.device_association_removed_retry)
 
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartIntentSenderForResult(),
@@ -69,12 +86,11 @@ fun ScanForDevicesMenu(
                             Timber.i("Device ${device.name} already associated, skipping pairing")
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                                 deviceManager.disassociate(device.id)
-                                errorMessage = "The device is already associated."
+                                errorMessage = duplicateAssociatedText
                             } else {
                                 @Suppress("DEPRECATION")
                                 deviceManager.disassociate(device.address)
-                                errorMessage =
-                                    "The device was already associated. The association was removed to prevent duplicates. Please try again."
+                                errorMessage = duplicateRemovedText
                             }
                             return@let
                         }
@@ -91,24 +107,23 @@ fun ScanForDevicesMenu(
             }
 
             CompanionDeviceManager.RESULT_CANCELED -> {
-                errorMessage = context.getString(R.string.the_request_was_canceled)
+                errorMessage = requestCanceledText
             }
 
             CompanionDeviceManager.RESULT_INTERNAL_ERROR -> {
-                errorMessage = context.getString(R.string.internal_error_happened)
+                errorMessage = internalErrorText
             }
 
             CompanionDeviceManager.RESULT_DISCOVERY_TIMEOUT -> {
-                errorMessage =
-                    context.getString(R.string.no_device_matching_the_given_filter_were_found)
+                errorMessage = discoveryTimeoutText
             }
 
             CompanionDeviceManager.RESULT_USER_REJECTED -> {
-                errorMessage = context.getString(R.string.the_user_explicitly_declined_the_request)
+                errorMessage = userDeclinedText
             }
 
             else -> {
-                errorMessage = context.getString(R.string.unknown_error)
+                errorMessage = unknownErrorText
             }
         }
     }
@@ -135,7 +150,7 @@ fun ScanForDevicesMenu(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f),
-                text = stringResource(R.string.scan_for_devices),
+                text = stringResource(Res.string.scan_for_devices),
             )
             Button(
                 modifier = Modifier.weight(0.5f),
@@ -148,7 +163,7 @@ fun ScanForDevicesMenu(
                     }
                 },
             ) {
-                Text(text = "Start", maxLines = 1)
+                Text(text = stringResource(Res.string.start), maxLines = 1)
             }
         }
         if (errorMessage.isNotBlank()) {

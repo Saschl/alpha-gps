@@ -30,9 +30,46 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import cameragps.sharednew.generated.resources.Res
+import cameragps.sharednew.generated.resources.app_settings
+import cameragps.sharednew.generated.resources.background_location_access_message
+import cameragps.sharednew.generated.resources.background_location_access_title
+import cameragps.sharednew.generated.resources.background_location_benefit_1
+import cameragps.sharednew.generated.resources.background_location_benefit_2
+import cameragps.sharednew.generated.resources.background_location_benefit_3
+import cameragps.sharednew.generated.resources.background_location_instruction
+import cameragps.sharednew.generated.resources.background_location_required_error
+import cameragps.sharednew.generated.resources.bluetooth_connect_grant_button
+import cameragps.sharednew.generated.resources.bluetooth_connect_permanently_denied
+import cameragps.sharednew.generated.resources.bluetooth_connect_required_desc
+import cameragps.sharednew.generated.resources.bluetooth_connect_required_title
+import cameragps.sharednew.generated.resources.camera_gps_permissions
+import cameragps.sharednew.generated.resources.cancel_button
+import cameragps.sharednew.generated.resources.continue_anyway
+import cameragps.sharednew.generated.resources.continue_button
+import cameragps.sharednew.generated.resources.grant_permissions_button
+import cameragps.sharednew.generated.resources.location_bluetooth_access_message
+import cameragps.sharednew.generated.resources.location_bluetooth_access_title
+import cameragps.sharednew.generated.resources.location_bluetooth_benefit_1
+import cameragps.sharednew.generated.resources.location_bluetooth_benefit_2
+import cameragps.sharednew.generated.resources.location_bluetooth_benefit_3
+import cameragps.sharednew.generated.resources.permission_background_gps
+import cameragps.sharednew.generated.resources.permission_bluetooth
+import cameragps.sharednew.generated.resources.permission_gps
+import cameragps.sharednew.generated.resources.permission_notifications
+import cameragps.sharednew.generated.resources.permissions_required_app_error
+import cameragps.sharednew.generated.resources.step1_desc
+import cameragps.sharednew.generated.resources.step1_grant
+import cameragps.sharednew.generated.resources.step1_granted
+import cameragps.sharednew.generated.resources.step1_missing
+import cameragps.sharednew.generated.resources.step1_title
+import cameragps.sharednew.generated.resources.step2_android10_warning
+import cameragps.sharednew.generated.resources.step2_desc
+import cameragps.sharednew.generated.resources.step2_grant
+import cameragps.sharednew.generated.resources.step2_granted
+import cameragps.sharednew.generated.resources.step2_title
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.MultiplePermissionsState
 import com.google.accompanist.permissions.PermissionState
@@ -40,9 +77,9 @@ import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.google.accompanist.permissions.rememberPermissionState
 import com.google.accompanist.permissions.shouldShowRationale
-import com.saschl.cameragps.R
 import com.saschl.cameragps.utils.PreferencesManager
-
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.stringResource
 
 
 /**
@@ -57,7 +94,6 @@ fun EnhancedLocationPermissionBox(
     onAllPermissionsGranted: @Composable BoxScope.() -> Unit,
 ) {
     val context = LocalContext.current
-    var errorText by remember { mutableStateOf("") }
     var ignorePermissions by remember {
         mutableStateOf(PreferencesManager.isPermissionsIgnored(context))
     }
@@ -81,28 +117,12 @@ fun EnhancedLocationPermissionBox(
 
     val foregroundPermissionState = rememberMultiplePermissionsState(
         permissions = foregroundLocationPermissions
-    ) { map ->
-        val rejectedPermissions = map.filterValues { !it }.keys
-        errorText = if (rejectedPermissions.isNotEmpty()) {
-            context.getString(
-                R.string.permissions_required_app_error,
-                rejectedPermissions.joinToString()
-            )
-        } else {
-            ""
-        }
-    }
+    ) { }
 
     // Background location permission (separate for Android 10+)
     val backgroundLocationPermission = rememberPermissionState(
         permission = Manifest.permission.ACCESS_BACKGROUND_LOCATION
-    ) { granted ->
-        errorText = if (!granted) {
-            context.getString(R.string.background_location_required_error)
-        } else {
-            ""
-        }
-    }
+    ) { }
 
     val allForegroundGranted = foregroundPermissionState.allPermissionsGranted
     val backgroundGranted = backgroundLocationPermission.status.isGranted
@@ -126,7 +146,6 @@ fun EnhancedLocationPermissionBox(
                     foregroundPermissionState = foregroundPermissionState,
                     backgroundLocationPermission = backgroundLocationPermission,
                     allForegroundGranted = allForegroundGranted,
-                    errorText = errorText,
                     onContinueAnyway = {
                         ignorePermissions = true
                         PreferencesManager.setPermissionsIgnored(context, true)
@@ -142,12 +161,27 @@ private fun EnhancedPermissionScreen(
     foregroundPermissionState: MultiplePermissionsState,
     backgroundLocationPermission: PermissionState,
     allForegroundGranted: Boolean,
-    errorText: String,
     onContinueAnyway: () -> Unit,
 ) {
     val context = LocalContext.current
     var showForegroundRationale by remember { mutableStateOf(false) }
     var showBackgroundRationale by remember { mutableStateOf(false) }
+
+    val rejectedPermissionDescriptions = foregroundPermissionState.revokedPermissions
+        .mapNotNull { permission ->
+            getPermissionDescription(permission.permission)?.let { stringResource(it) }
+        }
+    val errorText = when {
+        rejectedPermissionDescriptions.isNotEmpty() -> stringResource(
+            Res.string.permissions_required_app_error,
+            rejectedPermissionDescriptions.joinToString()
+        )
+
+        allForegroundGranted && !backgroundLocationPermission.status.isGranted ->
+            stringResource(Res.string.background_location_required_error)
+
+        else -> ""
+    }
 
     Column(
         modifier = Modifier
@@ -158,7 +192,7 @@ private fun EnhancedPermissionScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
-            text = stringResource(R.string.camera_gps_permissions),
+            text = stringResource(Res.string.camera_gps_permissions),
             style = MaterialTheme.typography.titleLarge,
             modifier = Modifier.padding(bottom = 16.dp),
             color = MaterialTheme.colorScheme.onSurface
@@ -179,12 +213,12 @@ private fun EnhancedPermissionScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = stringResource(R.string.step1_title),
+                    text = stringResource(Res.string.step1_title),
                     style = MaterialTheme.typography.titleMedium,
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = stringResource(R.string.step1_desc),
+                    text = stringResource(Res.string.step1_desc),
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 Spacer(modifier = Modifier.height(12.dp))
@@ -192,12 +226,13 @@ private fun EnhancedPermissionScreen(
                 if (!allForegroundGranted) {
                     val revokedPermissions =
                         foregroundPermissionState.revokedPermissions.map { it ->
-                            stringResource(getPermissionDescription(it.permission))
+                            getPermissionDescription(it.permission)?.let { res -> stringResource(res) }
                         }
+                            .filterNotNull()
                             .joinToString("\n") { " - $it" }
 
                     Text(
-                        text = stringResource(R.string.step1_missing) + "\n" + revokedPermissions,
+                        text = stringResource(Res.string.step1_missing) + "\n" + revokedPermissions,
                         style = MaterialTheme.typography.bodySmall,
                         modifier = Modifier.padding(bottom = 12.dp)
                     )
@@ -211,11 +246,11 @@ private fun EnhancedPermissionScreen(
                             }
                         },
                     ) {
-                        Text(text = stringResource(R.string.step1_grant))
+                        Text(text = stringResource(Res.string.step1_grant))
                     }
                 } else {
                     Text(
-                        text = stringResource(R.string.step1_granted),
+                        text = stringResource(Res.string.step1_granted),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.primary
                     )
@@ -241,19 +276,19 @@ private fun EnhancedPermissionScreen(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = stringResource(R.string.step2_title),
+                        text = stringResource(Res.string.step2_title),
                         style = MaterialTheme.typography.titleMedium,
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = stringResource(R.string.step2_desc),
+                        text = stringResource(Res.string.step2_desc),
                         style = MaterialTheme.typography.bodyMedium,
                     )
                     Spacer(modifier = Modifier.height(12.dp))
 
                     if (!backgroundLocationPermission.status.isGranted) {
                             Text(
-                                text = stringResource(R.string.step2_android10_warning),
+                                text = stringResource(Res.string.step2_android10_warning),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.tertiary,
                                 modifier = Modifier.padding(bottom = 12.dp)
@@ -268,11 +303,11 @@ private fun EnhancedPermissionScreen(
                                 }
                             },
                         ) {
-                            Text(text = stringResource(R.string.step2_grant))
+                            Text(text = stringResource(Res.string.step2_grant))
                         }
                     } else {
                         Text(
-                            text = stringResource(R.string.step2_granted),
+                            text = stringResource(Res.string.step2_granted),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.primary
                         )
@@ -297,10 +332,10 @@ private fun EnhancedPermissionScreen(
                 },
                 modifier = Modifier.padding(top = 12.dp),
             ) {
-                Text(text = stringResource(R.string.app_settings))
+                Text(text = stringResource(Res.string.app_settings))
             }
             TextButton(onClick = onContinueAnyway) {
-                Text(text = stringResource(R.string.continue_anyway))
+                Text(text = stringResource(Res.string.continue_anyway))
             }
         }
     }
@@ -309,13 +344,13 @@ private fun EnhancedPermissionScreen(
     if (showForegroundRationale) {
         AlertDialog(
             onDismissRequest = { showForegroundRationale = false },
-            title = { Text(stringResource(R.string.location_bluetooth_access_title)) },
+            title = { Text(stringResource(Res.string.location_bluetooth_access_title)) },
             text = {
                 Column {
-                    Text(text = stringResource(R.string.location_bluetooth_access_message))
-                    Text(text = stringResource(R.string.location_bluetooth_benefit_1))
-                    Text(text = stringResource(R.string.location_bluetooth_benefit_2))
-                    Text(text = stringResource(R.string.location_bluetooth_benefit_3))
+                    Text(text = stringResource(Res.string.location_bluetooth_access_message))
+                    Text(text = stringResource(Res.string.location_bluetooth_benefit_1))
+                    Text(text = stringResource(Res.string.location_bluetooth_benefit_2))
+                    Text(text = stringResource(Res.string.location_bluetooth_benefit_3))
                 }
             },
             confirmButton = {
@@ -325,12 +360,12 @@ private fun EnhancedPermissionScreen(
                         foregroundPermissionState.launchMultiplePermissionRequest()
                     }
                 ) {
-                    Text(stringResource(R.string.grant_permissions_button))
+                    Text(stringResource(Res.string.grant_permissions_button))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showForegroundRationale = false }) {
-                    Text(stringResource(R.string.cancel_button))
+                    Text(stringResource(Res.string.cancel_button))
                 }
             }
         )
@@ -339,14 +374,17 @@ private fun EnhancedPermissionScreen(
     if (showBackgroundRationale) {
         AlertDialog(
             onDismissRequest = { showBackgroundRationale = false },
-            title = { Text(stringResource(R.string.background_location_access_title)) },
+            title = { Text(stringResource(Res.string.background_location_access_title)) },
             text = {
                 Column {
-                    Text(text = stringResource(R.string.background_location_access_message))
-                    Text(text = stringResource(R.string.background_location_benefit_1))
-                    Text(text = stringResource(R.string.background_location_benefit_2))
-                    Text(text = stringResource(R.string.background_location_benefit_3))
-                    Text(fontWeight = FontWeight.Bold , text = stringResource(R.string.background_location_instruction))
+                    Text(text = stringResource(Res.string.background_location_access_message))
+                    Text(text = stringResource(Res.string.background_location_benefit_1))
+                    Text(text = stringResource(Res.string.background_location_benefit_2))
+                    Text(text = stringResource(Res.string.background_location_benefit_3))
+                    Text(
+                        fontWeight = FontWeight.Bold,
+                        text = stringResource(Res.string.background_location_instruction)
+                    )
                 }
             },
             confirmButton = {
@@ -356,12 +394,12 @@ private fun EnhancedPermissionScreen(
                         backgroundLocationPermission.launchPermissionRequest()
                     }
                 ) {
-                    Text(stringResource(R.string.continue_button))
+                    Text(stringResource(Res.string.continue_button))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showBackgroundRationale = false }) {
-                    Text(stringResource(R.string.cancel_button))
+                    Text(stringResource(Res.string.cancel_button))
                 }
             }
         )
@@ -413,25 +451,25 @@ fun BluetoothConnectPermissionGate(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Text(
-                    text = stringResource(R.string.bluetooth_connect_required_title),
+                    text = stringResource(Res.string.bluetooth_connect_required_title),
                     style = MaterialTheme.typography.titleLarge,
                     modifier = Modifier.padding(bottom = 16.dp),
                     color = MaterialTheme.colorScheme.onSurface,
                 )
                 Text(
-                    text = stringResource(R.string.bluetooth_connect_required_desc),
+                    text = stringResource(Res.string.bluetooth_connect_required_desc),
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.padding(bottom = 24.dp),
                 )
                 Button(
                     onClick = { bluetoothConnectPermission.launchPermissionRequest() },
                 ) {
-                    Text(text = stringResource(R.string.bluetooth_connect_grant_button))
+                    Text(text = stringResource(Res.string.bluetooth_connect_grant_button))
                 }
                 // Permanently denied – show explanation and offer opening app settings
                 if (!bluetoothConnectPermission.status.shouldShowRationale) {
                     Text(
-                        text = stringResource(R.string.bluetooth_connect_permanently_denied),
+                        text = stringResource(Res.string.bluetooth_connect_permanently_denied),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.error,
                         modifier = Modifier.padding(top = 16.dp, bottom = 4.dp),
@@ -446,7 +484,7 @@ fun BluetoothConnectPermissionGate(
                         },
                         modifier = Modifier.padding(top = 8.dp),
                     ) {
-                        Text(text = stringResource(R.string.app_settings))
+                        Text(text = stringResource(Res.string.app_settings))
                     }
                 }
 
@@ -458,12 +496,12 @@ fun BluetoothConnectPermissionGate(
 /**
  * Gets a user-friendly description for what the permission is used for
  */
-fun getPermissionDescription(permission: String): Int {
+fun getPermissionDescription(permission: String): StringResource? {
     return when (permission) {
-        Manifest.permission.ACCESS_FINE_LOCATION -> R.string.permission_gps
-        Manifest.permission.ACCESS_BACKGROUND_LOCATION -> R.string.permission_background_gps
-        Manifest.permission.BLUETOOTH_CONNECT -> R.string.permission_bluetooth
-        Manifest.permission.POST_NOTIFICATIONS -> R.string.permission_notifications
-        else -> -1
+        Manifest.permission.ACCESS_FINE_LOCATION -> Res.string.permission_gps
+        Manifest.permission.ACCESS_BACKGROUND_LOCATION -> Res.string.permission_background_gps
+        Manifest.permission.BLUETOOTH_CONNECT -> Res.string.permission_bluetooth
+        Manifest.permission.POST_NOTIFICATIONS -> Res.string.permission_notifications
+        else -> null
     }
 }

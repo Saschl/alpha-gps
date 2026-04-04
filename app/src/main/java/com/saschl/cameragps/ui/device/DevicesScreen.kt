@@ -29,15 +29,23 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import cameragps.sharednew.generated.resources.Res
+import cameragps.sharednew.generated.resources.app_name_ui
+import cameragps.sharednew.generated.resources.app_settings
+import cameragps.sharednew.generated.resources.help_menu_item
+import cameragps.sharednew.generated.resources.permissions_missing_description
+import cameragps.sharednew.generated.resources.permissions_missing_title
+import cameragps.sharednew.generated.resources.settings
+import cameragps.sharednew.generated.resources.view_logs
 import com.sasch.cameragps.sharednew.ui.device.SharedDevicesScreen
 import com.saschl.cameragps.R
 import com.saschl.cameragps.service.AssociatedDeviceCompat
 import com.saschl.cameragps.ui.AssociatedDevicesList
 import com.saschl.cameragps.ui.getPermissionDescription
 import com.saschl.cameragps.ui.pairing.PairingManager
+import org.jetbrains.compose.resources.stringResource
 import timber.log.Timber
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -81,14 +89,14 @@ fun DevicesScreen(
     }
 
     SharedDevicesScreen(
-        title = stringResource(R.string.app_name_ui),
+        title = stringResource(Res.string.app_name_ui),
         topBarActions = {
             IconButton(
                 onClick = onHelpClick
             ) {
                 Icon(
                     painterResource(R.drawable.info_24px),
-                    contentDescription = stringResource(R.string.help_menu_item),
+                    contentDescription = stringResource(Res.string.help_menu_item),
                     tint = MaterialTheme.colorScheme.onSurface
                 )
             }
@@ -97,14 +105,14 @@ fun DevicesScreen(
             ) {
                 Icon(
                     painterResource(R.drawable.baseline_view_list_24),
-                    contentDescription = stringResource(R.string.view_logs),
+                    contentDescription = stringResource(Res.string.view_logs),
                     tint = MaterialTheme.colorScheme.onSurface
                 )
             }
             IconButton(onClick = { onSettingsClick() }) {
                 Icon(
                     painterResource(R.drawable.settings_24px),
-                    contentDescription = "Settings",
+                    contentDescription = stringResource(Res.string.settings),
                     tint = MaterialTheme.colorScheme.onSurface
                 )
             }
@@ -132,16 +140,20 @@ fun DevicesScreen(
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Text(
-                            text = stringResource(R.string.permissions_missing_title),
+                            text = stringResource(Res.string.permissions_missing_title),
                             style = MaterialTheme.typography.titleSmall,
                             color = MaterialTheme.colorScheme.onErrorContainer
                         )
-                        val missingPermissionNames = missingPermissions.joinToString("\n") {
-                            " - " + context.getString(getPermissionDescription(it))
-                        }
+                        val missingPermissionNames = missingPermissions
+                            .mapNotNull { permission ->
+                                getPermissionDescription(permission)?.let { res ->
+                                    " - ${stringResource(res)}"
+                                }
+                            }
+                            .joinToString("\n")
                         Text(
                             text = stringResource(
-                                R.string.permissions_missing_description,
+                                Res.string.permissions_missing_description,
                                 missingPermissionNames
                             ),
                             style = MaterialTheme.typography.bodySmall,
@@ -156,7 +168,7 @@ fun DevicesScreen(
                                 context.startActivity(intent)
                             }
                         ) {
-                            Text(text = stringResource(R.string.app_settings))
+                            Text(text = stringResource(Res.string.app_settings))
                         }
                     }
                 }

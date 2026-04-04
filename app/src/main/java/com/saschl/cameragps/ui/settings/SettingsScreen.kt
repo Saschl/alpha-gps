@@ -16,13 +16,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import cameragps.sharednew.generated.resources.Res
+import cameragps.sharednew.generated.resources.back
+import cameragps.sharednew.generated.resources.settings
 import com.sasch.cameragps.sharednew.ui.settings.SharedSettingsScreen
 import com.saschl.cameragps.R
 import com.saschl.cameragps.ui.ReviewHintDebugPanel
 import com.saschl.cameragps.utils.LanguageManager
 import com.saschl.cameragps.utils.PreferencesManager
+import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -40,13 +43,13 @@ fun SettingsScreen(
     }
 
     SharedSettingsScreen(
-        title = stringResource(R.string.settings),
+        title = stringResource(Res.string.settings),
         onBackClick = onBackClick,
         onTitleClick = { debugPanelCounter++ },
         navigationIcon = {
             Icon(
                 painterResource(R.drawable.arrow_back_24px),
-                contentDescription = stringResource(R.string.back)
+                contentDescription = stringResource(Res.string.back)
             )
         }
     ) { paddingValues ->

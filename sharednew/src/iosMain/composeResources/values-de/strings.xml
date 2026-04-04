@@ -1,0 +1,17 @@
+<resources>
+    <string name="ios_no_devices_message">Stelle sicher, dass deine Kamera eingeschaltet ist und sich im Bluetooth-Kopplungs- oder Erkennungsmodus befindet.</string>
+    <string name="ios_troubleshooting_need_help">Brauchst du Hilfe?</string>
+    <string name="ios_troubleshooting_title">Probleme beim Verbinden?</string>
+    <string name="ios_troubleshooting_step_1_bluetooth">1. Aktiviere Bluetooth sowohl auf deinem iPhone als auch auf der Kamera.</string>
+    <string name="ios_troubleshooting_step_2_pairing_mode">2. Falls die Kamera noch nicht gekoppelt ist, aktiviere den Kopplungsmodus an der Kamera, bevor du auf "Verbinden" tippst.</string>
+    <string name="ios_troubleshooting_step_3_location_linking">3. Oeffne an der Kamera die Netzwerk-/Smartphone-Einstellungen und aktiviere die Verknuepfung der Standortinformationen, damit GPS-Daten vom Telefon empfangen werden koennen.</string>
+    <string name="ios_troubleshooting_step_4_location_permission">4. Stelle sicher, dass die Ortungsdienste auf dem iPhone aktiviert sind und diese App Standortzugriff hat.</string>
+    <string name="ios_troubleshooting_got_it">Verstanden</string>
+    <string name="further_help">Funktioniert es immer noch nicht? Hier tippen</string>
+
+    <!-- Pre-connect pairing mode hint dialog (iOS) -->
+    <string name="enable_pairing_mode_title">Kopplungsmodus aktivieren</string>
+    <string name="enable_pairing_mode_message">Wenn du diese Kamera zum ersten Mal mit deinem Telefon verbindest, aktiviere bitte den Bluetooth-Kopplungsmodus in den Kameraeinstellungen, bevor du fortfaehrst. Wenn das nicht der Fall ist, kannst du einfach fortfahren.</string>
+    <string name="enable_pairing_mode_continue">Weiter</string>
+</resources>
+

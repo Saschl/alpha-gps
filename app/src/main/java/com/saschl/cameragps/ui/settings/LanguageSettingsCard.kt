@@ -23,13 +23,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.os.LocaleListCompat
+import cameragps.sharednew.generated.resources.Res
+import cameragps.sharednew.generated.resources.cancel_button
+import cameragps.sharednew.generated.resources.language_selection
+import cameragps.sharednew.generated.resources.language_settings
+import cameragps.sharednew.generated.resources.language_system
 import com.sasch.cameragps.sharednew.language.AppLanguage
-import com.saschl.cameragps.R
 import com.saschl.cameragps.utils.LanguageManager
+import org.jetbrains.compose.resources.stringResource
 import java.util.Locale
 
 @Composable
@@ -38,8 +42,9 @@ internal fun LanguageSettingsCard(
     onLanguageSelected: (AppLanguage) -> Unit
 ) {
     var showLanguageDialog by remember { mutableStateOf(false) }
+    val systemLabel = stringResource(Res.string.language_system)
 
-    SettingsCard(title = stringResource(R.string.language_settings)) {
+    SettingsCard(title = stringResource(Res.string.language_settings)) {
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
@@ -58,13 +63,13 @@ internal fun LanguageSettingsCard(
                     modifier = Modifier.weight(1f)
                 ) {
                     Text(
-                        text = stringResource(R.string.language_selection),
+                        text = stringResource(Res.string.language_selection),
                         style = MaterialTheme.typography.bodyLarge,
                         fontWeight = FontWeight.Medium
                     )
                     Text(
                         text = currentLanguage?.displayName
-                            ?: "System Default (${Locale.getDefault().displayName})",
+                            ?: "$systemLabel (${Locale.getDefault().displayName})",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -95,11 +100,13 @@ private fun LanguageSelectionDialog(
     onLanguageUnset: () -> Unit,
     onDismiss: () -> Unit
 ) {
+    val systemLabel = stringResource(Res.string.language_system)
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = stringResource(R.string.language_selection),
+                text = stringResource(Res.string.language_selection),
                 style = MaterialTheme.typography.headlineSmall
             )
         },
@@ -118,7 +125,7 @@ private fun LanguageSelectionDialog(
                             onClick = onLanguageUnset
                         )
                         Text(
-                            text = "System Default",
+                            text = systemLabel,
                             modifier = Modifier.padding(start = 8.dp),
                             style = MaterialTheme.typography.bodyLarge
                         )
@@ -147,7 +154,7 @@ private fun LanguageSelectionDialog(
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.cancel_button))
+                Text(stringResource(Res.string.cancel_button))
             }
         }
     )

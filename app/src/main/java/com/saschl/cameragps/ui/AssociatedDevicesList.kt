@@ -33,9 +33,11 @@ import androidx.compose.ui.unit.dp
 import cameragps.sharednew.generated.resources.Res
 import cameragps.sharednew.generated.resources.android_12_requires_keep_alive
 import cameragps.sharednew.generated.resources.associated_devices
+import cameragps.sharednew.generated.resources.device_icon
 import cameragps.sharednew.generated.resources.no_devices_message
 import cameragps.sharednew.generated.resources.no_devices_title
 import cameragps.sharednew.generated.resources.not_paired_tap_to_pair_again
+import cameragps.sharednew.generated.resources.show_details
 import com.sasch.cameragps.sharednew.database.LogDatabase
 import com.sasch.cameragps.sharednew.database.getDatabaseBuilder
 import com.sasch.cameragps.sharednew.ui.TransmissionDot
@@ -145,7 +147,7 @@ fun AssociatedDevicesList(
                         ) {
                             Icon(
                                 painterResource(R.drawable.baseline_photo_camera_24),
-                                contentDescription = "Device Icon"
+                                contentDescription = stringResource(Res.string.device_icon)
                             )
                             TransmissionDot(
                                 isRunning = isTransmissionRunning ?: false,
@@ -191,7 +193,7 @@ fun AssociatedDevicesList(
                     ) {
                         Icon(
                             painterResource(R.drawable.keyboard_arrow_right_24px),
-                            contentDescription = "Show details"
+                            contentDescription = stringResource(Res.string.show_details)
                         )
                     }
                 }

@@ -24,12 +24,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.saschl.cameragps.R
+import cameragps.sharednew.generated.resources.Res
+import cameragps.sharednew.generated.resources.cancel_button
+import cameragps.sharednew.generated.resources.log_level
+import cameragps.sharednew.generated.resources.log_settings
 import com.saschl.cameragps.service.FileTree
 import com.saschl.cameragps.utils.PreferencesManager
+import org.jetbrains.compose.resources.stringResource
 import timber.log.Timber
 
 @Composable
@@ -40,7 +43,7 @@ internal fun LogLevelSettingsCard() {
     }
     var showLogLevelDialog by remember { mutableStateOf(false) }
 
-    SettingsCard(title = stringResource(R.string.log_settings)) {
+    SettingsCard(title = stringResource(Res.string.log_settings)) {
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
@@ -57,7 +60,7 @@ internal fun LogLevelSettingsCard() {
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = stringResource(R.string.log_level),
+                        text = stringResource(Res.string.log_level),
                         style = MaterialTheme.typography.bodyLarge,
                         fontWeight = FontWeight.Medium
                     )
@@ -115,7 +118,7 @@ private fun LogLevelSelectionDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = stringResource(R.string.log_level),
+                text = stringResource(Res.string.log_level),
                 style = MaterialTheme.typography.headlineSmall
             )
         },
@@ -144,7 +147,7 @@ private fun LogLevelSelectionDialog(
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.cancel_button))
+                Text(stringResource(Res.string.cancel_button))
             }
         }
     )

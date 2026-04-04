@@ -35,11 +35,20 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.MutableCreationExtras
 import androidx.lifecycle.viewmodel.compose.viewModel
+import cameragps.sharednew.generated.resources.Res
+import cameragps.sharednew.generated.resources.always_on_description
+import cameragps.sharednew.generated.resources.app_name_ui
+import cameragps.sharednew.generated.resources.back
+import cameragps.sharednew.generated.resources.device_name_with_address
+import cameragps.sharednew.generated.resources.enableConstantly
+import cameragps.sharednew.generated.resources.enable_device
+import cameragps.sharednew.generated.resources.help_menu_item
+import cameragps.sharednew.generated.resources.hint_if_issues_after_switching
+import cameragps.sharednew.generated.resources.remove
 import com.sasch.cameragps.sharednew.database.LogDatabase
 import com.sasch.cameragps.sharednew.database.getDatabaseBuilder
 import com.saschl.cameragps.R
@@ -47,6 +56,7 @@ import com.saschl.cameragps.service.AssociatedDeviceCompat
 import com.saschl.cameragps.service.LocationSenderService
 import com.saschl.cameragps.ui.pairing.startDevicePresenceObservation
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
 import timber.log.Timber
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -85,7 +95,7 @@ fun DeviceDetailScreen(
             CenterAlignedTopAppBar(
                 title = {
                     Text(
-                        text = stringResource(R.string.app_name_ui),
+                        text = stringResource(Res.string.app_name_ui),
                         //  style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -97,7 +107,7 @@ fun DeviceDetailScreen(
                     ) {
                         Icon(
                             painter = painterResource(R.drawable.arrow_back_24px),
-                            contentDescription = stringResource(R.string.back)
+                            contentDescription = stringResource(Res.string.back)
                         )
                     }
                 },
@@ -107,7 +117,7 @@ fun DeviceDetailScreen(
                     ) {
                         Icon(
                             painter = painterResource(R.drawable.info_24px),
-                            contentDescription = stringResource(R.string.help_menu_item),
+                            contentDescription = stringResource(Res.string.help_menu_item),
                             tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
@@ -137,7 +147,13 @@ fun DeviceDetailScreen(
                 Column(
                     modifier = Modifier.weight(0.6f)
                 ) {
-                    Text(text = "Name: ${device.name} (${device.address})")
+                    Text(
+                        text = stringResource(
+                            Res.string.device_name_with_address,
+                            device.name,
+                            device.address
+                        )
+                    )
                 }
 
                 Column(
@@ -152,7 +168,7 @@ fun DeviceDetailScreen(
                         ),
                     ) {
                         Text(
-                            text = stringResource(R.string.remove),
+                            text = stringResource(Res.string.remove),
                             color = MaterialTheme.colorScheme.error
                         )
                     }
@@ -171,7 +187,7 @@ fun DeviceDetailScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = stringResource(R.string.enable_device),
+                        text = stringResource(Res.string.enable_device),
                         style = MaterialTheme.typography.bodyLarge
                     )
                     Switch(
@@ -210,7 +226,7 @@ fun DeviceDetailScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = stringResource(R.string.enableConstantly),
+                        text = stringResource(Res.string.enableConstantly),
                         style = MaterialTheme.typography.bodyLarge
                     )
                     Switch(
@@ -229,14 +245,14 @@ fun DeviceDetailScreen(
                 }
 
                 Text(
-                    text = stringResource(R.string.always_on_description),
+                    text = stringResource(Res.string.always_on_description),
                     style = MaterialTheme.typography.bodySmall.copy(fontSize = MaterialTheme.typography.labelSmall.fontSize),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(start = 8.dp, top = 4.dp, bottom = 8.dp),
                     lineHeight = MaterialTheme.typography.labelSmall.lineHeight
                 )
                 Text(
-                    text = stringResource(R.string.hint_if_issues_after_switching),
+                    text = stringResource(Res.string.hint_if_issues_after_switching),
                     style = MaterialTheme.typography.bodySmall.copy(fontSize = MaterialTheme.typography.labelSmall.fontSize),
                     color = MaterialTheme.colorScheme.error,
                     modifier = Modifier.padding(start = 8.dp, top = 4.dp, bottom = 8.dp),

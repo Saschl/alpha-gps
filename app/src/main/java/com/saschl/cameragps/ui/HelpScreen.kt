@@ -28,7 +28,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLinkStyles
@@ -37,11 +36,41 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.unit.dp
+import cameragps.sharednew.generated.resources.Res
+import cameragps.sharednew.generated.resources.faq_background_work_answer
+import cameragps.sharednew.generated.resources.faq_background_work_question
+import cameragps.sharednew.generated.resources.faq_camera_not_appearing_answer
+import cameragps.sharednew.generated.resources.faq_camera_not_appearing_question
+import cameragps.sharednew.generated.resources.faq_camera_not_connecting_answer
+import cameragps.sharednew.generated.resources.faq_camera_not_connecting_question
+import cameragps.sharednew.generated.resources.faq_connect_camera_answer
+import cameragps.sharednew.generated.resources.faq_connect_camera_question
+import cameragps.sharednew.generated.resources.faq_disconnects_answer
+import cameragps.sharednew.generated.resources.faq_disconnects_question
+import cameragps.sharednew.generated.resources.faq_enable_service_answer
+import cameragps.sharednew.generated.resources.faq_enable_service_question
+import cameragps.sharednew.generated.resources.faq_gps_accuracy_answer
+import cameragps.sharednew.generated.resources.faq_gps_accuracy_question
+import cameragps.sharednew.generated.resources.faq_permissions_answer
+import cameragps.sharednew.generated.resources.faq_permissions_question
+import cameragps.sharednew.generated.resources.help_about_description
+import cameragps.sharednew.generated.resources.help_about_title
+import cameragps.sharednew.generated.resources.help_close_description
+import cameragps.sharednew.generated.resources.help_faq_title
+import cameragps.sharednew.generated.resources.help_need_more_description
+import cameragps.sharednew.generated.resources.help_need_more_title
+import cameragps.sharednew.generated.resources.how_about_privacy
+import cameragps.sharednew.generated.resources.how_about_privacy_answer
+import cameragps.sharednew.generated.resources.is_there_documenation
+import cameragps.sharednew.generated.resources.is_there_documenation_answer
+import cameragps.sharednew.generated.resources.is_there_documenation_answer_coffee
 import com.saschl.cameragps.R
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.stringResource
 
 private data class FaqItem(
-    val questionRes: Int,
-    val answerRes: Int,
+    val questionRes: StringResource,
+    val answerRes: StringResource,
     val containsLink: Boolean = false
 )
 
@@ -52,45 +81,45 @@ fun HelpScreen(
 ) {
     val faqItems = listOf(
         FaqItem(
-            questionRes = R.string.is_there_documenation,
-            answerRes = R.string.is_there_documenation_answer,
+            questionRes = Res.string.is_there_documenation,
+            answerRes = Res.string.is_there_documenation_answer,
             containsLink = true
         ),
         FaqItem(
-            questionRes = R.string.how_about_privacy,
-            answerRes = R.string.how_about_privacy_answer,
+            questionRes = Res.string.how_about_privacy,
+            answerRes = Res.string.how_about_privacy_answer,
         ),
         FaqItem(
-            questionRes = R.string.faq_enable_service_question,
-            answerRes = R.string.faq_enable_service_answer
+            questionRes = Res.string.faq_enable_service_question,
+            answerRes = Res.string.faq_enable_service_answer
         ),
         FaqItem(
-            questionRes = R.string.faq_connect_camera_question,
-            answerRes = R.string.faq_connect_camera_answer
+            questionRes = Res.string.faq_connect_camera_question,
+            answerRes = Res.string.faq_connect_camera_answer
         ),
         FaqItem(
-            questionRes = R.string.faq_camera_not_appearing_question,
-            answerRes = R.string.faq_camera_not_appearing_answer
+            questionRes = Res.string.faq_camera_not_appearing_question,
+            answerRes = Res.string.faq_camera_not_appearing_answer
         ),
         FaqItem(
-            questionRes = R.string.faq_camera_not_connecting_question,
-            answerRes = R.string.faq_camera_not_connecting_answer
+            questionRes = Res.string.faq_camera_not_connecting_question,
+            answerRes = Res.string.faq_camera_not_connecting_answer
         ),
         FaqItem(
-            questionRes = R.string.faq_permissions_question,
-            answerRes = R.string.faq_permissions_answer
+            questionRes = Res.string.faq_permissions_question,
+            answerRes = Res.string.faq_permissions_answer
         ),
         FaqItem(
-            questionRes = R.string.faq_gps_accuracy_question,
-            answerRes = R.string.faq_gps_accuracy_answer
+            questionRes = Res.string.faq_gps_accuracy_question,
+            answerRes = Res.string.faq_gps_accuracy_answer
         ),
         FaqItem(
-            questionRes = R.string.faq_background_work_question,
-            answerRes = R.string.faq_background_work_answer
+            questionRes = Res.string.faq_background_work_question,
+            answerRes = Res.string.faq_background_work_answer
         ),
         FaqItem(
-            questionRes = R.string.faq_disconnects_question,
-            answerRes = R.string.faq_disconnects_answer
+            questionRes = Res.string.faq_disconnects_question,
+            answerRes = Res.string.faq_disconnects_answer
         )
     )
 
@@ -99,7 +128,7 @@ fun HelpScreen(
             CenterAlignedTopAppBar(
                 title = {
                     Text(
-                        text = stringResource(R.string.help_faq_title),
+                        text = stringResource(Res.string.help_faq_title),
                         fontWeight = FontWeight.SemiBold
                     )
                 },
@@ -107,7 +136,7 @@ fun HelpScreen(
                     IconButton(onClick = onBackClick) {
                         Icon(
                             painterResource(R.drawable.arrow_back_24px),
-                            contentDescription = stringResource(R.string.help_close_description)
+                            contentDescription = stringResource(Res.string.help_close_description)
                         )
                     }
                 },
@@ -137,14 +166,14 @@ fun HelpScreen(
                         modifier = Modifier.padding(16.dp)
                     ) {
                         Text(
-                            text = stringResource(R.string.help_about_title),
+                            text = stringResource(Res.string.help_about_title),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = stringResource(R.string.help_about_description),
+                            text = stringResource(Res.string.help_about_description),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
@@ -153,7 +182,7 @@ fun HelpScreen(
             }
 
             // FAQ items
-            items(faqItems, key = { it.questionRes }) { faq ->
+            items(faqItems) { faq ->
                 var expanded by remember { mutableStateOf(faq == faqItems.first()) }
 
                 Card(
@@ -209,7 +238,7 @@ fun HelpScreen(
                                             append("saschl.ra@web.de")
                                         }
                                         append("\n\n")
-                                        append(stringResource(R.string.is_there_documenation_answer_coffee))
+                                        append(stringResource(Res.string.is_there_documenation_answer_coffee))
                                         withLink(
                                             LinkAnnotation.Url(
                                                 "https://buymeacoffee.com/wj8tism4dq",
@@ -249,14 +278,14 @@ fun HelpScreen(
                         modifier = Modifier.padding(16.dp)
                     ) {
                         Text(
-                            text = stringResource(R.string.help_need_more_title),
+                            text = stringResource(Res.string.help_need_more_title),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onSecondaryContainer
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = stringResource(R.string.help_need_more_description),
+                            text = stringResource(Res.string.help_need_more_description),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSecondaryContainer
                         )

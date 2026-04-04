@@ -12,18 +12,23 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import cameragps.sharednew.generated.resources.Res
+import cameragps.sharednew.generated.resources.location_provider_hint
+import cameragps.sharednew.generated.resources.location_provider_platform
+import cameragps.sharednew.generated.resources.location_provider_play_services
+import cameragps.sharednew.generated.resources.location_provider_restart_required
+import cameragps.sharednew.generated.resources.location_provider_title
 import com.sasch.cameragps.sharednew.ui.settings.LocationProvider
-import com.saschl.cameragps.R
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 internal fun LocationProviderCard(
     locationProvider: LocationProvider,
     onProviderChange: (LocationProvider) -> Unit
 ) {
-    SettingsCard(title = stringResource(R.string.location_provider_title)) {
+    SettingsCard(title = stringResource(Res.string.location_provider_title)) {
         Column(
             modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -43,7 +48,7 @@ internal fun LocationProviderCard(
                     }
                 )
                 Text(
-                    text = stringResource(R.string.location_provider_play_services),
+                    text = stringResource(Res.string.location_provider_play_services),
                     style = MaterialTheme.typography.bodyLarge,
                     modifier = Modifier.padding(start = 8.dp)
                 )
@@ -64,7 +69,7 @@ internal fun LocationProviderCard(
                     }
                 )
                 Text(
-                    text = stringResource(R.string.location_provider_platform),
+                    text = stringResource(Res.string.location_provider_platform),
                     style = MaterialTheme.typography.bodyLarge,
                     modifier = Modifier.padding(start = 8.dp)
                 )
@@ -72,12 +77,12 @@ internal fun LocationProviderCard(
         }
 
         Text(
-            text = stringResource(R.string.location_provider_hint),
+            text = stringResource(Res.string.location_provider_hint),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Text(
-            text = stringResource(R.string.location_provider_restart_required),
+            text = stringResource(Res.string.location_provider_restart_required),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.primary,
             fontWeight = FontWeight.Medium

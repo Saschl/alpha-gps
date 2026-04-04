@@ -18,10 +18,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import cameragps.sharednew.generated.resources.Res
+import cameragps.sharednew.generated.resources.bluetooth_disabled_message
+import cameragps.sharednew.generated.resources.bluetooth_disabled_title
+import cameragps.sharednew.generated.resources.location_services_disabled_message
+import cameragps.sharednew.generated.resources.location_services_disabled_title
+import cameragps.sharednew.generated.resources.open_bluetooth_settings
+import cameragps.sharednew.generated.resources.open_location_settings
 import com.saschl.cameragps.R
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun BluetoothWarningCard() {
@@ -52,14 +59,14 @@ fun BluetoothWarningCard() {
                     tint = MaterialTheme.colorScheme.onErrorContainer
                 )
                 Text(
-                    text = stringResource(R.string.bluetooth_disabled_title),
+                    text = stringResource(Res.string.bluetooth_disabled_title),
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.onErrorContainer,
                     fontWeight = FontWeight.Medium
                 )
             }
             Text(
-                text = stringResource(R.string.bluetooth_disabled_message),
+                text = stringResource(Res.string.bluetooth_disabled_message),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onErrorContainer
             )
@@ -69,7 +76,7 @@ fun BluetoothWarningCard() {
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text(stringResource(R.string.open_bluetooth_settings))
+                Text(stringResource(Res.string.open_bluetooth_settings))
             }
         }
     }
@@ -104,14 +111,14 @@ fun LocationWarningCard() {
                     tint = MaterialTheme.colorScheme.onErrorContainer
                 )
                 Text(
-                    text = stringResource(R.string.location_services_disabled_title),
+                    text = stringResource(Res.string.location_services_disabled_title),
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.onErrorContainer,
                     fontWeight = FontWeight.Medium
                 )
             }
             Text(
-                text = stringResource(R.string.location_services_disabled_message),
+                text = stringResource(Res.string.location_services_disabled_message),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onErrorContainer
             )
@@ -121,7 +128,7 @@ fun LocationWarningCard() {
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text(stringResource(R.string.open_location_settings))
+                Text(stringResource(Res.string.open_location_settings))
             }
         }
     }
