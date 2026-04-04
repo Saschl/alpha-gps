@@ -24,9 +24,8 @@ You can also get the APK for Android from the releases and install it directly o
 
 ## How can I contribute?
 As the project is open source, contributions are welcome! Just check out the repo, open Android Studio and create a Pull Request.
-If you wish to improve the translations, the project is also in Weblate. Check it
-out [here](https://hosted.weblate.org/engage/alpha-gps/) (Currently on hold as I'm reorganizing the
-strings, but will be back soon!)
+If you wish to improve the translations, the project is also available on Weblate. Check it
+out [here](https://hosted.weblate.org/engage/alpha-gps/)
 
 If you want to contribute financially, consider supporting my work via [Buy Me A Coffee](https://buymeacoffee.com/wj8tism4dq)
 
