@@ -1,6 +1,6 @@
 <resources>
     <!-- Android framework/service-only strings. Shared UI strings live in sharednew composeResources. -->
-    <string name="foreground_service_notification">Transmitting location data to %d cameras</string>
+    <string name="foreground_service_notification">Transmitting location data to %1$d cameras</string>
     <string name="app_standby_title">Standby</string>
     <string name="app_standby_content">Waiting for camera to connect</string>
     <string name="notification_channel_name">Transmission state</string>

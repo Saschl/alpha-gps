@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Android framework/service-only strings. Shared UI strings live in sharednew composeResources. -->
-    <string name="foreground_service_notification">Übertrage Standortdaten zu %d Kameras</string>
+    <string name="foreground_service_notification">Übertrage Standortdaten zu %1$d Kameras</string>
     <string name="app_standby_title">Standby</string>
     <string name="app_standby_content">Warten auf Kameraverbindung</string>
     <string name="notification_channel_name">Transmission state</string>

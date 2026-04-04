@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Android framework/service-only strings. Shared UI strings live in sharednew composeResources. -->
-    <string name="foreground_service_notification">%d 台のカメラに位置情報データを送信中</string>
+    <string name="foreground_service_notification">%1$d 台のカメラに位置情報データを送信中</string>
     <string name="app_standby_title">待機</string>
     <string name="app_standby_content">カメラ接続を待機中</string>
     <string name="notification_channel_name">送信状態</string>

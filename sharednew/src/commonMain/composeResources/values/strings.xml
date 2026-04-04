@@ -2,7 +2,7 @@
     <string name="app_name" translatable="false">AlphaGPS</string>
     <string name="app_name_ui" translatable="false">Alpha GPS</string>
     <string name="header_device_list">My Cameras</string>
-    <string name="foreground_service_notification">Transmitting location data to %d cameras</string>
+    <string name="foreground_service_notification">Transmitting location data to %1$d cameras</string>
     <string name="scan_for_devices">Click to find &amp; associate your camera</string>
     <string name="permission_gps">Access precise location</string>
     <string name="permission_background_gps">Allow location access when the app is in the background</string>
@@ -48,7 +48,7 @@
     <string name="background_location_instruction">Please select "Allow all the time" in the next dialog.</string>
 
     <!-- Error messages -->
-    <string name="permissions_required_app_error">%s is required for the app to function</string>
+    <string name="permissions_required_app_error">%1$s is required for the app to function</string>
     <string name="background_location_required_error">Background location access required for continuous GPS sync when app is not in foreground</string>
     <string name="remove">Remove</string>
 

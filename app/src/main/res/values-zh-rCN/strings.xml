@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Android framework/service-only strings. Shared UI strings live in sharednew composeResources. -->
-    <string name="foreground_service_notification">正在向 %d 台相机传输位置数据</string>
+    <string name="foreground_service_notification">正在向 %1$d 台相机传输位置数据</string>
     <string name="app_standby_title">待机</string>
     <string name="app_standby_content">等待相机连接</string>
     <string name="notification_channel_name">传输状态</string>
