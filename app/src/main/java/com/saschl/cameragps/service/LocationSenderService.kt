@@ -8,6 +8,7 @@ import android.bluetooth.BluetoothGattCallback
 import android.bluetooth.BluetoothGattCharacteristic
 import android.bluetooth.BluetoothGattService
 import android.bluetooth.BluetoothManager
+import android.bluetooth.BluetoothProfile
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
@@ -77,6 +78,7 @@ class LocationSenderService : LifecycleService() {
 
     private var locationResult: Location? = null
     private var hasSessionLocation: Boolean = false
+    private lateinit var eventSoundPlayer: EventSoundPlayer
 
     private val deviceDao: CameraDeviceDAO by lazy {
         LogDatabase.getRoomDatabase(getDatabaseBuilder(applicationContext)).cameraDeviceDao()
@@ -131,6 +133,16 @@ class LocationSenderService : LifecycleService() {
         } else {
             (System.currentTimeMillis() - location.time) > SonyBluetoothConstants.OLD_LOCATION_THRESHOLD_MS
         }
+    }
+
+    private fun markLocationAcquiredIfNeeded(hadLocationBefore: Boolean) {
+        if (!hadLocationBefore) {
+            eventSoundPlayer.play(TransmissionSoundEvent.LOCATION_ACQUIRED)
+        }
+    }
+
+    private fun markLocationInvalid() {
+        eventSoundPlayer.play(TransmissionSoundEvent.LOCATION_INVALID)
     }
 
     @RequiresPermission(allOf = [Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION])
@@ -188,7 +200,9 @@ class LocationSenderService : LifecycleService() {
                 if (isLocationTooOld(location)) {
                     Timber.w("Ignoring stale initial location from Play Services")
                 } else {
+                    val hadLocationBefore = locationResult != null
                     locationResult = location
+                    markLocationAcquiredIfNeeded(hadLocationBefore)
                     Timber.d("Sending initial location to all active connections")
                     cameraConnectionManager.getActiveConnections().forEach { device ->
                         sendData(device.gatt, device.writeCharacteristic, device.locationDataConfig)
@@ -244,7 +258,9 @@ class LocationSenderService : LifecycleService() {
             if (isLocationTooOld(lastKnownLocation)) {
                 Timber.w("Ignoring stale initial location from fallback provider")
             } else {
+                val hadLocationBefore = locationResult != null
                 locationResult = lastKnownLocation
+                markLocationAcquiredIfNeeded(hadLocationBefore)
                 Timber.d("Sending initial location from fallback provider to all active connections")
                 cameraConnectionManager.getActiveConnections().forEach { device ->
                     sendData(device.gatt, device.writeCharacteristic, device.locationDataConfig)
@@ -257,8 +273,10 @@ class LocationSenderService : LifecycleService() {
             override fun onLocationChanged(location: Location) {
                 Timber.d("Got a new location from fallback provider")
                 if (shouldUpdateLocation(location)) {
+                    val hadLocationBefore = locationResult != null
                     hasSessionLocation = true
                     locationResult = location
+                    markLocationAcquiredIfNeeded(hadLocationBefore)
                     /* Timber.d("Will update cameras with new location")
                      cameraConnectionManager.getActiveConnections().forEach {
                          Timber.d("Sending location to camera ${it.gatt.device.name}")
@@ -342,6 +360,7 @@ class LocationSenderService : LifecycleService() {
                         }
                     } else {
                         Timber.w("Periodic: No location available to send")
+                        markLocationInvalid()
                     }
 
                     handler.postDelayed(this, LOCATION_UPDATE_INTERVAL_MS)
@@ -386,6 +405,7 @@ class LocationSenderService : LifecycleService() {
                 Timber.d("Last accurate location is older than 5 minutes, updating anyway")
                 return true
             }
+            markLocationInvalid()
             return false
         }
         return true
@@ -571,6 +591,8 @@ class LocationSenderService : LifecycleService() {
     @SuppressLint("MissingPermission")
     override fun onCreate() {
         super.onCreate()
+        eventSoundPlayer = EventSoundPlayer(this)
+
         NotificationsHelper.createNotificationChannel(this)
 
         if (!startAsForegroundService()) {
@@ -625,8 +647,10 @@ class LocationSenderService : LifecycleService() {
             val lastLocation = fetchedLocation.lastLocation ?: return
 
             if (shouldUpdateLocation(lastLocation)) {
+                val hadLocationBefore = locationResult != null
                 hasSessionLocation = true
                 locationResult = lastLocation
+                markLocationAcquiredIfNeeded(hadLocationBefore)
             }
         }
     }
@@ -717,22 +741,27 @@ class LocationSenderService : LifecycleService() {
         ) {
             super.onConnectionStateChange(gatt, status, newState)
 
-            if (status != BluetoothGatt.GATT_SUCCESS) {
+            if (newState == BluetoothProfile.STATE_CONNECTED && status == BluetoothGatt.GATT_SUCCESS) {
+                Timber.i("Connected to device with status %d", status)
+                cameraConnectionManager.resumeDevice(gatt.device.address.uppercase())
+                eventSoundPlayer.play(TransmissionSoundEvent.CAMERA_CONNECTED)
+                resumeLocationTransmission(gatt)
+                return
+            }
+
+            if (newState == BluetoothProfile.STATE_DISCONNECTED || status != BluetoothGatt.GATT_SUCCESS) {
                 if (status == 19 || status == 8) {
                     Timber.i("Device disconnected in callback due to device turned off or out of range: $status")
                 } else {
                     Timber.e("An error happened: $status")
                 }
                 cameraConnectionManager.pauseDevice(gatt.device.address.uppercase())
+                eventSoundPlayer.play(TransmissionSoundEvent.CAMERA_DISCONNECTED)
                 cancelLocationTransmission()
-
-            } else {
-                Timber.i("Connected to device with status %d", status)
-
-                cameraConnectionManager.resumeDevice(gatt.device.address.uppercase())
-                resumeLocationTransmission(gatt)
-
+                return
             }
+
+            Timber.d("Ignoring connection callback with status=$status and state=$newState")
         }
 
         /*     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)

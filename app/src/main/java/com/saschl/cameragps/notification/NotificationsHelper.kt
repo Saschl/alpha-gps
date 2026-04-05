@@ -7,6 +7,8 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.media.AudioAttributes
+import android.media.RingtoneManager
 import androidx.core.app.NotificationCompat
 import com.saschl.cameragps.MainActivity
 import com.saschl.cameragps.R
@@ -24,13 +26,22 @@ internal object NotificationsHelper {
         val channel = NotificationChannel(
             NOTIFICATION_CHANNEL_ID,
             context.getString(R.string.notification_channel_name),
-            NotificationManager.IMPORTANCE_DEFAULT
+            NotificationManager.IMPORTANCE_LOW
         )
+        channel.setSound(null, null)
+        channel.enableVibration(false)
 
         val disconnectChannel = NotificationChannel(
             DISCONNECT_NOTIFICATION_CHANNEL,
             context.getString(R.string.disconnect_notification_channel_name),
             NotificationManager.IMPORTANCE_DEFAULT
+        )
+        disconnectChannel.setSound(
+            RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION),
+            AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build()
         )
         notificationManager.createNotificationChannel(channel)
         notificationManager.createNotificationChannel(disconnectChannel)

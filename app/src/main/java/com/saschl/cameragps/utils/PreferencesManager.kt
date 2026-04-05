@@ -5,6 +5,8 @@ import android.content.SharedPreferences
 import android.util.Log
 import androidx.core.content.edit
 import com.sasch.cameragps.sharednew.ui.settings.LocationProvider
+import com.saschl.cameragps.service.TransmissionSoundEvent
+import com.saschl.cameragps.service.TransmissionSoundMode
 import java.time.Duration
 import java.time.Instant
 import java.time.temporal.ChronoUnit
@@ -19,8 +21,24 @@ object PreferencesManager {
     private const val KEY_REVIEW_HINT_SHOWN_TIMES = "review_hint_shown_times"
     private const val KEY_IGNORE_PERMISSIONS = "ignore_permissions"
     private const val KEY_LOCATION_PROVIDER = "location_provider"
+    private const val KEY_TRANSMISSION_EVENT_SOUNDS_ENABLED = "transmission_event_sounds_enabled"
+    private const val KEY_SOUND_LOCATION_ACQUIRED = "sound_location_acquired"
+    private const val KEY_SOUND_LOCATION_INVALID = "sound_location_invalid"
+    private const val KEY_SOUND_CAMERA_CONNECTED = "sound_camera_connected"
+    private const val KEY_SOUND_CAMERA_DISCONNECTED = "sound_camera_disconnected"
+    private const val KEY_SOUND_MODE_LOCATION_ACQUIRED = "sound_mode_location_acquired"
+    private const val KEY_SOUND_MODE_LOCATION_INVALID = "sound_mode_location_invalid"
+    private const val KEY_SOUND_MODE_CAMERA_CONNECTED = "sound_mode_camera_connected"
+    private const val KEY_SOUND_MODE_CAMERA_DISCONNECTED = "sound_mode_camera_disconnected"
+    private const val KEY_SOUND_URI_LOCATION_ACQUIRED = "sound_uri_location_acquired"
+    private const val KEY_SOUND_URI_LOCATION_INVALID = "sound_uri_location_invalid"
+    private const val KEY_SOUND_URI_CAMERA_CONNECTED = "sound_uri_camera_connected"
+    private const val KEY_SOUND_URI_CAMERA_DISCONNECTED = "sound_uri_camera_disconnected"
     private const val LOCATION_PROVIDER_PLAY_SERVICES = "play_services"
     private const val LOCATION_PROVIDER_PLATFORM = "platform"
+    private const val SOUND_MODE_DEFAULT = "default"
+    private const val SOUND_MODE_SILENT = "silent"
+    private const val SOUND_MODE_CUSTOM = "custom"
 
     // LocationProvider enum lives in shared module (com.saschl.cameragps.shared.ui.settings)
 
@@ -53,11 +71,6 @@ object PreferencesManager {
         }
     }
 
-    fun setBatteryOptimizationDialogDismissed(context: Context, dismissed: Boolean) {
-        getPreferences(context).edit {
-            putBoolean(KEY_BATTERY_OPTIMIZATION_DIALOG_DISMISSED, dismissed)
-        }
-    }
 
     fun reviewHintLastShownDaysAgo(context: Context, initialize: Boolean = false): Long {
         val lastShown = getPreferences(context).getLong(KEY_REVIEW_HINT_LAST_SHOWN, 0L)
@@ -189,5 +202,101 @@ object PreferencesManager {
         getPreferences(context).edit {
             putString(KEY_LOCATION_PROVIDER, stored)
         }
+    }
+
+    fun isTransmissionEventSoundsEnabled(context: Context): Boolean {
+        return getPreferences(context).getBoolean(KEY_TRANSMISSION_EVENT_SOUNDS_ENABLED, false)
+    }
+
+    fun setTransmissionEventSoundsEnabled(context: Context, enabled: Boolean) {
+        getPreferences(context).edit {
+            putBoolean(KEY_TRANSMISSION_EVENT_SOUNDS_ENABLED, enabled)
+        }
+    }
+
+    fun isTransmissionEventEnabled(context: Context, event: TransmissionSoundEvent): Boolean {
+        val key = when (event) {
+            TransmissionSoundEvent.LOCATION_ACQUIRED -> KEY_SOUND_LOCATION_ACQUIRED
+            TransmissionSoundEvent.LOCATION_INVALID -> KEY_SOUND_LOCATION_INVALID
+            TransmissionSoundEvent.CAMERA_CONNECTED -> KEY_SOUND_CAMERA_CONNECTED
+            TransmissionSoundEvent.CAMERA_DISCONNECTED -> KEY_SOUND_CAMERA_DISCONNECTED
+        }
+        return getPreferences(context).getBoolean(key, true)
+    }
+
+    fun setTransmissionEventEnabled(
+        context: Context,
+        event: TransmissionSoundEvent,
+        enabled: Boolean
+    ) {
+        val key = when (event) {
+            TransmissionSoundEvent.LOCATION_ACQUIRED -> KEY_SOUND_LOCATION_ACQUIRED
+            TransmissionSoundEvent.LOCATION_INVALID -> KEY_SOUND_LOCATION_INVALID
+            TransmissionSoundEvent.CAMERA_CONNECTED -> KEY_SOUND_CAMERA_CONNECTED
+            TransmissionSoundEvent.CAMERA_DISCONNECTED -> KEY_SOUND_CAMERA_DISCONNECTED
+        }
+        getPreferences(context).edit {
+            putBoolean(key, enabled)
+        }
+    }
+
+    fun getTransmissionEventSoundMode(
+        context: Context,
+        event: TransmissionSoundEvent
+    ): TransmissionSoundMode {
+        val modeKey = soundModeKey(event)
+        val stored = getPreferences(context).getString(modeKey, SOUND_MODE_DEFAULT)
+        return when (stored) {
+            SOUND_MODE_SILENT -> TransmissionSoundMode.SILENT
+            SOUND_MODE_CUSTOM -> TransmissionSoundMode.CUSTOM
+            else -> TransmissionSoundMode.DEFAULT
+        }
+    }
+
+    fun setTransmissionEventSoundMode(
+        context: Context,
+        event: TransmissionSoundEvent,
+        mode: TransmissionSoundMode
+    ) {
+        val modeValue = when (mode) {
+            TransmissionSoundMode.DEFAULT -> SOUND_MODE_DEFAULT
+            TransmissionSoundMode.SILENT -> SOUND_MODE_SILENT
+            TransmissionSoundMode.CUSTOM -> SOUND_MODE_CUSTOM
+        }
+        getPreferences(context).edit {
+            putString(soundModeKey(event), modeValue)
+        }
+    }
+
+    fun getTransmissionEventSoundUri(context: Context, event: TransmissionSoundEvent): String? {
+        return getPreferences(context).getString(soundUriKey(event), null)
+    }
+
+    fun setTransmissionEventSoundUri(
+        context: Context,
+        event: TransmissionSoundEvent,
+        uri: String?
+    ) {
+        getPreferences(context).edit {
+            if (uri == null) {
+                remove(soundUriKey(event))
+            } else {
+                putString(soundUriKey(event), uri)
+            }
+        }
+    }
+
+    private fun soundModeKey(event: TransmissionSoundEvent): String = when (event) {
+        TransmissionSoundEvent.LOCATION_ACQUIRED -> KEY_SOUND_MODE_LOCATION_ACQUIRED
+        TransmissionSoundEvent.LOCATION_INVALID -> KEY_SOUND_MODE_LOCATION_INVALID
+        TransmissionSoundEvent.CAMERA_CONNECTED -> KEY_SOUND_MODE_CAMERA_CONNECTED
+        TransmissionSoundEvent.CAMERA_DISCONNECTED -> KEY_SOUND_MODE_CAMERA_DISCONNECTED
+    }
+
+    private fun soundUriKey(event: TransmissionSoundEvent): String = when (event) {
+        TransmissionSoundEvent.LOCATION_ACQUIRED -> KEY_SOUND_URI_LOCATION_ACQUIRED
+        TransmissionSoundEvent.LOCATION_INVALID -> KEY_SOUND_URI_LOCATION_INVALID
+        TransmissionSoundEvent.CAMERA_CONNECTED -> KEY_SOUND_URI_CAMERA_CONNECTED
+        TransmissionSoundEvent.CAMERA_DISCONNECTED -> KEY_SOUND_URI_CAMERA_DISCONNECTED
     }
 }

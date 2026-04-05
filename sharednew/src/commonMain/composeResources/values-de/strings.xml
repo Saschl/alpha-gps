@@ -1,7 +1,7 @@
 <resources>
     <string name="app_name" translatable="false">AlphaGPS</string>
     <string name="app_name_ui" translatable="false">Alpha GPS</string>
-    <string name="header_device_list">My Cameras</string>
+    <string name="header_device_list">Meine Kameras</string>
     <string name="foreground_service_notification">Übertrage Standortdaten zu %d Kameras</string>
     <string name="scan_for_devices">Drücke Start um deine Kamera zu koppeln</string>
     <string name="permission_gps">Zugriff auf genauen Standort</string>
@@ -41,7 +41,7 @@
     <string name="background_location_benefit_1">• Nahtlose Übertragung, auch wenn die App nicht geöffnet ist.</string>
     <string name="background_location_benefit_2">• Standortermittlung, auch wen der Bildschirm ausgeschaltet ist</string>
     <string name="background_location_benefit_3">• Nahtloses Geotagging von Fotos bei langen Sessions</string>
-    <string name="background_location_instruction">Bitte im nächsten Dialog \"Immer erlauben\" auswählen</string>
+    <string name="background_location_instruction">Bitte im nächsten Dialog "Immer erlauben" auswählen</string>
     <string name="permissions_required_app_error">%1$s wird benötigt, damit die App funktioniert</string>
     <string name="background_location_required_error">Standortzugriff im Hintergrund wird benötigt, damit die App jederzeit die Koordinaten an die Kamera übertragen kann</string>
     <string name="remove">Entfernen</string>
@@ -55,7 +55,7 @@
     <string name="app_disabled_message">Enable the app in Settings to scan for nearby cameras.</string>
     <string name="scanning_paused_title">Scanning is paused</string>
     <string name="scanning_paused_message">Turn on automatic scanning in Settings to look for nearby cameras.</string>
-    <string name="scanning_for_cameras">Scanning for cameras...</string>
+    <string name="scanning_for_cameras">Suche nach Kameras..</string>
     <string name="welcome_title">Willkommen bei Alpha GPS</string>
     <string name="welcome_subtitle">GPS-Koordinaten in Echtzeit für Ihre Kamera über Bluetooth</string>
     <string name="welcome_feature_connect_title">Verbinde die Kamera</string>
@@ -63,7 +63,7 @@
     <string name="welcome_feature_gps_sync_title">Echtzeit Standortübertragung</string>
     <string name="welcome_feature_gps_sync_description">Automatische Übertragung der Standortdaten zu deiner Sony Kamera</string>
     <string name="welcome_feature_device_management_title">Device Management</string>
-    <string name="welcome_get_started_button">Los geht\'s</string>
+    <string name="welcome_get_started_button">Los geht's</string>
     <string name="welcome_settings_note">Diese Einstellungen können jederzeit angepasst werden</string>
     <string name="welcome_app_icon_description">Alpha GPS App Icon</string>
     <string name="settings">Einstellungen</string>
@@ -80,6 +80,24 @@
     <string name="location_provider_platform">Android Platform (LocationManager)</string>
     <string name="location_provider_hint">Falls dein Gerät keine Google Play Services unterstützt oder die Standorterfassung unzuverlässig ist, wechsle zum Platform Provider.</string>
     <string name="location_provider_restart_required">Schalte die Kamera aus und starte die App neu um die Änderungen durchzuführen. Falls der \"Always On\" Modus aktiv ist, deaktiviere diesen zuerst</string>
+    <string name="event_sounds_title">Töne für Übertragungsereignisse</string>
+    <string name="event_sounds_description">Spielt kurze Töne für Kamera- und GPS-Ereignisse während der Übertragung.</string>
+    <string name="event_sounds_enable_all">Ereignistöne aktivieren</string>
+    <string name="event_sounds_location_acquired">Standort gefunden</string>
+    <string name="event_sounds_location_invalid">Standort ungenau/ungültig</string>
+    <string name="event_sounds_camera_connected">Kamera verbunden</string>
+    <string name="event_sounds_camera_disconnected">Kamera getrennt</string>
+    <string name="event_sounds_current_default">Aktueller Ton: Standard</string>
+    <string name="event_sounds_current_silent">Aktueller Ton: Stumm</string>
+    <string name="event_sounds_current_custom">Aktueller Ton: Benutzerdefiniert</string>
+    <string name="event_sounds_set_default">Standard</string>
+    <string name="event_sounds_set_silent">Stumm</string>
+    <string name="event_sounds_choose_sound">Ton auswählen</string>
+    <string name="event_sounds_open_section">Toneinstellungen öffnen</string>
+    <string name="event_sounds_open_section_description">Konfiguriere benutzerdefinierte In-App-Ereignistöne und Benachrichtigungskanal-Töne.</string>
+    <string name="event_sounds_notification_channels_title">Töne für Benachrichtigungskanäle</string>
+    <string name="event_sounds_configure_transmission_channel">Übertragungskanal konfigurieren</string>
+    <string name="event_sounds_configure_disconnect_channel">Trennungs-Kanal konfigurieren</string>
     <string name="battery_optimization_settings_title">Akku &amp; Hintergrund-Einstellungen</string>
     <string name="battery_optimization_settings_short">Passen Sie diese Einstellungen an, falls die App im Hintergrund nicht zuverlässig funktioniert. <b>Hinweis: Dies ändert nicht das Verhalten App selbst, sondern versucht nur zu verhindern, dass sie vom Betriebssystem beendet wird. Nur bei Problemen verwenden.</b></string>
     <string name="battery_optimization_settings_description">Einige Hersteller erfordern zusätzliche Berechtigungen für Hintergrundaktivität. Falls die erste Option nicht funktioniert, tippen Sie auf Einstellungen öffnen. Navigieren Sie zum Akku-/Energiebereich und versuchen Sie, die App von Optimierungen auszuschließen.</string>
@@ -101,11 +119,11 @@
     <string name="help_need_more_title">Brauchen Sie weitere Hilfe?</string>
     <string name="help_need_more_description">Überprüfen Sie die App-Logs im oberen Menü für Informationen zur Fehlerbehebung oder überprüfen Sie Ihre Geräteeinstellungen, um sicherzustellen, dass alle Berechtigungen erteilt wurden.</string>
     <string name="faq_connect_camera_question">Wie verbinde ich meine Kamera mit der App?</string>
-    <string name="faq_connect_camera_answer">1. Stellen Sie sicher, dass Ihre Kamera Bluetooth-Konnektivität und GPS-Tagging unterstützt\n2. Aktivieren Sie Bluetooth auf Ihrem Telefon\n3. Tippen Sie auf \'Kamera-Gerät hinzufügen\', um den Kopplungsvorgang zu starten\n4. Folgen Sie den Anweisungen auf dem Bildschirm, um Ihre Kamera zu koppeln. \n5.Starten sie die Kamera neu, nachdem der Prozess abgeschlossen ist.</string>
+    <string name="faq_connect_camera_answer">1. Stellen Sie sicher, dass Ihre Kamera Bluetooth-Konnektivität und GPS-Tagging unterstützt\n2. Aktivieren Sie Bluetooth auf Ihrem Telefon\n3. Tippen Sie auf 'Kamera-Gerät hinzufügen', um den Kopplungsvorgang zu starten\n4. Folgen Sie den Anweisungen auf dem Bildschirm, um Ihre Kamera zu koppeln. \n5.Starten sie die Kamera neu, nachdem der Prozess abgeschlossen ist.</string>
     <string name="faq_camera_not_appearing_question">Warum erscheint meine Kamera nicht in der Liste?</string>
     <string name="faq_camera_not_appearing_answer">• Stellen Sie sicher, dass sich Ihre Kamera im Kopplungs-/Bluetooth-Modus befindet\n• Überprüfen Sie, ob Ihre Kamera das erforderliche Bluetooth-Profil unterstützt\n• Stellen Sie sicher, dass Sie in Reichweite sind (normalerweise 10 Meter)\n• Versuchen Sie, Bluetooth auf Ihrem Telefon neu zu starten</string>
     <string name="faq_enable_service_question">Wie aktiviere ich den Service dauerhaft?</string>
-    <string name="faq_enable_service_answer">Bitte besuchen Sie die App-Einstellungen und probieren Sie die Optionen im Bereich Akku &amp; Hintergrund aus. Alternativ versuchen Sie Folgendes:\nUm GPS-Daten kontinuierlich mit Ihrer Kamera zu synchronisieren:\n1. Gehen Sie zu den Einstellungen Ihres Geräts > Apps\n2. Finden Sie \'Alpha GPS\' in der App-Liste\n3. Tippen Sie darauf und wählen Sie \'Akku\'\n4. Wählen Sie \'Nicht optimieren\' oder \'Hintergrundaktivität erlauben\'\n5. Dies verhindert, dass das System den GPS-Service stoppt\n\nSie können dies auch über die Gerätedetails-Seite in der App aufrufen.</string>
+    <string name="faq_enable_service_answer">Bitte besuchen Sie die App-Einstellungen und probieren Sie die Optionen im Bereich Akku &amp; Hintergrund aus. Alternativ versuchen Sie Folgendes:\nUm GPS-Daten kontinuierlich mit Ihrer Kamera zu synchronisieren:\n1. Gehen Sie zu den Einstellungen Ihres Geräts > Apps\n2. Finden Sie 'Alpha GPS' in der App-Liste\n3. Tippen Sie darauf und wählen Sie 'Akku'\n4. Wählen Sie 'Nicht optimieren' oder 'Hintergrundaktivität erlauben'\n5. Dies verhindert, dass das System den GPS-Service stoppt\n\nSie können dies auch über die Gerätedetails-Seite in der App aufrufen.</string>
     <string name="faq_camera_not_connecting_question">Meine Kamera verbindet sich nicht automatisch, was kann ich tun?</string>
     <string name="faq_camera_not_connecting_answer">Leider kann es vorkommen, dass die automatische Verbindung nicht funktioniert. Falls Sie Probleme haben, gehen Sie bitte wie folgt vor: Tippen Sie auf dem Hauptbildschirm auf Ihre Kamera, um die Detailansicht zu öffnen. Dort haben Sie die Möglichkeit, den Always On Modus zu aktivieren, der die App im Vordergrund hält. \nAlternativ können Sie Bluetooth kurz aus- und wieder einschalten oder das Gerät in der App entfernen und erneut koppeln.</string>
     <string name="faq_permissions_question">Welche Berechtigungen benötigt die App?</string>
@@ -139,7 +157,7 @@
     <string name="enable_device">Gerät aktivieren</string>
     <string name="enableConstantly">Always On (Dauerbetrieb)</string>
     <string name="not_paired_tap_to_pair_again">Not paired, please pair the device in the bluetooth settings</string>
-    <string name="to_pair_with_your_camera_please">Um die Kamera \'%1$s\' zu koppeln, bitte:</string>
+    <string name="to_pair_with_your_camera_please">Um die Kamera '%1$s' zu koppeln, bitte:</string>
     <string name="_1_turn_on_your_camera">1. Schalte die Kamera ein</string>
     <string name="_2_go_to_camera_settings_and_enable_bluetooth_pairing_mode">2. Gehe in die Einstellungen und schalte Bluetooth ein.</string>
     <string name="_3_make_sure_the_camera_is_discoverable">3. Gehe in den Kopplungsmodus</string>
@@ -182,8 +200,8 @@
     <string name="try_again">Erneut versuchen</string>
     <string name="continue_label">Weiter</string>
     <string name="cancel">Abbrechen</string>
-    <string name="enable_auto_start_description">Startet die App nach einem Geräte-Neustart automatisch für Kameras, für die der „Immer an\"-Modus konfiguriert ist.</string>
-    <string name="hint_if_issues_after_switching">Hinweis: Aufgrund von kürzlichen Änderungen in der App kann es nach dem Deaktivieren des „Immer an\"-Modus erforderlich sein, einmalig eine Aktion durchzuführen. Deaktivieren und reaktivieren Sie das Gerät einfach einmal in diesen Einstellungen. Dies ist nur einmal nach dem App-Update nötig – nachfolgende Moduswechsel funktionieren sofort.</string>
+    <string name="enable_auto_start_description">Startet die App nach einem Geräte-Neustart automatisch für Kameras, für die der „Always On"-Modus konfiguriert ist.</string>
+    <string name="hint_if_issues_after_switching">Hinweis: Aufgrund von kürzlichen Änderungen in der App kann es nach dem Deaktivieren des „Always On" - Modus erforderlich sein, einmalig eine Aktion durchzuführen. Deaktivieren und reaktivieren Sie das Gerät einfach einmal in diesen Einstellungen. Dies ist nur einmal nach dem App-Update nötig – nachfolgende Moduswechsel funktionieren sofort.</string>
     <string name="sentry_consent_title">Helfen Sie, Alpha GPS zu verbessern</string>
     <string name="sentry_consent_message">Möchten Sie uns helfen, die App zu verbessern, indem Sie anonyme Absturzberichte und Fehlerprotokolle senden? Diese Informationen helfen uns, Probleme zu erkennen und zu beheben. Es werden keine personenbezogenen Daten oder Standortinformationen übertragen. Sie können diese Einstellung später in den App-Einstellungen ändern.</string>
     <string name="sentry_consent_allow">Erlauben</string>

@@ -2,15 +2,15 @@ package com.saschl.cameragps.ui.settings
 
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Icon
+import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
@@ -23,35 +23,49 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.core.os.LocaleListCompat
 import cameragps.sharednew.generated.resources.Res
 import cameragps.sharednew.generated.resources.cancel_button
 import cameragps.sharednew.generated.resources.language_selection
-import cameragps.sharednew.generated.resources.language_settings
 import cameragps.sharednew.generated.resources.language_system
 import com.sasch.cameragps.sharednew.language.AppLanguage
+import com.saschl.cameragps.R
 import com.saschl.cameragps.utils.LanguageManager
 import org.jetbrains.compose.resources.stringResource
-import java.util.Locale
 
 @Composable
 internal fun LanguageSettingsCard(
-    currentLanguage: AppLanguage?,
-    onLanguageSelected: (AppLanguage) -> Unit
 ) {
     var showLanguageDialog by remember { mutableStateOf(false) }
     val systemLabel = stringResource(Res.string.language_system)
+    val context = LocalContext.current
+    val currentLanguage = LanguageManager.getCurrentLanguage(context)
 
-    SettingsCard(title = stringResource(Res.string.language_settings)) {
-        Surface(
+
+    Surface(
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable { showLanguageDialog = true },
-            shape = RoundedCornerShape(8.dp),
-            color = MaterialTheme.colorScheme.surfaceVariant
+        shape = MaterialTheme.shapes.large,
+        tonalElevation = 1.dp,
         ) {
+
+        Column {
+            ListItem(
+                headlineContent = { Text(stringResource(Res.string.language_selection)) },
+                trailingContent = {
+                    Icon(
+                        painter = painterResource(R.drawable.keyboard_arrow_right_24px),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            )
+        }
+    }/*{
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -75,8 +89,8 @@ internal fun LanguageSettingsCard(
                     )
                 }
             }
-        }
-    }
+        }*/
+
 
     if (showLanguageDialog) {
         LanguageSelectionDialog(
@@ -85,7 +99,10 @@ internal fun LanguageSettingsCard(
                 AppCompatDelegate.setApplicationLocales(LocaleListCompat.getEmptyLocaleList())
             },
             onLanguageSelected = { language ->
-                onLanguageSelected(language)
+                val activity = context as? androidx.activity.ComponentActivity
+                activity?.let {
+                    LanguageManager.applyLanguageToActivity(it, language)
+                }
                 showLanguageDialog = false
             },
             onDismiss = { showLanguageDialog = false }

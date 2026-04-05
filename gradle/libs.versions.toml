@@ -19,14 +19,12 @@ room = "2.8.4"
 runtimeLivedata = "1.10.6"
 coreSplashscreen = "1.2.0"
 lifecycle = "2.10.0"
-workRuntimeKtx = "2.11.1"
 navigation3 = "1.0.1"
 kotlinxSerializationCore = "1.10.0"
 kotlinSerialization = "2.3.20"
 appCompat = "1.7.1"
 composeMultiplatform = "1.11.0-beta01"
 material3Multiplatform = "1.10.0-alpha05"
-coroutines = "1.10.2"
 kotlinStdlib = "2.3.20"
 kotlinTest = "2.3.20"
 runner = "1.7.0"
@@ -74,11 +72,9 @@ androidx-navigation3-runtime = { module = "androidx.navigation3:navigation3-runt
 androidx-navigation3-ui = { module = "androidx.navigation3:navigation3-ui", version.ref = "navigation3" }
 kotlinx-serialization-core = { module = "org.jetbrains.kotlinx:kotlinx-serialization-core", version.ref = "kotlinxSerializationCore" }
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appCompat" }
-kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
 compose-runtime-multiplatform = { module = "org.jetbrains.compose.runtime:runtime", version.ref = "composeMultiplatform" }
 compose-foundation-multiplatform = { module = "org.jetbrains.compose.foundation:foundation", version.ref = "composeMultiplatform" }
 compose-material3-multiplatform = { module = "org.jetbrains.compose.material3:material3", version.ref = "material3Multiplatform" }
-compose-ui-multiplatform = { module = "org.jetbrains.compose.ui:ui", version.ref = "composeMultiplatform" }
 kotlin-stdlib = { group = "org.jetbrains.kotlin", name = "kotlin-stdlib", version.ref = "kotlinStdlib" }
 kotlin-test = { group = "org.jetbrains.kotlin", name = "kotlin-test", version.ref = "kotlinTest" }
 androidx-runner = { group = "androidx.test", name = "runner", version.ref = "runner" }
