@@ -208,7 +208,7 @@
     <string name="sentry_consent_allow">Erlauben</string>
     <string name="sentry_consent_decline">Ablehnen</string>
     <string name="sentry_consent_dont_show">Nicht mehr anzeigen</string>
-    <string name="notification_channel_name">Transmission state</string>
+    <string name="notification_channel_name">Übertrangungsstatus</string>
     <string name="disconnect_notification_channel_name">Gerät nicht verbunden</string>
     <string name="continue_anyway">Trotzdem fortfahren</string>
     <string name="start">Start</string>
