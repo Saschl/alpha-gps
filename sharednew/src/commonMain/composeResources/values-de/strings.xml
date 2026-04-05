@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name" translatable="false">AlphaGPS</string>
     <string name="app_name_ui" translatable="false">Alpha GPS</string>
@@ -123,7 +124,7 @@
     <string name="faq_camera_not_appearing_question">Warum erscheint meine Kamera nicht in der Liste?</string>
     <string name="faq_camera_not_appearing_answer">• Stellen Sie sicher, dass sich Ihre Kamera im Kopplungs-/Bluetooth-Modus befindet\n• Überprüfen Sie, ob Ihre Kamera das erforderliche Bluetooth-Profil unterstützt\n• Stellen Sie sicher, dass Sie in Reichweite sind (normalerweise 10 Meter)\n• Versuchen Sie, Bluetooth auf Ihrem Telefon neu zu starten</string>
     <string name="faq_enable_service_question">Wie aktiviere ich den Service dauerhaft?</string>
-    <string name="faq_enable_service_answer">Bitte besuchen Sie die App-Einstellungen und probieren Sie die Optionen im Bereich Akku &amp; Hintergrund aus. Alternativ versuchen Sie Folgendes:\nUm GPS-Daten kontinuierlich mit Ihrer Kamera zu synchronisieren:\n1. Gehen Sie zu den Einstellungen Ihres Geräts > Apps\n2. Finden Sie 'Alpha GPS' in der App-Liste\n3. Tippen Sie darauf und wählen Sie 'Akku'\n4. Wählen Sie 'Nicht optimieren' oder 'Hintergrundaktivität erlauben'\n5. Dies verhindert, dass das System den GPS-Service stoppt\n\nSie können dies auch über die Gerätedetails-Seite in der App aufrufen.</string>
+    <string name="faq_enable_service_answer">Bitte besuchen Sie die App-Einstellungen und probieren Sie die Optionen im Bereich Akku &amp; Hintergrund aus. Alternativ versuchen Sie Folgendes:\nUm GPS-Daten kontinuierlich mit Ihrer Kamera zu synchronisieren:\n1. Gehen Sie zu den Einstellungen Ihres Geräts &gt; Apps\n2. Finden Sie 'Alpha GPS' in der App-Liste\n3. Tippen Sie darauf und wählen Sie 'Akku'\n4. Wählen Sie 'Nicht optimieren' oder 'Hintergrundaktivität erlauben'\n5. Dies verhindert, dass das System den GPS-Service stoppt\n\nSie können dies auch über die Gerätedetails-Seite in der App aufrufen.</string>
     <string name="faq_camera_not_connecting_question">Meine Kamera verbindet sich nicht automatisch, was kann ich tun?</string>
     <string name="faq_camera_not_connecting_answer">Leider kann es vorkommen, dass die automatische Verbindung nicht funktioniert. Falls Sie Probleme haben, gehen Sie bitte wie folgt vor: Tippen Sie auf dem Hauptbildschirm auf Ihre Kamera, um die Detailansicht zu öffnen. Dort haben Sie die Möglichkeit, den Always On Modus zu aktivieren, der die App im Vordergrund hält. \nAlternativ können Sie Bluetooth kurz aus- und wieder einschalten oder das Gerät in der App entfernen und erneut koppeln.</string>
     <string name="faq_permissions_question">Welche Berechtigungen benötigt die App?</string>
@@ -215,4 +216,6 @@
     <string name="bluetooth_connect_required_desc">This app requires Bluetooth Connect permission to discover and communicate with your camera device.</string>
     <string name="bluetooth_connect_grant_button">Grant Bluetooth Permission</string>
     <string name="bluetooth_connect_permanently_denied">Bluetooth permission has been permanently denied. Please open App Settings, navigate to Permissions → Nearby devices, and grant the permission manually.</string>
+    <string name="auto_scan">Start Scan nach Öffnen der App</string>
+    <string name="auto_scan_description">Suche automatisch nach Kameras in der Nähe wenn der Startbildschirm sichtbar ist</string>
 </resources>
