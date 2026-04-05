@@ -183,6 +183,9 @@ private fun SettingsOverviewScreen(
                 item {
                     DebugRestartReceiverCard()
                 }
+                item {
+                    DebugDonationDialogCard()
+                }
             }
         }
     }

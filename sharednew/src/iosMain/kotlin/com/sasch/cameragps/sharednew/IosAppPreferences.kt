@@ -12,6 +12,7 @@ internal object IosAppPreferences {
     private const val keyAutoScanEnabled = "ios.autoScanEnabled"
     private const val keyDonationHintLastShown = "ios.donationHintLastShown"
     private const val keyDonationHintShownTimes = "ios.donationHintShownTimes"
+    private const val keyForceDonationDialogOnNextStart = "ios.forceDonationDialogOnNextStart"
 
     private const val logLevel = "ios.logLevel"
 
@@ -72,6 +73,18 @@ internal object IosAppPreferences {
             (donationHintShownTimes() + 1).toLong(),
             forKey = keyDonationHintShownTimes
         )
+    }
+
+    fun setForceDonationDialogOnNextAppStart(enabled: Boolean) {
+        defaults.setBool(enabled, forKey = keyForceDonationDialogOnNextStart)
+    }
+
+    fun consumeForceDonationDialogOnNextAppStart(): Boolean {
+        val shouldForce = defaults.boolForKey(keyForceDonationDialogOnNextStart)
+        if (shouldForce) {
+            defaults.removeObjectForKey(keyForceDonationDialogOnNextStart)
+        }
+        return shouldForce
     }
 
     fun getLogLevel(): String = defaults.stringForKey(logLevel) ?: LogLevel.Info.name

@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
@@ -27,6 +28,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -73,19 +75,29 @@ private enum class IosLogLevel {
 internal fun IosSettingsScreen(
     isAppEnabled: Boolean,
     autoScanEnabled: Boolean,
+    scrollToTipJarOnOpen: Boolean = false,
     onBackClick: () -> Unit,
     onOpenHelp: () -> Unit,
     onAppEnabledChange: (Boolean) -> Unit,
     onAutoScanEnabledChange: (Boolean) -> Unit,
     onShowWelcomeAgain: () -> Unit,
     onChangeLogLevel: (LogLevel) -> Unit,
+    onTipJarScrollConsumed: () -> Unit = {},
 ) {
     var selectedLogLevel by remember { mutableStateOf(LogLevel.valueOf(IosAppPreferences.getLogLevel())) }
+    var debugTapCounter by remember { mutableIntStateOf(0) }
+    val listState = rememberLazyListState()
+
+    LaunchedEffect(scrollToTipJarOnOpen) {
+        if (!scrollToTipJarOnOpen) return@LaunchedEffect
+        listState.animateScrollToItem(index = TIP_JAR_ITEM_INDEX, 1)
+        onTipJarScrollConsumed()
+    }
 
     SharedSettingsScreen(
         title = stringResource(Res.string.settings),
         onBackClick = onBackClick,
-        onTitleClick = {},
+        onTitleClick = { debugTapCounter++ },
         navigationIcon = {
             Icon(
                 painterResource(Res.drawable.arrow_back_24px),
@@ -94,6 +106,7 @@ internal fun IosSettingsScreen(
         },
     ) { paddingValues ->
         LazyColumn(
+            state = listState,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
@@ -133,6 +146,48 @@ internal fun IosSettingsScreen(
             item {
                 IosTipJarCard()
             }
+
+            if (debugTapCounter >= 5) {
+                item {
+                    IosDebugCard()
+                }
+            }
+        }
+    }
+}
+
+private const val TIP_JAR_ITEM_INDEX = 2
+
+@Composable
+private fun IosDebugCard() {
+    var queued by remember { mutableStateOf(false) }
+
+    SharedSettingsCard(title = "Debug") {
+        Text(
+            text = "Internal debug actions",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        OutlinedButton(
+            onClick = {
+                IosAppPreferences.setForceDonationDialogOnNextAppStart(true)
+                queued = true
+            },
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(text = "Show donation dialog on next app start")
+        }
+
+        if (queued) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Queued for next app start.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.primary,
+            )
         }
     }
 }

@@ -54,6 +54,8 @@ import timber.log.Timber
 @SuppressLint("MissingPermission")
 @Composable
 fun CameraDeviceManager(
+    forceShowDonationDialogOnEnter: Boolean = false,
+    onForceDonationDialogConsumed: () -> Unit = {},
     onSettingsClick: () -> Unit = {},
     onHelpClick: () -> Unit = {},
     onLogsClick: () -> Unit = {}
@@ -157,6 +159,14 @@ fun CameraDeviceManager(
             PreferencesManager.setDonationHintShownNow(context.applicationContext)
             PreferencesManager.increaseDonationHintShownTimes(context.applicationContext)
             showDonationDialog = true
+        }
+    }
+
+    LaunchedEffect(forceShowDonationDialogOnEnter, lifecycleState, showDonationDialog) {
+        if (!forceShowDonationDialogOnEnter || showDonationDialog) return@LaunchedEffect
+        if (lifecycleState == Lifecycle.State.RESUMED) {
+            showDonationDialog = true
+            onForceDonationDialogConsumed()
         }
     }
 

@@ -129,6 +129,11 @@ class MainActivity : AppCompatActivity() {
                 !PreferencesManager.isSentryConsentDialogDismissed(context)
             )
         }
+        var forceDonationDialogThisLaunch by remember {
+            mutableStateOf(
+                PreferencesManager.consumeForceDonationDialogOnNextAppStart(context)
+            )
+        }
 
         NavDisplay(
             backStack = backStack,
@@ -180,6 +185,10 @@ class MainActivity : AppCompatActivity() {
 
                         EnhancedLocationPermissionBox {
                             CameraDeviceManager(
+                                forceShowDonationDialogOnEnter = forceDonationDialogThisLaunch,
+                                onForceDonationDialogConsumed = {
+                                    forceDonationDialogThisLaunch = false
+                                },
                                 onSettingsClick = {
                                     backStack.add(AppDestination.Settings)
                                 },

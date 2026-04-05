@@ -21,6 +21,8 @@ object PreferencesManager {
     private const val KEY_REVIEW_HINT_SHOWN_TIMES = "review_hint_shown_times"
     private const val KEY_DONATION_HINT_LAST_SHOWN = "donation_hint_last_shown"
     private const val KEY_DONATION_HINT_SHOWN_TIMES = "donation_hint_shown_times"
+    private const val KEY_FORCE_DONATION_DIALOG_ON_NEXT_START =
+        "force_donation_dialog_on_next_start"
     private const val KEY_IGNORE_PERMISSIONS = "ignore_permissions"
     private const val KEY_LOCATION_PROVIDER = "location_provider"
     private const val KEY_TRANSMISSION_EVENT_SOUNDS_ENABLED = "transmission_event_sounds_enabled"
@@ -158,6 +160,23 @@ object PreferencesManager {
         getPreferences(applicationContext).edit {
             putInt(KEY_DONATION_HINT_SHOWN_TIMES, currentTimes + 1)
         }
+    }
+
+    fun setForceDonationDialogOnNextAppStart(context: Context, enabled: Boolean) {
+        getPreferences(context).edit {
+            putBoolean(KEY_FORCE_DONATION_DIALOG_ON_NEXT_START, enabled)
+        }
+    }
+
+    fun consumeForceDonationDialogOnNextAppStart(context: Context): Boolean {
+        val shouldForce =
+            getPreferences(context).getBoolean(KEY_FORCE_DONATION_DIALOG_ON_NEXT_START, false)
+        if (shouldForce) {
+            getPreferences(context).edit {
+                remove(KEY_FORCE_DONATION_DIALOG_ON_NEXT_START)
+            }
+        }
+        return shouldForce
     }
 
     fun resetReviewHintData(context: Context) {

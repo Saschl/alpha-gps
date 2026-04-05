@@ -74,6 +74,8 @@ internal fun CameraGpsIosApp() {
         )
     }
     var showDonationDialog by remember { mutableStateOf(false) }
+    var scrollToTipJarOnSettingsOpen by remember { mutableStateOf(false) }
+    var forceDonationDialogThisLaunch by remember { mutableStateOf(false) }
 
     DisposableEffect(Unit) {
         val center = NSNotificationCenter.defaultCenter
@@ -105,6 +107,7 @@ internal fun CameraGpsIosApp() {
                 VariableLogLevel(LogLevel.valueOf(IosAppPreferences.getLogLevel()))
             )
         )
+        forceDonationDialogThisLaunch = IosAppPreferences.consumeForceDonationDialogOnNextAppStart()
     }
     LaunchedEffect(currentScreen, isAppEnabled, autoScanEnabled, isAppInForeground) {
         if (SCREENSHOT_MODE) return@LaunchedEffect
@@ -127,6 +130,19 @@ internal fun CameraGpsIosApp() {
             IosAppPreferences.setDonationHintShownNow()
             IosAppPreferences.increaseDonationHintShownTimes()
             showDonationDialog = true
+        }
+    }
+
+    LaunchedEffect(
+        currentScreen,
+        isAppInForeground,
+        showDonationDialog,
+        forceDonationDialogThisLaunch
+    ) {
+        if (SCREENSHOT_MODE || showDonationDialog || !forceDonationDialogThisLaunch) return@LaunchedEffect
+        if (currentScreen == IosScreen.Devices && isAppInForeground) {
+            showDonationDialog = true
+            forceDonationDialogThisLaunch = false
         }
     }
 
@@ -202,6 +218,7 @@ internal fun CameraGpsIosApp() {
             IosSettingsScreen(
                 isAppEnabled = isAppEnabled,
                 autoScanEnabled = autoScanEnabled,
+                scrollToTipJarOnOpen = scrollToTipJarOnSettingsOpen,
                 onBackClick = { currentScreen = IosScreen.Devices },
                 onOpenHelp = { currentScreen = IosScreen.Help },
                 onAppEnabledChange = { enabled ->
@@ -221,6 +238,9 @@ internal fun CameraGpsIosApp() {
                 },
                 onChangeLogLevel = { level ->
                     KmLogging.setLoggers(DatabaseLogger(logRepository, VariableLogLevel(level)))
+                },
+                onTipJarScrollConsumed = {
+                    scrollToTipJarOnSettingsOpen = false
                 }
             )
         }
@@ -250,6 +270,7 @@ internal fun CameraGpsIosApp() {
                 TextButton(
                     onClick = {
                         showDonationDialog = false
+                        scrollToTipJarOnSettingsOpen = true
                         currentScreen = IosScreen.Settings
                     }
                 ) {
