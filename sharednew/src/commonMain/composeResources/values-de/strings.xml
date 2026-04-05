@@ -2,7 +2,7 @@
 <resources>
     <string name="app_name" translatable="false">AlphaGPS</string>
     <string name="app_name_ui" translatable="false">Alpha GPS</string>
-    <string name="header_device_list">My Cameras</string>
+    <string name="header_device_list">Meine Kameras</string>
     <string name="foreground_service_notification">Übertrage Standortdaten zu %1$d Kameras</string>
     <string name="scan_for_devices">Drücke Start um deine Kamera zu koppeln</string>
     <string name="permission_gps">Zugriff auf genauen Standort</string>
@@ -16,20 +16,20 @@
     <string name="step1_granted">✓ Freigegeben</string>
     <string name="step2_title">Schritt 2: Erlaube Standortzugriff im Hintergrund</string>
     <string name="step2_desc">Ermöglicht kontinuierliche Übertragung der Standortdaten, auch im Hintergrund.</string>
-    <string name="step2_android10_warning">Im nächsten Dialog musst du \"Immer erlauben\" auswählen, damit die App korrekt funktioniert</string>
+    <string name="step2_android10_warning">Im nächsten Dialog musst du "Immer erlauben" auswählen, damit die App korrekt funktioniert</string>
     <string name="step2_grant">Erlaube Standortzugriff im Hintergrund</string>
     <string name="step2_granted">✓ Freigegeben</string>
     <string name="view_logs">Zeige Logs</string>
     <string name="logs_title">Logs</string>
-    <string name="logs_clear_all">Clear all logs</string>
-    <string name="logs_empty">No logs available yet. Logs will appear here as the app runs.</string>
+    <string name="logs_clear_all">Lösche alle Logs</string>
+    <string name="logs_empty">Noch keine Logs verfügbar.</string>
     <string name="camera_gps_permissions">Alpha GPS Berechtigungen</string>
-    <string name="grant_permissions">Grant permissions</string>
+    <string name="grant_permissions">Erlaube Berechtigungen</string>
     <string name="grant_permissions_button">Berechtigungen erteilen</string>
     <string name="permissions_missing_title">Fehlende Berechtigungen</string>
     <string name="permissions_missing_description">Einige Features funktionieren möglicherweise nicht, bis folgende Berechtigungen erteilt wurden:\n%1$s</string>
     <string name="continue_button">Weiter</string>
-    <string name="dismiss_button">Dismiss</string>
+    <string name="dismiss_button">Verwerfen</string>
     <string name="cancel_button">Abbrechen</string>
     <string name="app_settings">App Einstellungen</string>
     <string name="location_bluetooth_access_title">Standort &amp; Bluetooth Zugriff benötigt</string>
@@ -52,10 +52,10 @@
     <string name="location_services_disabled_title">Standortdienste sind deaktiviert</string>
     <string name="location_services_disabled_message">Bitte aktiviere die Standortdienste für GPS-Funktionalität.</string>
     <string name="open_location_settings">Standort-Einstellungen öffnen</string>
-    <string name="app_disabled_title">App is disabled</string>
-    <string name="app_disabled_message">Enable the app in Settings to scan for nearby cameras.</string>
-    <string name="scanning_paused_title">Scanning is paused</string>
-    <string name="scanning_paused_message">Turn on automatic scanning in Settings to look for nearby cameras.</string>
+    <string name="app_disabled_title">App ist deaktiviert</string>
+    <string name="app_disabled_message">Aktiviere die App in den Einstellungen um Kameras in der Nähe zu finden</string>
+    <string name="scanning_paused_title">Scan ist pausiert</string>
+    <string name="scanning_paused_message">Um Kameras in der Nähe zu finden, schalte den automatischen Scan in den Einstellungen ein.</string>
     <string name="scanning_for_cameras">Suche nach Kameras..</string>
     <string name="welcome_title">Willkommen bei Alpha GPS</string>
     <string name="welcome_subtitle">GPS-Koordinaten in Echtzeit für Ihre Kamera über Bluetooth</string>
@@ -63,7 +63,7 @@
     <string name="welcome_feature_connect_description">Kopple deine Sony Kamera via Bluetooth für nahtlose Standortübertragung</string>
     <string name="welcome_feature_gps_sync_title">Echtzeit Standortübertragung</string>
     <string name="welcome_feature_gps_sync_description">Automatische Übertragung der Standortdaten zu deiner Sony Kamera</string>
-    <string name="welcome_feature_device_management_title">Device Management</string>
+    <string name="welcome_feature_device_management_title">Geräteverwaltung</string>
     <string name="welcome_get_started_button">Los geht's</string>
     <string name="welcome_settings_note">Diese Einstellungen können jederzeit angepasst werden</string>
     <string name="welcome_app_icon_description">Alpha GPS App Icon</string>
@@ -72,10 +72,10 @@
     <string name="enable_app">App aktivieren</string>
     <string name="enable_auto_start">Starte App nach Geräteneustart</string>
     <string name="enable_app_description">Aktiviert die Funktionalität zur Übertragung des Standorts</string>
-    <string name="show_welcome_again_description">Reopen the onboarding flow the next time the app starts</string>
+    <string name="show_welcome_again_description">Zeige den Willkommens-Bildschirm beim nächsten App start</string>
     <string name="log_settings">Log Level Einstellungen</string>
     <string name="log_level">Log Level</string>
-    <string name="log_level_description">Minimum log level to record</string>
+    <string name="log_level_description">Minimaler Log Level</string>
     <string name="location_provider_title">Standortanbieter</string>
     <string name="location_provider_play_services">Google Play Services (empfohlen)</string>
     <string name="location_provider_platform">Android Platform (LocationManager)</string>
@@ -120,7 +120,7 @@
     <string name="help_need_more_title">Brauchen Sie weitere Hilfe?</string>
     <string name="help_need_more_description">Überprüfen Sie die App-Logs im oberen Menü für Informationen zur Fehlerbehebung oder überprüfen Sie Ihre Geräteeinstellungen, um sicherzustellen, dass alle Berechtigungen erteilt wurden.</string>
     <string name="faq_connect_camera_question">Wie verbinde ich meine Kamera mit der App?</string>
-    <string name="faq_connect_camera_answer">1. Stellen Sie sicher, dass Ihre Kamera Bluetooth-Konnektivität und GPS-Tagging unterstützt\n2. Aktivieren Sie Bluetooth auf Ihrem Telefon\n3. Tippen Sie auf 'Kamera-Gerät hinzufügen', um den Kopplungsvorgang zu starten\n4. Folgen Sie den Anweisungen auf dem Bildschirm, um Ihre Kamera zu koppeln. \n5.Starten sie die Kamera neu, nachdem der Prozess abgeschlossen ist.</string>
+    <string name="faq_connect_camera_answer">1. Stellen Sie sicher, dass Ihre Kamera Bluetooth-Konnektivität und GPS-Tagging unterstützt\n2. Aktivieren Sie Bluetooth auf Ihrem Telefon\n3. Tippen Sie auf 'Kamera-Gerät hinzufügen', um den Kopplungsvorgang zu starten\n4. Folgen Sie den Anweisungen auf dem Bildschirm, um Ihre Kamera zu koppeln. \n5.Starten sie die Kamera neu, nachdem der Prozess abgeschlossen ist</string>
     <string name="faq_camera_not_appearing_question">Warum erscheint meine Kamera nicht in der Liste?</string>
     <string name="faq_camera_not_appearing_answer">• Stellen Sie sicher, dass sich Ihre Kamera im Kopplungs-/Bluetooth-Modus befindet\n• Überprüfen Sie, ob Ihre Kamera das erforderliche Bluetooth-Profil unterstützt\n• Stellen Sie sicher, dass Sie in Reichweite sind (normalerweise 10 Meter)\n• Versuchen Sie, Bluetooth auf Ihrem Telefon neu zu starten</string>
     <string name="faq_enable_service_question">Wie aktiviere ich den Service dauerhaft?</string>
@@ -136,15 +136,15 @@
     <string name="faq_disconnects_question">Meine Kamera trennt häufig die Verbindung. Was kann ich tun?</string>
     <string name="faq_disconnects_answer">Versuchen Sie diese Lösungen:\n• Halten Sie Ihr Telefon näher zur Kamera\n• Deaktivieren Sie die Akkuoptimierung für die App\n• Überprüfen Sie, ob Ihre Kamera Energiesparmodi hat, die Bluetooth beeinträchtigen\n• Starten Sie beide Geräte neu und koppeln Sie sie bei Bedarf erneut</string>
     <string name="help_menu_item">Hilfe</string>
-    <string name="associated_devices">Associated Devices</string>
-    <string name="nearby_cameras">Nearby Cameras</string>
-    <string name="saved_devices">Saved Devices</string>
-    <string name="no_devices_title">No cameras connected</string>
-    <string name="no_devices_message">Tap the button above to start pairing your camera device.</string>
-    <string name="tap_to_connect">Disconnected</string>
-    <string name="connected">Connected</string>
-    <string name="transmission_active">Transmission active</string>
-    <string name="transmission_inactive">Transmission inactive</string>
+    <string name="associated_devices">Verknüpfte Geräte</string>
+    <string name="nearby_cameras">Kameras in der Nähe</string>
+    <string name="saved_devices">Gespeicherte Geräte</string>
+    <string name="no_devices_title">Keine Kameras verbunden</string>
+    <string name="no_devices_message">Tippe auf den Button oben um deine Kamera zu koppeln</string>
+    <string name="tap_to_connect">Getrennt</string>
+    <string name="connected">Verbunden</string>
+    <string name="transmission_active">Übertragung Aktiv</string>
+    <string name="transmission_inactive">Übertragung inaktiv</string>
     <string name="the_request_was_canceled">Die Anfrage wurde abgebrochen</string>
     <string name="internal_error_happened">Ein interner Fehler ist aufgetreten</string>
     <string name="no_device_matching_the_given_filter_were_found">Keine Geräte gefunden, die dem angegebenen Filter entsprechen</string>
@@ -208,7 +208,7 @@
     <string name="sentry_consent_allow">Erlauben</string>
     <string name="sentry_consent_decline">Ablehnen</string>
     <string name="sentry_consent_dont_show">Nicht mehr anzeigen</string>
-    <string name="notification_channel_name">Übertrangungsstatus</string>
+    <string name="notification_channel_name">Übertragungsstatus</string>
     <string name="disconnect_notification_channel_name">Gerät nicht verbunden</string>
     <string name="continue_anyway">Trotzdem fortfahren</string>
     <string name="start">Start</string>
