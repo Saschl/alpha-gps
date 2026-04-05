@@ -2,8 +2,8 @@
 <resources>
     <string name="app_name" translatable="false">AlphaGPS</string>
     <string name="app_name_ui" translatable="false">Alpha GPS</string>
-    <string name="header_device_list">Meine Kameras</string>
-    <string name="foreground_service_notification">Übertrage Standortdaten zu %d Kameras</string>
+    <string name="header_device_list">My Cameras</string>
+    <string name="foreground_service_notification">Übertrage Standortdaten zu %1$d Kameras</string>
     <string name="scan_for_devices">Drücke Start um deine Kamera zu koppeln</string>
     <string name="permission_gps">Zugriff auf genauen Standort</string>
     <string name="permission_background_gps">Erlaube Zugriff auf Standort wenn die App im Hintergrund ist</string>
