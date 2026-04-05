@@ -218,4 +218,11 @@
     <string name="bluetooth_connect_permanently_denied">Bluetooth permission has been permanently denied. Please open App Settings, navigate to Permissions → Nearby devices, and grant the permission manually.</string>
     <string name="auto_scan">Start Scan nach Öffnen der App</string>
     <string name="auto_scan_description">Suche automatisch nach Kameras in der Nähe wenn der Startbildschirm sichtbar ist</string>
+    <string name="tip_jar">Spenden</string>
+    <string name="tip_jar_description">Gefällt dir die App? Mit einer Spende kannst du mir helfen, die Apple Gebühren für Entwickler zu finanzieren (99€/Jahr). Eine Spende ist komplett optional, vielen Dank für die Benutzung von Alpha GPS! ❤️</string>
+    <string name="tip_jar_loading">Laden…</string>
+    <string name="tip_jar_thank_you">Vielen Dank für deine Unterstützung!</string>
+    <string name="tip_jar_unavailable">Spenden sind momentan nicht möglich.</string>
+    <string name="tip_jar_error_prefix">Etwas ist schief gelaufen:</string>
+    <string name="tip_jar_dismiss">Verwerfen</string>
 </resources>
