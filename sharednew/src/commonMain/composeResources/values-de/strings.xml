@@ -226,7 +226,7 @@
     <string name="tip_jar_error_prefix">Etwas ist schief gelaufen:</string>
     <string name="tip_jar_dismiss">Verwerfen</string>
     <string name="donation_dialog_title">Gefällt die Alpha GPS?</string>
-    <string name="donation_dialog_message">Falls die App dich beim Fotografieren unterstützt, würde ich mich über eine kleine Spende freuen. Das bleibt natürlich komplett optional, unterstütz aber die Entwicklung.</string>
+    <string name="donation_dialog_message">Falls die App dich beim Fotografieren unterstützt, würde ich mich über eine kleine Spende freuen. Das ist natürlich komplett optional, unterstützt jedoch die Weiterentwicklung.</string>
     <string name="donation_dialog_confirm">Unterstütze das Projekt</string>
     <string name="donation_dialog_dismiss">Nicht jetzt</string>
 </resources>
