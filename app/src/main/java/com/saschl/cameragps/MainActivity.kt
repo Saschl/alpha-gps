@@ -90,13 +90,32 @@ class MainActivity : AppCompatActivity() {
         }
         val backStack = rememberNavBackStack(startDestination)
 
+        fun popBackStackIfPossible() {
+            if (backStack.size > 1) {
+                backStack.removeAt(backStack.lastIndex)
+            } else {
+                Timber.d("Ignoring back press on root destination")
+            }
+        }
+
+        fun resetBackStackTo(destination: AppDestination) {
+            if (backStack.isEmpty()) {
+                backStack.add(destination)
+                return
+            }
+
+            backStack[0] = destination
+            while (backStack.size > 1) {
+                backStack.removeAt(backStack.lastIndex)
+            }
+        }
+
         LaunchedEffect(lifecycleState) {
             Timber.d("Lifecycle state changed: $lifecycleState")
             when (lifecycleState) {
                 Lifecycle.State.RESUMED -> {
                     if (PreferencesManager.isFirstLaunch(context)) {
-                        backStack.clear()
-                        backStack.add(AppDestination.Welcome)
+                        resetBackStackTo(AppDestination.Welcome)
                     }
                 }
                 else -> { /* No action needed */ }
@@ -139,7 +158,7 @@ class MainActivity : AppCompatActivity() {
         NavDisplay(
             backStack = backStack,
             onBack = {
-                backStack.removeAt(backStack.lastIndex)
+                popBackStackIfPossible()
             }
         ) { destination ->
             when (destination) {
@@ -148,8 +167,7 @@ class MainActivity : AppCompatActivity() {
                         WelcomeScreen(
                             onGetStarted = {
                                 PreferencesManager.setFirstLaunchCompleted(context)
-                                backStack.clear()
-                                backStack.add(AppDestination.Devices)
+                                resetBackStackTo(AppDestination.Devices)
                                 Timber.i("Welcome screen completed, navigating to main app")
                             }
                         )
@@ -160,7 +178,7 @@ class MainActivity : AppCompatActivity() {
                     NavEntry(AppDestination.Settings) {
                         SettingsScreen(
                             onBackClick = {
-                                backStack.removeAt(backStack.lastIndex)
+                                popBackStackIfPossible()
                             }
                         )
                     }
@@ -170,7 +188,7 @@ class MainActivity : AppCompatActivity() {
                     NavEntry(AppDestination.Help) {
                         HelpScreen(
                             onBackClick = {
-                                backStack.removeAt(backStack.lastIndex)
+                                popBackStackIfPossible()
                             }
                         )
                     }
@@ -222,7 +240,7 @@ class MainActivity : AppCompatActivity() {
                             logFormatter,
                             logRepository = logRepository,
                             onBackClick = {
-                                backStack.removeAt(backStack.lastIndex)
+                                popBackStackIfPossible()
                             }
                         )
                     }

@@ -42,6 +42,7 @@ import com.saschl.cameragps.ui.BluetoothWarningCard
 import com.saschl.cameragps.ui.LocationWarningCard
 import com.saschl.cameragps.ui.pairing.isDevicePaired
 import com.saschl.cameragps.utils.DeviceAssociationUtils
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import timber.log.Timber
@@ -157,9 +158,17 @@ fun ScanForDevicesMenu(
                 // enabled = associatedDevices.isEmpty() && isBluetoothEnabled && isLocationEnabled,
                 onClick = {
                     scope.launch {
-                        val intentSender =
-                            DeviceAssociationUtils.requestDeviceAssociation(deviceManager)
-                        launcher.launch(IntentSenderRequest.Builder(intentSender).build())
+                        try {
+                            val intentSender =
+                                DeviceAssociationUtils.requestDeviceAssociation(deviceManager)
+                            launcher.launch(IntentSenderRequest.Builder(intentSender).build())
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            Timber.e(e, "Failed to start device association")
+                            errorMessage =
+                                e.message?.takeIf { it.isNotBlank() } ?: internalErrorText
+                        }
                     }
                 },
             ) {
