@@ -115,14 +115,24 @@ fun EnhancedLocationPermissionBox(
         Manifest.permission.BLUETOOTH)
     }
 
+    var hasUserDeniedPermission by remember { mutableStateOf(false) }
+
     val foregroundPermissionState = rememberMultiplePermissionsState(
         permissions = foregroundLocationPermissions
-    ) { }
+    ) { results ->
+        if (results.values.any { !it }) {
+            hasUserDeniedPermission = true
+        }
+    }
 
     // Background location permission (separate for Android 10+)
     val backgroundLocationPermission = rememberPermissionState(
         permission = Manifest.permission.ACCESS_BACKGROUND_LOCATION
-    ) { }
+    ) { granted ->
+        if (!granted) {
+            hasUserDeniedPermission = true
+        }
+    }
 
     val allForegroundGranted = foregroundPermissionState.allPermissionsGranted
     val backgroundGranted = backgroundLocationPermission.status.isGranted
@@ -146,6 +156,7 @@ fun EnhancedLocationPermissionBox(
                     foregroundPermissionState = foregroundPermissionState,
                     backgroundLocationPermission = backgroundLocationPermission,
                     allForegroundGranted = allForegroundGranted,
+                    hasUserDeniedPermission = hasUserDeniedPermission,
                     onContinueAnyway = {
                         ignorePermissions = true
                         PreferencesManager.setPermissionsIgnored(context, true)
@@ -161,6 +172,7 @@ private fun EnhancedPermissionScreen(
     foregroundPermissionState: MultiplePermissionsState,
     backgroundLocationPermission: PermissionState,
     allForegroundGranted: Boolean,
+    hasUserDeniedPermission: Boolean,
     onContinueAnyway: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -316,7 +328,7 @@ private fun EnhancedPermissionScreen(
             }
         }
 
-        if (errorText.isNotBlank()) {
+        if (hasUserDeniedPermission && errorText.isNotBlank()) {
             Spacer(modifier = Modifier.height(16.dp))
             Text(
                 text = errorText,
