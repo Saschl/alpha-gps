@@ -128,7 +128,7 @@
         <!-- enable the performance API by setting a sample-rate, adjust in production env -->
         <meta-data
             android:name="io.sentry.traces.sample-rate"
-            android:value="1.0" />
+            android:value="0.8" />
     </application>
 
 </manifest>
