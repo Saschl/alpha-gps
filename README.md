@@ -2,6 +2,7 @@
 <img src="https://hosted.weblate.org/widget/alpha-gps/svg-badge.svg" alt="Übersetzungsstatus" />
 </a>
 
+
 ## What is it?
 
 App for transmitting location data to sony cameras. I was fed up with the official app and found a python script (https://github.com/anoulis/sony_camera_bluetooth_external_gps) that got the protocol right, so I thought let's make a better app.
@@ -9,6 +10,9 @@ App for transmitting location data to sony cameras. I was fed up with the offici
 Also big thanks to https://github.com/mlapaglia/AlphaSync which provided insights into how to enable the functionality for devices that use the Sony creators's app instead of Imaging Edge.
 
 It makes use of the companion device manager APIs of Android which *should* provide a reliable way to launch the transmission even when the app is in the background and the screen is off. However, due to limited devices, there might be differences. I have tested Android 10, 12, 13, 15 and 16 up to now, but your mileage may wary
+
+> [!NOTE]
+> I will move and add documentation to the new webpage at https://alphagps.app in the future
 
 
 ## How to install?
