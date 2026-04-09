@@ -173,7 +173,7 @@
     <string name="will_show_welcome">Willkommensbildschirm wird beim nächsten Start angezeigt!</string>
     <string name="is_there_documenation">Gibt es irgendwo eine Dokumentation?</string>
     <string name="is_there_documenation_answer">Ja! Bitte besuchen Sie die GitHub Seite. \nDort können sie auch Probleme/Bugs mit der Anwendung melden oder kontaktieren Sie uns per E-Mail:</string>
-    <string name="is_there_documenation_answer_coffee">If you like the app and want to support development, you can buy me a coffee ☕️</string>
+    <string name="is_there_documenation_answer_coffee">Falls dir die App gefällt und du die Entwicklung unterstützen willst, folge dem Link ☕️</string>
     <string name="app_standby_title">Standby</string>
     <string name="app_standby_content">Warten auf Kameraverbindung</string>
     <string name="language_settings">Spracheinstellungen</string>
