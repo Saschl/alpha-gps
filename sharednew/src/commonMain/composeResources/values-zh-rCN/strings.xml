@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="foreground_service_notification">正在向 %d 台相机传输位置数据</string>
+    <string name="foreground_service_notification">正在向 %1$d 台相机传输位置数据</string>
     <string name="scan_for_devices">点击查找并关联您的相机</string>
     <string name="permission_gps">访问精确位置</string>
     <string name="permission_background_gps">允许应用在后台访问位置</string>
@@ -33,7 +33,7 @@
     <string name="background_location_benefit_2">• 屏幕关闭时也能跟踪位置</string>
     <string name="background_location_benefit_3">• 长时间拍摄时无缝照片地理标记</string>
     <string name="background_location_instruction">请在下一个对话框中选择始终允许。</string>
-    <string name="permissions_required_app_error">应用正常运行需要 %s 权限</string>
+    <string name="permissions_required_app_error">应用正常运行需要 %1$s 权限</string>
     <string name="background_location_required_error">应用不在前台时需要后台位置权限来持续GPS同步</string>
     <string name="remove">移除</string>
     <string name="bluetooth_disabled_title">蓝牙已禁用</string>
@@ -70,7 +70,7 @@
     <string name="help_need_more_title">需要更多帮助？</string>
     <string name="help_need_more_description">查看顶部菜单中的应用日志以获取故障排除信息，或检查您的设备设置以确保已授予所有权限。</string>
     <string name="faq_connect_camera_question">如何将相机连接到应用？</string>
-    <string name="faq_connect_camera_answer">1. 确保您的相机支持蓝牙连接和GPS标记\n2. 在手机上启用蓝牙\n3. 点击添加相机设备开始配对过程\n4. 按照屏幕说明配对您的相机。首次配对完成后重启相机。</string>
+    <string name="faq_connect_camera_answer">1. 确保您的相机支持蓝牙连接和GPS标记功能\n2. 在相机和手机上均开启蓝牙\n3. 将相机设为配对模式。在屏幕上点击该相机，并按照屏幕上的指示进行操作（相机和手机端均需配合）\n4. 如果配对失败，请删除手机和相机蓝牙设置中现有的配对记录，然后重试</string>
     <string name="faq_camera_not_appearing_question">为什么我的相机没有出现在列表中？</string>
     <string name="faq_camera_not_appearing_answer">• 确保相机处于配对/蓝牙模式\n• 检查相机是否支持所需的蓝牙配置文件\n• 确保您在范围内（通常为10米）\n• 尝试重启手机蓝牙</string>
     <string name="faq_enable_service_question">如何让该服务保持常驻？它好像运行一段时间后就会自动停止</string>
@@ -83,7 +83,7 @@
     <string name="faq_gps_accuracy_answer">GPS准确性取决于：\n• 卫星可见性（室外更佳）\n• 天气条件\n• 您手机的GPS能力\n• 良好条件下的典型精度为3–5米</string>
     <string name="faq_background_work_question">应用在后台工作吗？</string>
     <string name="faq_background_work_answer">是的，正确配置后：\n• 服务在后台运行以维持GPS同步\n• 确保禁用电池优化\n• 应用活动时会显示持续通知\n• GPS数据持续发送到已连接的相机</string>
-    <string name="faq_disconnects_question">我的相机经常断开连接。我该怎么办？</string>
+    <string name="faq_disconnects_question">我的相机经常断开连接</string>
     <string name="faq_disconnects_answer">尝试这些解决方案：\n• 保持手机靠近相机\n• 为应用禁用电池优化\n• 检查相机是否有影响蓝牙的省电模式\n• 必要时重启两个设备并重新配对</string>
     <string name="help_menu_item">帮助</string>
     <string name="the_request_was_canceled">请求已取消</string>
@@ -149,5 +149,40 @@
     <string name="disconnect_notification_channel_name">设备已断开</string>
     <string name="continue_anyway">仍然继续</string>
     <string name="permissions_missing_description">需开启以下权限以确保功能完整：\n%1$s</string>
+    <string name="header_device_list">我的相机</string>
+    <string name="logs_clear_all">清除所有日志</string>
+    <string name="logs_empty">暂无日志。日志将在应用运行时显示于此处。</string>
+    <string name="grant_permissions">授予权限</string>
+    <string name="welcome_feature_device_management_title">设备管理</string>
+    <string name="associated_devices">已关联的设备</string>
+    <string name="logs_title">日志</string>
+    <string name="dismiss_button">忽略</string>
+    <string name="event_sounds_title">传输事件提示音</string>
+    <string name="event_sounds_description">为相机和 GPS 传输事件播放简短提示音。</string>
+    <string name="event_sounds_enable_all">启用事件提示音</string>
+    <string name="event_sounds_location_acquired">已获取位置</string>
+    <string name="event_sounds_location_invalid">位置不准确/无效</string>
+    <string name="event_sounds_camera_connected">相机已连接</string>
+    <string name="event_sounds_camera_disconnected">相机已断开连接</string>
+    <string name="event_sounds_current_default">当前音效：默认</string>
+    <string name="event_sounds_current_silent">当前音效：静音</string>
+    <string name="event_sounds_current_custom">当前音效：自定义</string>
+    <string name="event_sounds_set_default">默认</string>
+    <string name="event_sounds_set_silent">静音</string>
+    <string name="event_sounds_choose_sound">选择音效</string>
+    <string name="event_sounds_open_section">打开声音设置</string>
+    <string name="event_sounds_open_section_description">配置自定义应用内事件声音和通知渠道声音。</string>
+    <string name="event_sounds_notification_channels_title">通知渠道声音</string>
+    <string name="log_level_description">最低日志记录级别</string>
+    <string name="nearby_cameras">附近的相机</string>
+    <string name="saved_devices">已保存的设备</string>
+    <string name="no_devices_title">未连接到相机</string>
+    <string name="no_devices_message">点击上方的按钮，开始配对您的相机。</string>
+    <string name="tap_to_connect">已断开</string>
+    <string name="connected">已连接</string>
+    <string name="app_disabled_message">请在设置中开启权限以扫描周围的相机。</string>
+    <string name="is_there_documenation_answer_coffee">如果你喜欢这个应用并想支持开发，可以请我喝杯咖啡 ☕️</string>
+    <string name="app_disabled_title">应用已禁用</string>
+    <string name="scanning_paused_title">扫描已暂停</string>
+    <string name="device_name_with_address">设备名称： %1$s (%2$s)</string>
 </resources>
-
