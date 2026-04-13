@@ -190,6 +190,9 @@
 
     <string name="back">Back</string>
     <string name="device_icon">Device icon</string>
+    <string name="trigger_shutter">Trigger remote shutter</string>
+    <string name="remote_feature_active">Remote ready</string>
+    <string name="remote_feature_inactive">Remote off in camera</string>
     <string name="show_details">Show details</string>
     <string name="device_name_with_address">Name: %1$s (%2$s)</string>
     <string name="enable_device">Enable device</string>

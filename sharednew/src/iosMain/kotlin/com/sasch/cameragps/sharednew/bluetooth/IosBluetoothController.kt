@@ -148,6 +148,7 @@ object IosBluetoothController : BluetoothController {
             }
         }
 
+
         @ObjCSignatureOverride
         override fun peripheral(
             peripheral: CBPeripheral,
@@ -186,6 +187,12 @@ object IosBluetoothController : BluetoothController {
 
                     IosSonyBleConstants.LOCATION_ENABLED_CHARACTERISTIC_UUID_STRING -> session.locationEnabledCharacteristic =
                         characteristic
+
+                    IosSonyBleConstants.REMOTE_CHARACTERISTIC_UUID_STRING -> session.remoteControlCharacteristic =
+                        characteristic
+
+                    IosSonyBleConstants.REMOTE_STATUS_UUID_STRING -> session.remoteStatusCharacteristic =
+                        characteristic
                 }
 
                 // Collect every characteristic that supports notifications/indications
@@ -197,6 +204,8 @@ object IosBluetoothController : BluetoothController {
                     session.notifiableCharacteristics.add(characteristic)
                 }
             }
+
+            subscribeToRemoteStatusUpdates(session)
 
             // Trigger pairing by subscribing to notifications.
             // The CCCD descriptor write that setNotifyValue triggers often requires
@@ -255,6 +264,16 @@ object IosBluetoothController : BluetoothController {
                     ),
                 )
                 beginGpsEnable(session)
+            } else if (didUpdateValueForCharacteristic.UUID == IosSonyBleConstants.REMOTE_STATUS_UUID_STRING) {
+                val active = isRemoteFeatureActive(value)
+                session.remoteFeatureActive = active
+                logging.i {
+                    "Remote feature status update for ${peripheral.identifier.UUIDString}: active=$active value=${
+                        value.joinToString(
+                            ","
+                        )
+                    }"
+                }
             }
         }
 
@@ -333,6 +352,26 @@ object IosBluetoothController : BluetoothController {
 
             // Ignore callbacks that arrive when we're no longer waiting for
             // pairing (e.g. the unsubscribe we issue after pairing succeeds).
+            if (didUpdateNotificationStateForCharacteristic.UUID == IosSonyBleConstants.REMOTE_STATUS_UUID_STRING) {
+                if (isAuthenticationError(error)) {
+                    retryAfterPairing(session) {
+                        peripheral.setNotifyValue(
+                            true,
+                            forCharacteristic = didUpdateNotificationStateForCharacteristic,
+                        )
+                    }
+                    return
+                }
+
+                if (error == null) {
+                    session.remoteStatusNotificationsEnabled = true
+                    logging.i { "Subscribed to remote status notifications for ${peripheral.identifier.UUIDString}" }
+                } else {
+                    logging.w { "Remote status notification subscription failed for ${peripheral.identifier.UUIDString}: ${error.localizedDescription}" }
+                }
+                return
+            }
+
             if (session.phase != PeripheralPhase.WaitingForPairing) return
             logging.d { "Notification subscription result for ${didUpdateNotificationStateForCharacteristic.UUID.UUIDString}: error=${error?.code} / ${error?.localizedDescription}" }
 
@@ -467,6 +506,7 @@ object IosBluetoothController : BluetoothController {
                             listOf(
                                 CBUUID.UUIDWithString(SonyBluetoothConstants.SERVICE_UUID),
                                 CBUUID.UUIDWithString(SonyBluetoothConstants.CONTROL_SERVICE_UUID),
+                                IosSonyBleConstants.REMOTE_SERVICE_UUID,
                             )
                         )
                     }
@@ -520,6 +560,7 @@ object IosBluetoothController : BluetoothController {
                 listOf(
                     IosSonyBleConstants.LOCATION_SERVICE_UUID,
                     IosSonyBleConstants.CONTROL_SERVICE_UUID_STRING,
+                    IosSonyBleConstants.REMOTE_SERVICE_UUID,
                 )
             )
             connectCallbacks.remove(id)?.invoke(true)
@@ -652,6 +693,22 @@ object IosBluetoothController : BluetoothController {
         discovered.remove(identifier)
         sessions.remove(identifier)
         refreshDeviceList()
+    }
+
+    suspend fun triggerRemoteShutter(identifier: String): Boolean {
+        val session = sessions[identifier] ?: return false
+        if (session.phase != PeripheralPhase.Ready) return false
+        if (!session.remoteFeatureActive) return false
+
+        val downSent =
+            writeRemoteShutterCommand(session, SonyBluetoothConstants.FULL_SHUTTER_DOWN_COMMAND)
+        if (!downSent) return false
+
+        delay(80)
+
+        val upSent =
+            writeRemoteShutterCommand(session, SonyBluetoothConstants.FULL_SHUTTER_UP_COMMAND)
+        return upSent
     }
 
     suspend fun applyAppEnabledState(enabled: Boolean) {
@@ -848,6 +905,27 @@ object IosBluetoothController : BluetoothController {
         )
     }
 
+    private fun subscribeToRemoteStatusUpdates(session: PeripheralSession) {
+        val statusCharacteristic = session.remoteStatusCharacteristic ?: return
+        if (session.remoteStatusNotificationsEnabled) return
+        session.peripheral.setNotifyValue(true, forCharacteristic = statusCharacteristic)
+    }
+
+    private fun isRemoteFeatureActive(value: ByteArray): Boolean {
+        if (value.isEmpty()) return false
+        return (value[0].toInt() and 0x01) == 0x01
+    }
+
+    private fun writeRemoteShutterCommand(session: PeripheralSession, command: ByteArray): Boolean {
+        val characteristic = session.remoteControlCharacteristic ?: return false
+        session.peripheral.writeValue(
+            data = command.toNSData(),
+            forCharacteristic = characteristic,
+            type = CBCharacteristicWriteWithResponse,
+        )
+        return true
+    }
+
     private fun forceShutdownAllConnections() {
         stopScanIfNeeded()
         cancelAllKnownConnections()
@@ -962,6 +1040,7 @@ object IosBluetoothController : BluetoothController {
                     isSaved = id in autoReconnectIds,
                     isTransmissionActive =
                         session?.phase == PeripheralPhase.Ready && locationUpdatesStarted,
+                    isRemoteFeatureActive = session?.remoteFeatureActive == true,
                 )
             }
         }
@@ -1018,6 +1097,10 @@ private data class PeripheralSession(
     var lockGpsCharacteristic: CBCharacteristic? = null,
     var timeSyncCharacteristic: CBCharacteristic? = null,
     var locationEnabledCharacteristic: CBCharacteristic? = null,
+    var remoteControlCharacteristic: CBCharacteristic? = null,
+    var remoteStatusCharacteristic: CBCharacteristic? = null,
+    var remoteStatusNotificationsEnabled: Boolean = false,
+    var remoteFeatureActive: Boolean = false,
     var locationConfig: SonyLocationTransmissionConfig? = null,
     var phase: PeripheralPhase = PeripheralPhase.Connected,
     var pairingRetryCount: Int = 0,
@@ -1040,6 +1123,12 @@ private object IosSonyBleConstants {
         CBUUID.UUIDWithString(SonyBluetoothConstants.TIME_SYNC_CHARACTERISTIC_UUID)
     val LOCATION_ENABLED_CHARACTERISTIC_UUID_STRING =
         CBUUID.UUIDWithString(SonyBluetoothConstants.CHARACTERISTIC_LOCATION_ENABLED_IN_CAMERA)
+    val REMOTE_SERVICE_UUID =
+        CBUUID.UUIDWithString(SonyBluetoothConstants.REMOTE_SERVICE_UUID)
+    val REMOTE_CHARACTERISTIC_UUID_STRING =
+        CBUUID.UUIDWithString(SonyBluetoothConstants.REMOTE_CHARACTERISTIC_UUID)
+    val REMOTE_STATUS_UUID_STRING =
+        CBUUID.UUIDWithString(SonyBluetoothConstants.REMOTE_STATUS_UUID)
 
     // ATT error codes that indicate the device requires pairing/bonding.
     // iOS shows the system pairing dialog automatically when an encrypted

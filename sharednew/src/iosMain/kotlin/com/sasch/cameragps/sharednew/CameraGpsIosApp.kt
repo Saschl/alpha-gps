@@ -209,6 +209,11 @@ internal fun CameraGpsIosApp() {
                             }
                         }
                     },
+                    onTriggerRemoteShutter = { device ->
+                        scope.launch {
+                            bluetoothController.triggerRemoteShutter(device.identifier)
+                        }
+                    },
                     onDelete = { device ->
                         scope.launch {
                             bluetoothController.forgetDevice(device.identifier)

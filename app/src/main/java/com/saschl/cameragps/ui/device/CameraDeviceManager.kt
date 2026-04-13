@@ -254,6 +254,19 @@ fun CameraDeviceManager(
                                 selectedDevice = device
                             }
                         },
+                        onTriggerRemoteShutter = { device ->
+                            if (!SCREENSHOT_MODE) {
+                                val shutterIntent = Intent(
+                                    context.applicationContext,
+                                    LocationSenderService::class.java
+                                ).apply {
+                                    action =
+                                        com.sasch.cameragps.sharednew.bluetooth.SonyBluetoothConstants.ACTION_TRIGGER_REMOTE_SHUTTER
+                                    putExtra("address", device.address.uppercase())
+                                }
+                                context.startService(shutterIntent)
+                            }
+                        },
                         onSettingsClick = onSettingsClick,
                         onHelpClick = onHelpClick,
                         onLogsClick = onLogsClick

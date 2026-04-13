@@ -15,6 +15,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -37,7 +38,10 @@ import cameragps.sharednew.generated.resources.device_icon
 import cameragps.sharednew.generated.resources.no_devices_message
 import cameragps.sharednew.generated.resources.no_devices_title
 import cameragps.sharednew.generated.resources.not_paired_tap_to_pair_again
+import cameragps.sharednew.generated.resources.remote_feature_active
+import cameragps.sharednew.generated.resources.remote_feature_inactive
 import cameragps.sharednew.generated.resources.show_details
+import cameragps.sharednew.generated.resources.trigger_shutter
 import com.sasch.cameragps.sharednew.database.LogDatabase
 import com.sasch.cameragps.sharednew.database.getDatabaseBuilder
 import com.sasch.cameragps.sharednew.ui.TransmissionDot
@@ -52,6 +56,7 @@ import org.jetbrains.compose.resources.stringResource
 fun AssociatedDevicesList(
     associatedDevices: List<AssociatedDeviceCompat>,
     onConnect: (AssociatedDeviceCompat) -> Unit,
+    onTriggerRemoteShutter: (AssociatedDeviceCompat) -> Unit,
 ) {
     val context = LocalContext.current
     val cameraDeviceDAO = LogDatabase.getRoomDatabase(
@@ -60,6 +65,9 @@ fun AssociatedDevicesList(
 
     val enableServer = remember {
         LocationSenderService.activeTransmissions
+    }
+    val remoteFeatureStatus = remember {
+        LocationSenderService.remoteFeatureActive
     }
     Column {
         LazyColumn(
@@ -128,6 +136,8 @@ fun AssociatedDevicesList(
                     var isAlwaysOnEnabled by remember(device.address) { mutableStateOf(true) }
 
                     val isTransmissionRunning = enableServer[device.address]
+                    val isRemoteFeatureActive =
+                        remoteFeatureStatus[device.address.uppercase()] == true
 
 
                     LaunchedEffect(device.address) {
@@ -174,6 +184,22 @@ fun AssociatedDevicesList(
                             )
                         }
 
+                        if (isTransmissionRunning == true) {
+                            Text(
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (isRemoteFeatureActive) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                },
+                                text = if (isRemoteFeatureActive) {
+                                    stringResource(Res.string.remote_feature_active)
+                                } else {
+                                    stringResource(Res.string.remote_feature_inactive)
+                                }
+                            )
+                        }
+
                         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S
                             && !isAlwaysOnEnabled
                         ) {
@@ -187,10 +213,21 @@ fun AssociatedDevicesList(
                     Column(
                         Modifier
                             .fillMaxWidth()
-                            .weight(0.1f),
+                            .weight(0.2f),
                         horizontalAlignment = Alignment.End,
                         verticalArrangement = Arrangement.Center,
                     ) {
+                        if (isTransmissionRunning == true) {
+                            IconButton(
+                                onClick = { onTriggerRemoteShutter(device) },
+                                enabled = isRemoteFeatureActive,
+                            ) {
+                                Icon(
+                                    painterResource(R.drawable.baseline_photo_camera_24),
+                                    contentDescription = stringResource(Res.string.trigger_shutter)
+                                )
+                            }
+                        }
                         Icon(
                             painterResource(R.drawable.keyboard_arrow_right_24px),
                             contentDescription = stringResource(Res.string.show_details)

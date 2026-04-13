@@ -18,10 +18,25 @@ object SonyBluetoothConstants {
 
     val TIME_SYNC_CHARACTERISTIC_UUID = "0000cc13-0000-1000-8000-00805f9b34fb"
 
+    val REMOTE_SERVICE_UUID = "8000ff00-ff00-ffff-ffff-ffffffffffff"
+
+    val REMOTE_CHARACTERISTIC_UUID = "0000ff01-0000-1000-8000-00805f9b34fb"
+
+    val REMOTE_STATUS_UUID = "0000ff02-0000-1000-8000-00805f9b34fb"
+
+    val CCCD_UUID = "00002902-0000-1000-8000-00805f9b34fb"
+
     const val ACTION_REQUEST_SHUTDOWN = "com.saschl.cameragps.ACTION_REQUEST_SHUTDOWN"
+    const val ACTION_TRIGGER_REMOTE_SHUTTER = "com.saschl.cameragps.ACTION_TRIGGER_REMOTE_SHUTTER"
 
     // GPS enable command bytes
     val GPS_ENABLE_COMMAND = byteArrayOf(0x01)
+
+    // remote control commands
+    val FULL_SHUTTER_DOWN_COMMAND = byteArrayOf(0x01, 0x09)
+    val FULL_SHUTTER_UP_COMMAND = byteArrayOf(0x01, 0x08)
+
+    val PROBE_COMMAND = byteArrayOf(0x01, 0x06)
 
     // Location update interval
     const val LOCATION_UPDATE_INTERVAL_MS = 5000L

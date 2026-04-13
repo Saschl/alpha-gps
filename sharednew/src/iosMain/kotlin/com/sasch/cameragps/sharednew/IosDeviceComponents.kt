@@ -19,6 +19,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
@@ -41,6 +42,7 @@ import cameragps.sharednew.generated.resources.Res
 import cameragps.sharednew.generated.resources.app_disabled_message
 import cameragps.sharednew.generated.resources.app_disabled_title
 import cameragps.sharednew.generated.resources.app_settings
+import cameragps.sharednew.generated.resources.camera_24px
 import cameragps.sharednew.generated.resources.cancel
 import cameragps.sharednew.generated.resources.connected
 import cameragps.sharednew.generated.resources.delete
@@ -60,6 +62,8 @@ import cameragps.sharednew.generated.resources.ios_troubleshooting_step_3_locati
 import cameragps.sharednew.generated.resources.ios_troubleshooting_step_4_location_permission
 import cameragps.sharednew.generated.resources.ios_troubleshooting_title
 import cameragps.sharednew.generated.resources.nearby_cameras
+import cameragps.sharednew.generated.resources.remote_feature_active
+import cameragps.sharednew.generated.resources.remote_feature_inactive
 import cameragps.sharednew.generated.resources.saved_devices
 import cameragps.sharednew.generated.resources.scanning_for_cameras
 import cameragps.sharednew.generated.resources.scanning_paused_message
@@ -67,6 +71,7 @@ import cameragps.sharednew.generated.resources.scanning_paused_title
 import cameragps.sharednew.generated.resources.tap_to_connect
 import cameragps.sharednew.generated.resources.transmission_active
 import cameragps.sharednew.generated.resources.transmission_inactive
+import cameragps.sharednew.generated.resources.trigger_shutter
 import com.sasch.cameragps.sharednew.bluetooth.BluetoothDeviceInfo
 import com.sasch.cameragps.sharednew.ui.TransmissionDot
 import org.jetbrains.compose.resources.painterResource
@@ -80,6 +85,7 @@ internal fun DeviceListContent(
     onOpenSettings: () -> Unit,
     onOpenHelp: () -> Unit,
     onConnect: (BluetoothDeviceInfo) -> Unit,
+    onTriggerRemoteShutter: (BluetoothDeviceInfo) -> Unit,
     onDelete: (BluetoothDeviceInfo) -> Unit,
 ) {
     var deviceToDelete by remember { mutableStateOf<BluetoothDeviceInfo?>(null) }
@@ -234,6 +240,7 @@ internal fun DeviceListContent(
                             SwipeToDeleteDeviceCard(
                                 device = device,
                                 onConnect = { onConnect(device) },
+                                onTriggerRemoteShutter = { onTriggerRemoteShutter(device) },
                                 onDeleteRequest = { deviceToDelete = device },
                             )
                         }
@@ -253,7 +260,11 @@ internal fun DeviceListContent(
                             SectionHeader(title = stringResource(Res.string.nearby_cameras))
                         }
                         items(nearbyDevices, key = { it.identifier }) { device ->
-                            DeviceCard(device = device, onConnect = { deviceToPair = device })
+                            DeviceCard(
+                                device = device,
+                                onConnect = { deviceToPair = device },
+                                onTriggerRemoteShutter = { onTriggerRemoteShutter(device) },
+                            )
                         }
                     }
                 }
@@ -325,6 +336,7 @@ private fun SectionHeader(title: String) {
 private fun SwipeToDeleteDeviceCard(
     device: BluetoothDeviceInfo,
     onConnect: () -> Unit,
+    onTriggerRemoteShutter: () -> Unit,
     onDeleteRequest: () -> Unit,
 ) {
     val dismissState = rememberSwipeToDismissBoxState()
@@ -366,7 +378,11 @@ private fun SwipeToDeleteDeviceCard(
             }
         },
     ) {
-        DeviceCard(device = device, onConnect = onConnect)
+        DeviceCard(
+            device = device,
+            onConnect = onConnect,
+            onTriggerRemoteShutter = onTriggerRemoteShutter,
+        )
     }
 }
 
@@ -375,6 +391,7 @@ private fun SwipeToDeleteDeviceCard(
 private fun DeviceCard(
     device: BluetoothDeviceInfo,
     onConnect: () -> Unit,
+    onTriggerRemoteShutter: () -> Unit,
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -392,18 +409,47 @@ private fun DeviceCard(
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Medium,
                 )
-                val isTransmissionActive = device.isTransmissionActive
-                val transmissionStatusDescription = if (isTransmissionActive) {
-                    stringResource(Res.string.transmission_active)
-                } else {
-                    stringResource(Res.string.transmission_inactive)
-                }
-                TransmissionDot(
-                    isTransmissionActive,
-                    modifier = Modifier.semantics {
-                        contentDescription = transmissionStatusDescription
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    val isShutterEnabled = device.isConnected && device.isRemoteFeatureActive
+                    if (device.isConnected) {
+                        IconButton(onClick = onTriggerRemoteShutter, enabled = isShutterEnabled) {
+                            Icon(
+                                painter = painterResource(Res.drawable.camera_24px),
+                                contentDescription = stringResource(Res.string.trigger_shutter),
+                            )
+                        }
                     }
-                )
+                    if (device.isConnected) {
+                        Text(
+                            text = if (device.isRemoteFeatureActive) {
+                                stringResource(Res.string.remote_feature_active)
+                            } else {
+                                stringResource(Res.string.remote_feature_inactive)
+                            },
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (device.isRemoteFeatureActive) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
+                        )
+                    }
+                    val isTransmissionActive = device.isTransmissionActive
+                    val transmissionStatusDescription = if (isTransmissionActive) {
+                        stringResource(Res.string.transmission_active)
+                    } else {
+                        stringResource(Res.string.transmission_inactive)
+                    }
+                    TransmissionDot(
+                        isTransmissionActive,
+                        modifier = Modifier.semantics {
+                            contentDescription = transmissionStatusDescription
+                        }
+                    )
+                }
             }
             Text(
                 text = if (device.isConnected) {
