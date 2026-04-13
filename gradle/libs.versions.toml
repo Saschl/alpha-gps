@@ -1,6 +1,6 @@
 [versions]
 agp = "9.1.0"
-componentsResources = "1.11.0-beta01"
+componentsResources = "1.11.0-beta02"
 kotlin = "2.3.20"
 coreKtx = "1.18.0"
 junit = "4.13.2"
