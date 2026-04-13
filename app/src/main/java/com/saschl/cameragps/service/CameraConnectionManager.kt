@@ -64,8 +64,8 @@ class CameraConnectionManager(
         }
         snapshot.forEach { config ->
             runCatching {
-                config.gatt.disconnect()
                 config.gatt.close()
+                config.gatt.disconnect()
             }.onFailure { Timber.w(it) }
         }
     }
@@ -121,15 +121,6 @@ class CameraConnectionManager(
         connections[address]?.let { config ->
             connections[address] =
                 config.copy(remoteControlCharacteristic = remoteControlCharacteristic)
-        }
-    }
-
-    fun setRemoteControlDescriptor(
-        address: String,
-        remoteControlDescriptor: BluetoothGattDescriptor?
-    ) {
-        connections[address]?.let { config ->
-            connections[address] = config.copy(remoteControlDescriptor = remoteControlDescriptor)
         }
     }
 

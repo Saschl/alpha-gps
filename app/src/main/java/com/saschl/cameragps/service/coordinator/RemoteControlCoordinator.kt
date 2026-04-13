@@ -19,6 +19,7 @@ class RemoteControlCoordinator(
 ) {
     private val handler = Handler(Looper.getMainLooper())
     private val activeProbeRunnables = mutableMapOf<String, Runnable>()
+    private val probeGattRefs = mutableMapOf<String, BluetoothGatt>()
 
     companion object {
         private const val REMOTE_STATUS_PROBE_INTERVAL_MS = 3_000L
@@ -102,50 +103,17 @@ class RemoteControlCoordinator(
             return
         }
 
-        // Cancel any existing probe loop for this address before starting a new one
-        cancelRemoteStatusProbe(address)
-
-        val probeRunnable = object : Runnable {
-            override fun run() {
-                val currentConnection = cameraConnectionManager.getConnection(address)
-                if (currentConnection == null || currentConnection.state != BluetoothGatt.GATT_SUCCESS) {
-                    Timber.i("Connection no longer active for $address, stopping remote status probe")
-                    cancelRemoteStatusProbe(address)
-                    return
-                }
-
-                val characteristic = currentConnection.remoteControlCharacteristic
-                if (characteristic == null) {
-                    Timber.w("Remote control characteristic gone for $address, stopping remote status probe")
-                    cancelRemoteStatusProbe(address)
-                    return
-                }
-
-                val probeSent = BluetoothGattUtils.writeCharacteristic(
-                    currentConnection.gatt,
-                    characteristic,
-                    SonyBluetoothConstants.PROBE_COMMAND,
-                )
-                if (probeSent) {
-                    Timber.i("Sent remote status probe command for $address")
-                } else {
-                    Timber.w("Failed to send remote status probe command for $address")
-                }
-
-                handler.postDelayed(this, REMOTE_STATUS_PROBE_INTERVAL_MS)
-            }
-        }
-
-        activeProbeRunnables[address] = probeRunnable
-        handler.postDelayed(probeRunnable, REMOTE_STATUS_PROBE_INITIAL_DELAY_MS)
-        Timber.i("Started periodic remote status probe for $address (every ${REMOTE_STATUS_PROBE_INTERVAL_MS}ms)")
+        probeGattRefs[address] = gatt
+        startProbeLoop(address)
     }
 
     fun cancelRemoteStatusProbe(address: String) {
-        activeProbeRunnables.remove(address.uppercase())?.let { runnable ->
+        val normalized = address.uppercase()
+        activeProbeRunnables.remove(normalized)?.let { runnable ->
             handler.removeCallbacks(runnable)
-            Timber.i("Cancelled remote status probe for ${address.uppercase()}")
+            Timber.i("Cancelled remote status probe for $normalized")
         }
+        probeGattRefs.remove(normalized)
     }
 
     fun cancelAllProbes() {
@@ -154,6 +122,7 @@ class RemoteControlCoordinator(
             Timber.i("Cancelled remote status probe for $address")
         }
         activeProbeRunnables.clear()
+        probeGattRefs.clear()
     }
 
     fun handleRemoteStatusCharacteristicChanged(
@@ -165,11 +134,18 @@ class RemoteControlCoordinator(
         cameraConnectionManager.setRemoteFeatureActive(address, isActive)
         Timber.i(
             "Remote feature status update for ${gatt.device.address}: active=$isActive value=${
-                value.joinToString(
-                    ","
-                )
+                value.joinToString(",")
             }"
         )
+
+        if (isActive) {
+            // Feature is active on camera — no need to keep probing
+            stopProbeLoop(address)
+        } else {
+            // Feature became inactive — resume probing to detect re-activation
+            startProbeLoop(address)
+        }
+
         return value.contentEquals(byteArrayOf(0x02, 0xA0.toByte(), 0x00))
     }
 
@@ -204,6 +180,7 @@ class RemoteControlCoordinator(
         success: Boolean,
     ) {
         if (success) {
+            stopProbeLoop(gatt.device.address.uppercase())
             eventBus.emit(
                 ServiceEvent.RemoteFeatureActivated(
                     address = gatt.device.address.uppercase(),
@@ -218,6 +195,60 @@ class RemoteControlCoordinator(
             )
         }
 
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun startProbeLoop(address: String) {
+        // Already probing — nothing to do
+        if (activeProbeRunnables.containsKey(address)) return
+
+        val gatt = probeGattRefs[address]
+        if (gatt == null) {
+            Timber.w("No stored GATT ref for $address, cannot start probe loop")
+            return
+        }
+
+        val probeRunnable = object : Runnable {
+            override fun run() {
+                val currentConnection = cameraConnectionManager.getConnection(address)
+                if (currentConnection == null || currentConnection.state != BluetoothGatt.GATT_SUCCESS) {
+                    Timber.i("Connection no longer active for $address, stopping remote status probe")
+                    stopProbeLoop(address)
+                    return
+                }
+
+                val characteristic = currentConnection.remoteControlCharacteristic
+                if (characteristic == null) {
+                    Timber.w("Remote control characteristic gone for $address, stopping remote status probe")
+                    stopProbeLoop(address)
+                    return
+                }
+
+                val probeSent = BluetoothGattUtils.writeCharacteristic(
+                    currentConnection.gatt,
+                    characteristic,
+                    SonyBluetoothConstants.PROBE_COMMAND,
+                )
+                if (probeSent) {
+                    Timber.d("Sent remote status probe command for $address")
+                } else {
+                    Timber.w("Failed to send remote status probe command for $address")
+                }
+
+                handler.postDelayed(this, REMOTE_STATUS_PROBE_INTERVAL_MS)
+            }
+        }
+
+        activeProbeRunnables[address] = probeRunnable
+        handler.postDelayed(probeRunnable, REMOTE_STATUS_PROBE_INITIAL_DELAY_MS)
+        Timber.i("Started periodic remote status probe for $address (every ${REMOTE_STATUS_PROBE_INTERVAL_MS}ms)")
+    }
+
+    private fun stopProbeLoop(address: String) {
+        activeProbeRunnables.remove(address)?.let { runnable ->
+            handler.removeCallbacks(runnable)
+            Timber.i("Stopped remote status probe loop for $address")
+        }
     }
 
     private fun isRemoteFeatureActive(value: ByteArray): Boolean {
