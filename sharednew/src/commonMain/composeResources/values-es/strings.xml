@@ -119,7 +119,7 @@
     <string name="quick_start_feature_title">Inicio rápido</string>
     <string name="always_on_quickstart">Siempre modo Enc</string>
     <string name="reset_welcome">Muestra la pantalla bienvenida en el siguiente lanzamiento</string>
-    <string name="will_show_welcome">Mostrará la pantalla bienvenida en el siguiente lanzamiento</string>
+    <string name="will_show_welcome">Mostrará la pantalla bienvenida en el siguiente lanzamiento.</string>
     <string name="is_there_documenation">¿Hay algún documento?</string>
     <string name="is_there_documenation_answer">¡Sí!, visite la página de Github.\nPuede además informar sobre las cuestiones con la App allí o contáctenos por vía de correo:</string>
     <string name="language_settings">Ajustes del Idioma</string>
