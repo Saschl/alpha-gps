@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name" translatable="false">AlphaGPS</string>
     <string name="app_name_ui" translatable="false">Alpha GPS</string>
@@ -12,18 +13,17 @@
     <string name="step1_desc">Required for connecting to your Sony camera and accessing location data.</string>
     <string name="step1_missing">Missing permissions:</string>
     <string name="step1_grant">Grant Location &amp; Bluetooth Access</string>
-    <string name="step1_granted">&#10003; Granted</string>
+    <string name="step1_granted">✓ Granted</string>
     <string name="step2_title">Step 2: Background Location Access</string>
     <string name="step2_desc">Allows continuous GPS sync to your camera even when the app is in the background or screen is off.</string>
     <string name="step2_android10_warning">You\'ll need to select "Allow all the time" in the next dialog</string>
     <string name="step2_grant">Grant Background Location</string>
-    <string name="step2_granted">&#10003; Granted</string>
+    <string name="step2_granted">✓ Granted</string>
     <string name="view_logs">View logs</string>
     <string name="logs_title">Logs</string>
     <string name="logs_clear_all">Clear all logs</string>
     <string name="logs_empty">No logs available yet. Logs will appear here as the app runs.</string>
     <string name="camera_gps_permissions">Alpha GPS Permissions</string>
-
     <!-- Permission request strings -->
     <string name="grant_permissions">Grant permissions</string>
     <string name="permissions_missing_title">Permissions missing</string>
@@ -32,7 +32,6 @@
     <string name="dismiss_button">Dismiss</string>
     <string name="cancel_button">Cancel</string>
     <string name="app_settings">App settings</string>
-
     <!-- Permission rationale strings -->
     <string name="location_bluetooth_access_title">Location &amp; Bluetooth Access Required</string>
     <string name="location_bluetooth_access_message">This app needs location and Bluetooth permissions to:</string>
@@ -46,12 +45,10 @@
     <string name="background_location_benefit_2">• Location tracking even when the screen is off</string>
     <string name="background_location_benefit_3">• Seamless photo geotagging during long shooting sessions</string>
     <string name="background_location_instruction">Please select "Allow all the time" in the next dialog.</string>
-
     <!-- Error messages -->
     <string name="permissions_required_app_error">%1$s is required for the app to function</string>
     <string name="background_location_required_error">Background location access required for continuous GPS sync when app is not in foreground</string>
     <string name="remove">Remove</string>
-
     <!-- System state warnings -->
     <string name="bluetooth_disabled_title">Bluetooth is disabled</string>
     <string name="bluetooth_disabled_message">Please enable Bluetooth to scan for devices.</string>
@@ -64,7 +61,6 @@
     <string name="scanning_paused_title">Scanning is paused</string>
     <string name="scanning_paused_message">Turn on automatic scanning in Settings to look for nearby cameras.</string>
     <string name="scanning_for_cameras">Scanning for cameras...</string>
-
     <!-- Welcome screen strings -->
     <string name="welcome_title">Welcome to Alpha GPS Geotagging</string>
     <string name="welcome_subtitle">Real-time GPS coordinates for your camera via Bluetooth</string>
@@ -76,7 +72,6 @@
     <string name="welcome_get_started_button">Get Started</string>
     <string name="welcome_settings_note">You can access these settings later from the main menu</string>
     <string name="welcome_app_icon_description">Alpha GPS App Icon</string>
-
     <!-- Settings screen strings -->
     <string name="settings">Settings</string>
     <string name="app_controls">App Controls</string>
@@ -121,16 +116,13 @@
     <string name="battery_optimization_open_autostart">Open Autostart Settings</string>
     <string name="battery_optimization_open_app_settings">Open App Settings</string>
     <string name="battery_optimization_open_failed">Failed to open settings</string>
-
     <!-- Sentry Settings -->
     <string name="sentry_settings">Error Reporting Settings</string>
     <string name="enable_sentry">Enable Error Reporting</string>
     <string name="enable_sentry_description">Send anonymous crash reports to help improve the app</string>
     <string name="sentry_restart_required">App restart required for changes to take effect</string>
-
     <!-- General strings -->
     <string name="unknown_error">Unknown error</string>
-
     <!-- Help & FAQ strings -->
     <string name="help_faq_title">Help &amp; FAQ</string>
     <string name="help_close_description">Close</string>
@@ -138,48 +130,35 @@
     <string name="help_about_description">This app provides real-time GPS coordinates to your camera via Bluetooth, allowing for automatic geotagging of your photos without needing a camera's built-in GPS.</string>
     <string name="help_need_more_title">Need more help?</string>
     <string name="help_need_more_description">Check the app logs in the top menu for troubleshooting information, or review your device settings to ensure all permissions are granted.</string>
-
     <!-- FAQ Questions -->
     <string name="faq_connect_camera_question">How do I connect my camera to the app?</string>
     <string name="faq_connect_camera_answer">1. Make sure your camera supports Bluetooth connectivity and GPS tagging\n2. Enable Bluetooth on your camera and phone\n3. Put your camera in pairing mode, click on the camera on the main screen and follow the on-screen instructions (both camera and phone) \n 4. If this fails, remove any pairing in the Bluetooth settings of the phone and camera. Then try again</string>
-
     <string name="faq_camera_not_appearing_question">Why isn't my camera appearing in the list?</string>
     <string name="faq_camera_not_appearing_answer">• Ensure your camera is in pairing/Bluetooth mode\n• Check that your camera supports the required Bluetooth profile\n• Make sure you\'re within range (typically 10 meters)\n• Try restarting Bluetooth on your phone</string>
-
     <string name="faq_disconnects_question">My camera is losing connection all the time</string>
     <string name="faq_disconnects_answer">Try these solutions:\n• Keep your phone closer to the camera\n• Disable battery optimization for the app\n• Check whether your camera has power-saving modes that affect Bluetooth\n• Restart both devices and pair them again if needed</string>
-
-
     <string name="faq_enable_service_question">How do I enable the service permanently? It seems to stop after a while</string>
-    <string name="faq_enable_service_answer">Please visit the App Settings and try the options in the Battery &amp; Background section. Alternatively try the following: \nTo keep GPS data syncing with your camera:\n1. Go to your device\'s Settings > Apps\n2. Find \'Alpha GPS\' in the app list\n3. Tap on it and select \'Battery\'\n4. Choose \'Don\'t optimize\' or \'Allow background activity\'\n5. This prevents the system from stopping the GPS service\n\nYou can also access this through the device details page in the app.</string>
-
+    <string name="faq_enable_service_answer">Please visit the App Settings and try the options in the Battery &amp; Background section. Alternatively try the following: \nTo keep GPS data syncing with your camera:\n1. Go to your device\'s Settings &gt; Apps\n2. Find \'Alpha GPS\' in the app list\n3. Tap on it and select \'Battery\'\n4. Choose \'Don\'t optimize\' or \'Allow background activity\'\n5. This prevents the system from stopping the GPS service\n\nYou can also access this through the device details page in the app.</string>
     <string name="faq_camera_not_connecting_question">My camera does not connect automatically, what can I do?</string>
     <string name="faq_camera_not_connecting_answer">Unfortunately, there might be situations, where the automatic connection does not work. If you encounter issues please do the following:  On the main screen, tap on your camera to open the details screen. There you have an option to enable the "Always On" mode, which will keep the app in the foreground. \nOtherwise try toggling bluetooth or remove the device from the app and associate it again.</string>
-
     <string name="faq_permissions_question">What permissions does the app need?</string>
     <string name="faq_permissions_answer">The app requires:\n• Location permissions (for GPS data)\n• Bluetooth permissions (to connect to camera)\n• Battery optimization exemption (for continuous service)\n• Nearby devices permission (for device discovery)</string>
-
     <string name="faq_gps_accuracy_question">How accurate is the GPS data?</string>
     <string name="faq_gps_accuracy_answer">GPS accuracy depends on:\n• Satellite visibility (better outdoors)\n• Weather conditions\n• Your phone's GPS capabilities\n• Typical accuracy is 3–5 meters under good conditions</string>
-
     <string name="faq_background_work_question">Does the app work in the background?</string>
     <string name="faq_background_work_answer">Yes, once properly configured:\n• The service runs in the background to maintain GPS sync\n• Make sure to disable battery optimization\n• The app will show a persistent notification when active\n• GPS data is continuously sent to your connected camera</string>
-
     <!-- Help menu item -->
     <string name="help_menu_item">Help</string>
-
     <!-- Additional missing strings for device management -->
     <string name="associated_devices">Associated Devices</string>
     <string name="nearby_cameras">Nearby Cameras</string>
     <string name="saved_devices">Saved Devices</string>
-
     <string name="no_devices_title">No cameras connected</string>
     <string name="no_devices_message">Tap the button above to start pairing your camera device.</string>
     <string name="tap_to_connect">Disconnected</string>
     <string name="connected">Connected</string>
     <string name="transmission_active">Transmission active</string>
     <string name="transmission_inactive">Transmission inactive</string>
-
     <!-- Error messages for device association -->
     <string name="the_request_was_canceled">The request was canceled</string>
     <string name="internal_error_happened">An internal error occurred</string>
@@ -187,15 +166,12 @@
     <string name="the_user_explicitly_declined_the_request">The user declined the request</string>
     <string name="device_already_associated">The device is already associated.</string>
     <string name="device_association_removed_retry">The device was already associated. The association was removed to prevent duplicates. Please try again.</string>
-
     <string name="back">Back</string>
     <string name="device_icon">Device icon</string>
     <string name="show_details">Show details</string>
     <string name="device_name_with_address">Name: %1$s (%2$s)</string>
     <string name="enable_device">Enable device</string>
     <string name="enableConstantly">Keep active (Always On)</string>
-
-
     <string name="not_paired_tap_to_pair_again">Not paired, please pair the device in the bluetooth settings</string>
     <string name="to_pair_with_your_camera_please">To pair with your camera \'%1$s\', please:</string>
     <string name="_1_turn_on_your_camera">\n1. Turn on your camera</string>
@@ -213,10 +189,8 @@
     <string name="is_there_documenation">Is there any documentation?</string>
     <string name="is_there_documenation_answer">Yes! Please visit the Github page \nYou can also report issues with the App there or contact us via email:</string>
     <string name="is_there_documenation_answer_coffee">If you like the app and want to support development, you can buy me a coffee ☕️</string>
-
     <string name="app_standby_title">Standby</string>
     <string name="app_standby_content">Waiting for camera to connect</string>
-
     <!-- Language settings -->
     <string name="language_settings">Language Settings</string>
     <string name="language_selection">Language Selection</string>
@@ -226,7 +200,6 @@
     <string name="language_chinese">简体中文</string>
     <string name="how_about_privacy">How about privacy?</string>
     <string name="how_about_privacy_answer">The app does not transmit any personal data to the developer or third parties. All collected information (location data) is only used to transfer GPS coordinates to your connected camera and is not permanently stored. Location collection stops as soon as the connection to the camera is disconnected. If you have any questions or concerns, please contact us via the email address mentioned above.</string>
-
     <!-- Device management strings -->
     <string name="device_management">Device Management</string>
     <string name="no_devices_found">No devices found</string>
@@ -234,7 +207,6 @@
     <string name="delete_device_confirmation">Are you sure you want to delete %1$s?</string>
     <string name="delete">Delete</string>
     <string name="always_on_enabled">Always On Enabled</string>
-
     <!-- Pairing dialog strings -->
     <string name="pairing_camera_title">Pairing Camera</string>
     <string name="pairing_complete_title">Pairing Complete</string>
@@ -249,7 +221,6 @@
     <string name="cancel">Cancel</string>
     <string name="enable_auto_start_description">Auto starts the app after a device reboot for configured "Always On" devices.</string>
     <string name="hint_if_issues_after_switching">Note: Due to recent changes in the app, you may need to perform a one-time action if you encounter issues after disabling Always On mode. Simply deactivate and reactivate the device once in these settings. This is only needed once after the app update – subsequent mode changes will work immediately.</string>
-
     <!-- Sentry Consent Dialog -->
     <string name="sentry_consent_title">Help Improve Alpha GPS</string>
     <string name="sentry_consent_message">Would you like to help us improve the app by sending anonymous crash reports and error logs? This information helps us identify and fix issues. No personal data or location information is transmitted. You can change this setting later in the app settings.</string>
@@ -264,20 +235,17 @@
     <string name="bluetooth_connect_required_desc">This app requires Bluetooth Connect permission to discover and communicate with your camera device.</string>
     <string name="bluetooth_connect_grant_button">Grant Bluetooth Permission</string>
     <string name="bluetooth_connect_permanently_denied">Bluetooth permission has been permanently denied. Please open App Settings, navigate to Permissions → Nearby devices, and grant the permission manually.</string>
-
     <!-- Tip Jar -->
     <string name="tip_jar">Tip Jar</string>
     <string name="tip_jar_description">Enjoying the app? Tips help cover the Apple Developer Program fee ($99/year) required to keep this app on the App Store. It's completely optional — thank you for using Alpha GPS! ❤️</string>
     <string name="tip_jar_loading">Loading…</string>
-    <string name="tip_jar_thank_you">Thank you so much for your support! ️</string>
+    <string name="tip_jar_thank_you">Thank you so much for your support!</string>
     <string name="tip_jar_unavailable">Tip options are not available right now.</string>
     <string name="tip_jar_error_prefix">Something went wrong:</string>
     <string name="tip_jar_dismiss">Dismiss</string>
-
     <!-- Donation prompt -->
     <string name="donation_dialog_title">Enjoying Alpha GPS?</string>
     <string name="donation_dialog_message">If the app helps your photography, a small donation helps keep development going. It is completely optional.</string>
     <string name="donation_dialog_confirm">Support project</string>
     <string name="donation_dialog_dismiss">Not now</string>
-
 </resources>
