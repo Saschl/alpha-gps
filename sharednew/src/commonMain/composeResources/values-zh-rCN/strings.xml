@@ -157,13 +157,13 @@
     <string name="associated_devices">已关联的设备</string>
     <string name="logs_title">日志</string>
     <string name="dismiss_button">忽略</string>
-    <string name="event_sounds_title">传输事件提示音</string>
-    <string name="event_sounds_description">为相机和 GPS 传输事件播放简短提示音。</string>
-    <string name="event_sounds_enable_all">启用事件提示音</string>
+    <string name="event_sounds_title">传输事件音效</string>
+    <string name="event_sounds_description">为相机和 GPS 传输事件播放简短音效。</string>
+    <string name="event_sounds_enable_all">启用事件音效</string>
     <string name="event_sounds_location_acquired">已获取位置</string>
     <string name="event_sounds_location_invalid">位置不准确/无效</string>
     <string name="event_sounds_camera_connected">相机已连接</string>
-    <string name="event_sounds_camera_disconnected">相机已断开连接</string>
+    <string name="event_sounds_camera_disconnected">相机已断开</string>
     <string name="event_sounds_current_default">当前音效：默认</string>
     <string name="event_sounds_current_silent">当前音效：静音</string>
     <string name="event_sounds_current_custom">当前音效：自定义</string>
@@ -171,8 +171,8 @@
     <string name="event_sounds_set_silent">静音</string>
     <string name="event_sounds_choose_sound">选择音效</string>
     <string name="event_sounds_open_section">打开声音设置</string>
-    <string name="event_sounds_open_section_description">配置自定义应用内事件声音和通知渠道声音。</string>
-    <string name="event_sounds_notification_channels_title">通知渠道声音</string>
+    <string name="event_sounds_open_section_description">配置自定义应用内事件音效和通知渠道音效。</string>
+    <string name="event_sounds_notification_channels_title">通知渠道音效</string>
     <string name="log_level_description">最低日志记录级别</string>
     <string name="nearby_cameras">附近的相机</string>
     <string name="saved_devices">已保存的设备</string>
@@ -219,4 +219,12 @@
     <string name="tip_jar_error_prefix">出错了：</string>
     <string name="tip_jar_dismiss">忽略</string>
     <string name="donation_dialog_title">喜欢 Alpha GPS 吗？</string>
+    <string name="auto_scan_description">当设备列表可见时，自动搜索附近的相机</string>
+    <string name="event_sounds_configure_transmission_channel">配置“传输”通知渠道</string>
+    <string name="event_sounds_configure_disconnect_channel">配置“断开连接”通知渠道</string>
+    <string name="android_12_requires_keep_alive">运行 Android 11 及以下版本的设备必须启用常驻模式。点击设备并启用该设置</string>
+    <string name="always_on_enabled">“始终开启”已启用</string>
+    <string name="start">开始</string>
+    <string name="transmission_active">传输中</string>
+    <string name="transmission_inactive">传输停止</string>
 </resources>
