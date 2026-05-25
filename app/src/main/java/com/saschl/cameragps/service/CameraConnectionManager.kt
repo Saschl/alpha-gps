@@ -5,9 +5,11 @@ import android.bluetooth.BluetoothDevice.BOND_BONDED
 import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCallback
 import android.bluetooth.BluetoothGattCharacteristic
+import android.bluetooth.BluetoothGattDescriptor
 import android.bluetooth.BluetoothManager
 import android.content.Context
 import androidx.annotation.RequiresPermission
+import com.sasch.cameragps.sharednew.bluetooth.coordinator.LocationDataConfig
 import timber.log.Timber
 import java.util.Collections
 
@@ -21,6 +23,11 @@ class CameraConnectionManager(
         val gatt: BluetoothGatt,
         val state: Int = -1,
         val writeCharacteristic: BluetoothGattCharacteristic? = null,
+        val remoteControlCharacteristic: BluetoothGattCharacteristic? = null,
+        val remoteControlDescriptor: BluetoothGattDescriptor? = null,
+        val remoteStatusCharacteristic: BluetoothGattCharacteristic? = null,
+        val remoteStatusDescriptor: BluetoothGattDescriptor? = null,
+        val remoteFeatureActive: Boolean = false,
         var locationDataConfig: LocationDataConfig = LocationDataConfig(shouldSendTimeZoneAndDst = true)
     )
 
@@ -36,13 +43,12 @@ class CameraConnectionManager(
         try {
             val device: BluetoothDevice = bluetoothManager.adapter.getRemoteDevice(mac)
             if (device.bondState != BOND_BONDED) {
-                Timber.e("Device $mac is not paired. Cannot connect.")
+                Timber.w("Device $mac is not paired. Cannot connect.")
                 return false
             }
             val gatt = device.connectGatt(context, true, gattCallback)
                 ?: throw IllegalStateException("Failed to connect to device $mac: GATT is null")
             connections[mac] = CameraConnectionConfig(gatt = gatt)
-            LocationSenderService.activeTransmissions[mac] = false
         } catch (e: SecurityException) {
             Timber.e("SecurityException while connecting to device $mac: ${e.message}")
             return false
@@ -59,8 +65,11 @@ class CameraConnectionManager(
         }
         snapshot.forEach { config ->
             runCatching {
-                config.gatt.disconnect()
-                config.gatt.close()
+                try {
+                    config.gatt.disconnect()
+                } finally {
+                    config.gatt.close()
+                }
             }.onFailure { Timber.w(it) }
         }
     }
@@ -77,9 +86,6 @@ class CameraConnectionManager(
         connections[address]?.let { config ->
             connections[address] = config.copy(state = BluetoothGatt.GATT_FAILURE)
         }
-        LocationSenderService.activeTransmissions[address]?.let {
-            LocationSenderService.activeTransmissions[address] = false
-        }
 
     }
 
@@ -87,13 +93,14 @@ class CameraConnectionManager(
         connections[address]?.let { config ->
             connections[address] = config.copy(state = BluetoothGatt.GATT_SUCCESS)
         }
-        LocationSenderService.activeTransmissions[address]?.let {
-            LocationSenderService.activeTransmissions[address] = true
-        }
     }
 
     fun getActiveConnections(): Collection<CameraConnectionConfig> {
         return connections.values.filter { it.state == BluetoothGatt.GATT_SUCCESS }.toList()
+    }
+
+    fun getConnection(address: String): CameraConnectionConfig? {
+        return connections[address]
     }
 
     fun setWriteCharacteristic(
@@ -108,6 +115,41 @@ class CameraConnectionManager(
     fun setLocationDataConfig(uppercase: String, locationDataConfig: LocationDataConfig) {
         connections[uppercase]?.let { config ->
             connections[uppercase] = config.copy(locationDataConfig = locationDataConfig)
+        }
+    }
+
+    fun setRemoteControlCharacteristic(
+        address: String,
+        remoteControlCharacteristic: BluetoothGattCharacteristic?
+    ) {
+        connections[address]?.let { config ->
+            connections[address] =
+                config.copy(remoteControlCharacteristic = remoteControlCharacteristic)
+        }
+    }
+
+    fun setRemoteStatusCharacteristic(
+        address: String,
+        remoteStatusCharacteristic: BluetoothGattCharacteristic?
+    ) {
+        connections[address]?.let { config ->
+            connections[address] =
+                config.copy(remoteStatusCharacteristic = remoteStatusCharacteristic)
+        }
+    }
+
+    fun setRemoteStatusDescriptor(
+        address: String,
+        remoteStatusDescriptor: BluetoothGattDescriptor?
+    ) {
+        connections[address]?.let { config ->
+            connections[address] = config.copy(remoteStatusDescriptor = remoteStatusDescriptor)
+        }
+    }
+
+    fun setRemoteFeatureActive(address: String, isActive: Boolean) {
+        connections[address]?.let { config ->
+            connections[address] = config.copy(remoteFeatureActive = isActive)
         }
     }
 }

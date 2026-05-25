@@ -53,6 +53,7 @@ import platform.UIKit.UIApplicationState.UIApplicationStateActive
 internal enum class IosScreen {
     Welcome,
     Devices,
+    DeviceDetails,
     Settings,
     Help,
     Logs,
@@ -80,6 +81,7 @@ internal fun CameraGpsIosApp() {
     var showDonationDialog by remember { mutableStateOf(false) }
     var scrollToTipJarOnSettingsOpen by remember { mutableStateOf(false) }
     var forceDonationDialogThisLaunch by remember { mutableStateOf(false) }
+    var selectedDeviceIdentifier by remember { mutableStateOf<String?>(null) }
 
     DisposableEffect(Unit) {
         val center = NSNotificationCenter.defaultCenter
@@ -209,11 +211,34 @@ internal fun CameraGpsIosApp() {
                             }
                         }
                     },
+                    onTriggerRemoteShutter = { device ->
+                        scope.launch {
+                            bluetoothController.triggerRemoteShutter(device.identifier)
+                        }
+                    },
                     onDelete = { device ->
                         scope.launch {
                             bluetoothController.forgetDevice(device.identifier)
                         }
                     },
+                    onOpenDetails = { device ->
+                        selectedDeviceIdentifier = device.identifier
+                        currentScreen = IosScreen.DeviceDetails
+                    },
+                )
+            }
+        }
+
+        IosScreen.DeviceDetails -> {
+            val selectedDevice = devices.firstOrNull { it.identifier == selectedDeviceIdentifier }
+            if (selectedDevice == null) {
+                LaunchedEffect(Unit) {
+                    currentScreen = IosScreen.Devices
+                }
+            } else {
+                IosDeviceDetailScreen(
+                    device = selectedDevice,
+                    onBackClick = { currentScreen = IosScreen.Devices },
                 )
             }
         }

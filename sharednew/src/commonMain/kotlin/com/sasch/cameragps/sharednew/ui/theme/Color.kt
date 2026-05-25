@@ -8,4 +8,6 @@ val Pink80 = Color(0xFFEFB8C8)
 
 val Purple40 = Color(0xADD8E6FF)      // dark primary
 val PurpleGrey40 = Color(0xFF4B6275)  // dark desaturated
-val Pink40 = Color(0xFF5B8FD9)        // medium accent
+val Pink40 = Color(0xFF5B8FD9)
+
+val black = Color(0xFF000000)

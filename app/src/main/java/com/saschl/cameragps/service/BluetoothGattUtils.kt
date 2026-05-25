@@ -3,6 +3,7 @@ package com.saschl.cameragps.service
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCharacteristic
+import android.bluetooth.BluetoothGattDescriptor
 import android.os.Build
 import timber.log.Timber
 
@@ -49,5 +50,32 @@ object BluetoothGattUtils {
     fun findCharacteristic(gatt: BluetoothGatt, characteristicUuid: java.util.UUID): BluetoothGattCharacteristic? {
         return gatt.services?.flatMap { service -> service.characteristics }
             ?.find { it.uuid == characteristicUuid }
+    }
+
+    @SuppressLint("MissingPermission")
+    fun writeDescriptor(
+        gatt: BluetoothGatt,
+        descriptor: BluetoothGattDescriptor,
+        value: ByteArray,
+    ): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val result = gatt.writeDescriptor(descriptor, value)
+            if (result != 0 && result != 201) {
+                Timber.e("Writing descriptor failed. Result: $result")
+                false
+            } else {
+                Timber.d("Descriptor written successfully (API 33+)")
+                true
+            }
+        } else {
+            @Suppress("DEPRECATION")
+            descriptor.value = value
+            @Suppress("DEPRECATION")
+            val result = gatt.writeDescriptor(descriptor)
+            if (!result) {
+                Timber.e("Writing descriptor failed (legacy API)")
+            }
+            result
+        }
     }
 }

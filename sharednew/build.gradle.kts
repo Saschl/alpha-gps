@@ -32,7 +32,7 @@ kotlin {
                 minorApiLevel = 1
             }
         }
-        minSdk = 24
+        minSdk = 26
 
         withHostTestBuilder {
         }
@@ -94,6 +94,7 @@ kotlin {
                 implementation(libs.androidx.sqlite.bundled)
                 implementation(libs.logging)
                 implementation(libs.kotlinx.datetime)
+                implementation(libs.androidx.lifecycle.viewmodel)
 
             }
         }

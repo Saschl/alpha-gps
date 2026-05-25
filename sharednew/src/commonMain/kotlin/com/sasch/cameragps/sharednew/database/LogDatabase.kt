@@ -17,10 +17,11 @@ import kotlinx.coroutines.IO
 
 @Database(
     entities = [LogEntry::class, CameraDevice::class],
-    version = 3,
+    version = 4,
     autoMigrations = [
         AutoMigration(from = 1, to = 2),
-        AutoMigration(from = 2, to = 3, LogDatabase.DeleteOldColumn::class)
+        AutoMigration(from = 2, to = 3, LogDatabase.DeleteOldColumn::class),
+        AutoMigration(from = 3, to = 4)
     ]
 )
 @ConstructedBy(LogDatabaseConstructor::class)
@@ -68,7 +69,6 @@ abstract class LogDatabase : RoomDatabase() {
     }
 }
 
-@Suppress("KotlinNoActualForExpect")
 expect object LogDatabaseConstructor : RoomDatabaseConstructor<LogDatabase> {
     override fun initialize(): LogDatabase
 }

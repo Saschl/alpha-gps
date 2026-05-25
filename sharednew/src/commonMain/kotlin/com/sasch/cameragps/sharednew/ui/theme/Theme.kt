@@ -12,12 +12,14 @@ private val DarkColorScheme = darkColorScheme(
     secondary = PurpleGrey80,
     tertiary = Pink80,
     primaryContainer =  Color(0xFF1C1B1F),
+    // background = black,
 )
 
 private val LightColorScheme = lightColorScheme(
    // primary = Purple80,
     secondary = PurpleGrey40,
-    tertiary = Pink40
+    tertiary = Pink40,
+    //  background = black,
 
     /* Other default colors to override
     background = Color(0xFFFFFBFE),
@@ -51,6 +53,6 @@ fun CameraGpsTheme(
     MaterialTheme(
         colorScheme = colorScheme,
         typography = Typography,
-        content = content
+        content = content,
     )
 }

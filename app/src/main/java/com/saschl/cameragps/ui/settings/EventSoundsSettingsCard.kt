@@ -55,11 +55,12 @@ import cameragps.sharednew.generated.resources.event_sounds_notification_channel
 import cameragps.sharednew.generated.resources.event_sounds_set_default
 import cameragps.sharednew.generated.resources.event_sounds_set_silent
 import cameragps.sharednew.generated.resources.event_sounds_title
-import com.saschl.cameragps.R
+import cameragps.sharednew.generated.resources.keyboard_arrow_right_24px
 import com.saschl.cameragps.notification.NotificationsHelper
 import com.saschl.cameragps.service.TransmissionSoundEvent
 import com.saschl.cameragps.service.TransmissionSoundMode
 import com.saschl.cameragps.utils.PreferencesManager
+import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
@@ -299,7 +300,7 @@ private fun SettingsActionRow(
         headlineContent = { Text(title) },
         trailingContent = {
             Icon(
-                painter = androidx.compose.ui.res.painterResource(R.drawable.keyboard_arrow_right_24px),
+                painter = painterResource(Res.drawable.keyboard_arrow_right_24px),
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )

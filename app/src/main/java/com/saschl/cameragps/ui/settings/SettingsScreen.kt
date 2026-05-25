@@ -33,6 +33,7 @@ import cameragps.sharednew.generated.resources.battery_optimization_settings_tit
 import cameragps.sharednew.generated.resources.enable_sentry_description
 import cameragps.sharednew.generated.resources.event_sounds_open_section_description
 import cameragps.sharednew.generated.resources.event_sounds_title
+import cameragps.sharednew.generated.resources.keyboard_arrow_right_24px
 import cameragps.sharednew.generated.resources.location_provider_hint
 import cameragps.sharednew.generated.resources.location_provider_title
 import cameragps.sharednew.generated.resources.sentry_settings
@@ -42,6 +43,7 @@ import com.saschl.cameragps.R
 import com.saschl.cameragps.ui.ReviewHintDebugPanel
 import com.saschl.cameragps.utils.PreferencesManager
 import kotlinx.serialization.Serializable
+import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -227,7 +229,7 @@ private fun SettingsSectionNavigation(
                 },
                 trailingContent = {
                     Icon(
-                        painter = painterResource(R.drawable.keyboard_arrow_right_24px),
+                        painter = painterResource(Res.drawable.keyboard_arrow_right_24px),
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
