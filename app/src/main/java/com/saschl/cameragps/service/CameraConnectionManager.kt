@@ -65,8 +65,11 @@ class CameraConnectionManager(
         }
         snapshot.forEach { config ->
             runCatching {
-                config.gatt.close()
-                config.gatt.disconnect()
+                try {
+                    config.gatt.disconnect()
+                } finally {
+                    config.gatt.close()
+                }
             }.onFailure { Timber.w(it) }
         }
     }
