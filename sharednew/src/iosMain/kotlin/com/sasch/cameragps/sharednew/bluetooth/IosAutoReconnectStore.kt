@@ -37,6 +37,7 @@ internal class IosAutoReconnectStore(
     /** Load persisted IDs from disk into the in-memory set. */
     fun loadFromDisk() {
         val raw = userDefaults.stringForKey(PERSISTED_PERIPHERALS_KEY) ?: return
+        ids.clear()
         ids.addAll(raw.split(",").filter { it.isNotBlank() })
     }
 
