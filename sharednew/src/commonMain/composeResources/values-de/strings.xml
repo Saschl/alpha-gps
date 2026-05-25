@@ -100,7 +100,7 @@
     <string name="event_sounds_configure_transmission_channel">Übertragungskanal konfigurieren</string>
     <string name="event_sounds_configure_disconnect_channel">Trennungs-Kanal konfigurieren</string>
     <string name="battery_optimization_settings_title">Akku &amp; Hintergrund-Einstellungen</string>
-    <string name="battery_optimization_settings_short">Passen Sie diese Einstellungen an, falls die App im Hintergrund nicht zuverlässig funktioniert. <b>Hinweis: Dies ändert nicht das Verhalten App selbst, sondern versucht nur zu verhindern, dass sie vom Betriebssystem beendet wird. Nur bei Problemen verwenden.</b></string>
+    <string name="battery_optimization_settings_short"><![CDATA[Passen Sie diese Einstellungen an, falls die App im Hintergrund nicht zuverlässig funktioniert. <b>Hinweis: Dies ändert nicht das Verhalten App selbst, sondern versucht nur zu verhindern, dass sie vom Betriebssystem beendet wird. Nur bei Problemen verwenden.</b>]]></string>
     <string name="battery_optimization_settings_description">Einige Hersteller erfordern zusätzliche Berechtigungen für Hintergrundaktivität. Falls die erste Option nicht funktioniert, tippen Sie auf Einstellungen öffnen. Navigieren Sie zum Akku-/Energiebereich und versuchen Sie, die App von Optimierungen auszuschließen.</string>
     <string name="learn_more">Mehr erfahren</string>
     <string name="show_less">Weniger anzeigen</string>
