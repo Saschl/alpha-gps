@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Android framework/service-only strings. Shared UI strings live in sharednew composeResources. -->
-    <string name="foreground_service_notification">Transmitiendo los datos de ubicación a las cámaras %1$d</string>
-    <string name="app_standby_title">En espera</string>
-    <string name="app_standby_content">Esperando conexion de la camara</string>
-    <string name="notification_channel_name">Estado de transmision</string>
+    <string name="foreground_service_notification">Trasmite datos de localización a %1$d cámaras</string>
+    <string name="app_standby_title">En Espera</string>
+    <string name="app_standby_content">Esperando que la cámara se conecte</string>
+    <string name="notification_channel_name">Estado de transmisión</string>
     <string name="disconnect_notification_channel_name">dispositivo desconectado</string>
 </resources>
