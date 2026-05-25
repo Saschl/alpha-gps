@@ -35,7 +35,7 @@ android {
 
     defaultConfig {
         applicationId = "com.saschl.cameragps"
-        minSdk = 29
+        minSdk = 26
         targetSdk = 37
         versionCode = 133
         versionName = "v1.3.1"
