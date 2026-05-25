@@ -4,6 +4,7 @@ import com.sasch.cameragps.sharednew.bluetooth.SonyBluetoothConstants
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.receiveAsFlow
@@ -24,6 +25,7 @@ class RemoteControlCoordinator(
     private val scope: CoroutineScope,
 ) {
     private val activeProbeJobs = mutableMapOf<String, Job>()
+    private val monitoredDevices = mutableSetOf<String>()
 
     private val _events = Channel<BleSessionEvent>(Channel.UNLIMITED)
 
@@ -40,6 +42,7 @@ class RemoteControlCoordinator(
      */
     fun startRemoteStatusMonitoring(identifier: String) {
         val normalized = identifier.uppercase()
+        monitoredDevices.add(normalized)
 
         // Subscribe to remote status characteristic notifications
         port.subscribeToNotifications(normalized, SonyBluetoothConstants.REMOTE_STATUS_UUID)
@@ -55,13 +58,24 @@ class RemoteControlCoordinator(
      */
     fun onRemoteStatusChanged(identifier: String, value: ByteArray): Boolean {
         val normalized = identifier.uppercase()
+        val wasActive = port.isRemoteFeatureActive(normalized)
         val active = isRemoteFeatureActive(value)
         port.setRemoteFeatureActive(normalized, active)
 
         if (active) {
             stopProbeLoop(normalized)
+            if (!wasActive) {
+                _events.trySend(BleSessionEvent.RemoteFeatureActivated(normalized))
+            }
         } else {
-            startProbeLoop(normalized)
+            if (wasActive) {
+                _events.trySend(BleSessionEvent.RemoteFeatureDeactivated(normalized))
+            }
+            if (normalized in monitoredDevices) {
+                startProbeLoop(normalized)
+            } else {
+                stopProbeLoop(normalized)
+            }
         }
 
         return shouldSendShutterUp(value)
@@ -73,13 +87,18 @@ class RemoteControlCoordinator(
      */
     fun onRemoteControlWriteResponse(identifier: String, success: Boolean) {
         val normalized = identifier.uppercase()
+        val wasActive = port.isRemoteFeatureActive(normalized)
         if (success) {
             port.setRemoteFeatureActive(normalized, true)
             stopProbeLoop(normalized)
-            _events.trySend(BleSessionEvent.RemoteFeatureActivated(normalized))
+            if (!wasActive) {
+                _events.trySend(BleSessionEvent.RemoteFeatureActivated(normalized))
+            }
         } else {
             port.setRemoteFeatureActive(normalized, false)
-            _events.trySend(BleSessionEvent.RemoteFeatureDeactivated(normalized))
+            if (wasActive) {
+                _events.trySend(BleSessionEvent.RemoteFeatureDeactivated(normalized))
+            }
         }
     }
 
@@ -127,6 +146,7 @@ class RemoteControlCoordinator(
      */
     fun cancelProbe(identifier: String) {
         val normalized = identifier.uppercase()
+        monitoredDevices.remove(normalized)
         activeProbeJobs.remove(normalized)?.cancel()
     }
 
@@ -134,6 +154,7 @@ class RemoteControlCoordinator(
      * Cancel all active probe loops (e.g. on service destroy).
      */
     fun cancelAllProbes() {
+        monitoredDevices.clear()
         activeProbeJobs.values.forEach { it.cancel() }
         activeProbeJobs.clear()
     }
@@ -163,7 +184,10 @@ class RemoteControlCoordinator(
                 delay(REMOTE_STATUS_PROBE_INTERVAL_MS)
             }
             // Clean up our own entry when the loop exits naturally
-            activeProbeJobs.remove(identifier)
+            val currentJob = currentCoroutineContext()[Job]
+            if (activeProbeJobs[identifier] === currentJob) {
+                activeProbeJobs.remove(identifier)
+            }
         }
         activeProbeJobs[identifier] = job
     }

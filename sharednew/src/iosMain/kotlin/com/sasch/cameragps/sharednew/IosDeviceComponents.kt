@@ -351,7 +351,6 @@ private fun SwipeToDeleteDeviceCard(
             onDeleteRequest()
 
             dismissState.snapTo(SwipeToDismissBoxValue.Settled)
-            //delay(60)
         }
     }
 
@@ -459,7 +458,7 @@ private fun DeviceCard(
             }
             Text(
                 text = if (device.isConnected) {
-                    stringResource(Res.string.connected)
+                    stringResource(Res.string.connected) + " - " +
                     if (device.isRemoteFeatureActive) {
                         stringResource(Res.string.remote_feature_active)
                     } else {
