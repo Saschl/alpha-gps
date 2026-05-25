@@ -54,8 +54,6 @@ class LocationSenderService : LifecycleService() {
     private lateinit var bluetoothStateReceiver: BluetoothStateBroadcastReceiver
     private val gattErrorCount = AtomicInteger(0)
     private val commandMutex = Mutex()
-
-    // --- shared wiring: eventBus is the single coupling point ---
     private val eventBus = ServiceEventBus()
     private val commandRouter = ServiceCommandRouter()
 
@@ -318,7 +316,7 @@ class LocationSenderService : LifecycleService() {
             }
 
             if (newState == BluetoothProfile.STATE_DISCONNECTED || status != BluetoothGatt.GATT_SUCCESS) {
-                if (status == 19 || status == 8) {
+                if (status == 19 || status == 8 || status == 0) {
                     Timber.i("Device disconnected in callback due to device turned off or out of range: $status")
                 } else {
                     Timber.e("An error happened: $status")
@@ -344,6 +342,7 @@ class LocationSenderService : LifecycleService() {
 
         override fun onServicesDiscovered(gatt: BluetoothGatt, status: Int) {
             super.onServicesDiscovered(gatt, status)
+            Timber.i("Services discovered for ${gatt.device.address} with status $status")
             bleSessionCoordinator.onServicesDiscovered(gatt, status)
         }
 

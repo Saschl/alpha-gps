@@ -43,7 +43,7 @@ class CameraConnectionManager(
         try {
             val device: BluetoothDevice = bluetoothManager.adapter.getRemoteDevice(mac)
             if (device.bondState != BOND_BONDED) {
-                Timber.e("Device $mac is not paired. Cannot connect.")
+                Timber.w("Device $mac is not paired. Cannot connect.")
                 return false
             }
             val gatt = device.connectGatt(context, true, gattCallback)

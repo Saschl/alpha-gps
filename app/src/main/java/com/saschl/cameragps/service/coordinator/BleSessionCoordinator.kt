@@ -1,9 +1,11 @@
 package com.saschl.cameragps.service.coordinator
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCharacteristic
 import android.bluetooth.BluetoothGattDescriptor
+import androidx.annotation.RequiresPermission
 import com.sasch.cameragps.sharednew.bluetooth.BleSessionPhase
 import com.sasch.cameragps.sharednew.bluetooth.SonyBluetoothConstants
 import com.sasch.cameragps.sharednew.bluetooth.coordinator.BleSessionEvent
@@ -32,6 +34,8 @@ class BleSessionCoordinator(
         remoteControlCoordinator.port,
         remoteControlCoordinator.shared,
     )
+
+    private var hasRetriedRead = false;
 
     init {
         // Bridge shared session events → Android ServiceEventBus
@@ -114,9 +118,24 @@ class BleSessionCoordinator(
         )
     }
 
+    @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     fun onCharacteristicRead(gatt: BluetoothGatt, value: ByteArray, status: Int) {
         if (status != BluetoothGatt.GATT_SUCCESS) {
-            Timber.w("Characteristic read failed for ${gatt.device.address} with status=$status")
+            // Retry once if read failed, as we sometimes face a 133 error on the first read
+            if (!hasRetriedRead) {
+                Timber.w("Characteristic read failed for ${gatt.device.address} with status=$status. Will retry")
+                hasRetriedRead = true
+                gatt.readCharacteristic(
+                    gatt.services
+                        ?.flatMap { it.characteristics }
+                        ?.find { it.uuid == constructBleUUID(SonyBluetoothConstants.CHARACTERISTIC_READ_UUID) }
+                )
+            } else {
+                Timber.e("Characteristic read failed for ${gatt.device.address} with status=$status. Will retry")
+                eventBus.emit(ServiceEvent.PhaseChanged(gatt.device.address, BleSessionPhase.Error))
+
+            }
+            return
         }
 
         shared.onCharacteristicRead(
