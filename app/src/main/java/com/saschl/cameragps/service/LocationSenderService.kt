@@ -48,7 +48,6 @@ import java.util.concurrent.atomic.AtomicInteger
  */
 class LocationSenderService : LifecycleService() {
 
-    // --- Android-only concerns ---
     private var isInitialized = true
     private lateinit var eventSoundPlayer: EventSoundPlayer
     private lateinit var bluetoothStateReceiver: BluetoothStateBroadcastReceiver
@@ -73,7 +72,6 @@ class LocationSenderService : LifecycleService() {
         )
     }
 
-    // --- coordinators: created once, no lambdas back to service ---
     private val remoteControlCoordinator by lazy {
         RemoteControlCoordinator(cameraConnectionManager, eventBus, lifecycleScope, deviceDao)
     }
@@ -96,6 +94,9 @@ class LocationSenderService : LifecycleService() {
         val activeTransmissions = mutableStateMapOf<String, Boolean>()
         val remoteFeatureActive = mutableStateMapOf<String, Boolean>()
         val sessionPhases = mutableStateMapOf<String, BleSessionPhase>()
+
+        @Volatile
+        var isRunning: Boolean = false
     }
 
     // ==================== Lifecycle ====================
@@ -103,6 +104,7 @@ class LocationSenderService : LifecycleService() {
     @SuppressLint("MissingPermission")
     override fun onCreate() {
         super.onCreate()
+        isRunning = true
         eventSoundPlayer = EventSoundPlayer(this)
         NotificationsHelper.createNotificationChannel(this)
 
@@ -119,6 +121,7 @@ class LocationSenderService : LifecycleService() {
 
     @SuppressLint("MissingPermission")
     override fun onDestroy() {
+        isRunning = false
         super.onDestroy()
         runCatching {
             if (::bluetoothStateReceiver.isInitialized) unregisterReceiver(bluetoothStateReceiver)

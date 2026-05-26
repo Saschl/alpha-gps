@@ -29,6 +29,10 @@ class AndroidDeviceDetailServiceActions(
     }
 
     override fun setRemoteControlMonitoring(deviceAddress: String, enabled: Boolean) {
+        if (!LocationSenderService.isRunning) {
+            return
+        }
+
         val normalized = deviceAddress.uppercase()
         val intent = Intent(context, LocationSenderService::class.java).apply {
             action = SonyBluetoothConstants.ACTION_SET_REMOTE_CONTROL_MONITORING
