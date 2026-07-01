@@ -216,8 +216,8 @@ class LocationSenderService : LifecycleService() {
             Priority.PRIORITY_HIGH_ACCURACY,
             LOCATION_UPDATE_INTERVAL_MS,
         )
-            .setWaitForAccurateLocation(false)
-            .setMinUpdateDistanceMeters(10f)
+            .setWaitForAccurateLocation(true)
+            //.setMinUpdateDistanceMeters(10f)
             //.setMaxUpdateDelayMillis(60000)
             .build()
 

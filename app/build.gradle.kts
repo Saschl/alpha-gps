@@ -17,9 +17,7 @@ room {
 android {
     namespace = "com.saschl.cameragps"
     compileSdk {
-        version = release(36) {
-            minorApiLevel = 1
-        }
+        version = release(37)
     }
 
     androidResources {
@@ -36,9 +34,9 @@ android {
     defaultConfig {
         applicationId = "com.saschl.cameragps"
         minSdk = 29
-        targetSdk = 36
-        versionCode = 133
-        versionName = "v1.3.1"
+        targetSdk = 37
+        versionCode = 134
+        versionName = "v1.3.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -55,6 +53,7 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
