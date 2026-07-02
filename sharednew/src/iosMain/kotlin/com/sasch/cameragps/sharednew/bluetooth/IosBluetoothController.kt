@@ -42,6 +42,7 @@ import platform.CoreBluetooth.CBPeripheralDelegateProtocol
 import platform.CoreBluetooth.CBPeripheralStateConnected
 import platform.CoreBluetooth.CBService
 import platform.CoreBluetooth.CBUUID
+import platform.CoreLocation.CLAccuracyAuthorization
 import platform.CoreLocation.CLLocation
 import platform.CoreLocation.CLLocationManager
 import platform.CoreLocation.CLLocationManagerDelegateProtocol
@@ -95,6 +96,10 @@ object IosBluetoothController : BluetoothController {
         )
     }
 
+    fun hasPreciseAccuracyAuthorization(): Boolean {
+        return locationManager.accuracyAuthorization() == CLAccuracyAuthorization.CLAccuracyAuthorizationFullAccuracy
+    }
+
     private val logging = logging()
 
     private val controllerScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
@@ -123,7 +128,7 @@ object IosBluetoothController : BluetoothController {
     private val autoReconnectIds = mutableSetOf<String>()
     private val userDefaults = NSUserDefaults.standardUserDefaults
     private val persistedPeripheralsKey = "com.saschl.cameragps.persistedPeripherals"
-    private const val MAX_IMMEDIATE_FIX_AGE_SECONDS = 5 * 60L
+    private const val MAX_IMMEDIATE_FIX_AGE_SECONDS = 30L
     private var appEnabled = IosAppPreferences.isAppEnabled()
     // ------------------------------------------------------------------------
 
@@ -382,6 +387,7 @@ object IosBluetoothController : BluetoothController {
             // send initial location immediately if none was cached yet
             if (latestLocation == null || !isFreshFix(latestLocation!!)) {
                 runCatching {
+                    logging.d { "Sending location to peripherals immediately" }
                     sendLocationToReadyPeripherals(location)
                 }.onFailure {
                     logging.e(it, msg = { "Error sending location to peripherals" })
@@ -405,7 +411,7 @@ object IosBluetoothController : BluetoothController {
     private val locationManager = CLLocationManager().apply {
         delegate = locationDelegate
         desiredAccuracy = platform.CoreLocation.kCLLocationAccuracyBest
-        distanceFilter = 10.0
+        distanceFilter = 2.0
 
         pausesLocationUpdatesAutomatically = false
         allowsBackgroundLocationUpdates = true
@@ -808,6 +814,7 @@ object IosBluetoothController : BluetoothController {
                 // will request always authorization in callback
                 locationManager.requestWhenInUseAuthorization()
             }
+
             locationManager.startUpdatingLocation()
             // Prime the first fix quickly so transmission can start without waiting for the next interval.
             //locationManager.requestLocation()

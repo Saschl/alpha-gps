@@ -217,7 +217,7 @@ class LocationSenderService : LifecycleService() {
             LOCATION_UPDATE_INTERVAL_MS,
         )
             .setWaitForAccurateLocation(true)
-            //.setMinUpdateDistanceMeters(10f)
+            .setMinUpdateDistanceMeters(2f)
             //.setMaxUpdateDelayMillis(60000)
             .build()
 
