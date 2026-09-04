@@ -45,5 +45,8 @@
     <string name="ios_accessory_migration_error_message">iOS did not open the confirmation window. This usually works on a second attempt.\n\nIf it keeps failing, close Alpha GPS completely from the app switcher and open it again, then try once more.</string>
     <string name="ios_accessory_migration_error_retry">Try again</string>
 
+
+    <string name="ios_accessory_migration_busy">Confirming your cameras…</string>
+
 </resources>
 

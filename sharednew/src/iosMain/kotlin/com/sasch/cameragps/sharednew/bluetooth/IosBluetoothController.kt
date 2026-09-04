@@ -237,6 +237,14 @@ object IosBluetoothController : BluetoothController {
         _migrationError.value = false
     }
 
+    /**
+     * A migration attempt is running. The flow spends seconds releasing the
+     * central and retrying a restricted picker before iOS shows anything, so the
+     * UI keeps its dialog up and busy rather than looking like nothing happened.
+     */
+    private val _migrationInProgress = MutableStateFlow(false)
+    val migrationInProgress: StateFlow<Boolean> = _migrationInProgress
+
     /** Guards the automatic migration sheet to one attempt per launch. */
     private var migrationAutoAttempted = false
 
@@ -759,40 +767,45 @@ object IosBluetoothController : BluetoothController {
         val candidates = _migrationCandidates.value
         if (candidates.isEmpty()) return true
         _migrationError.value = false
+        _migrationInProgress.value = true
+        try {
 
-        // AccessorySetupKit will not migrate while a CBCentralManager exists, so
-        // release it for the duration of the picker. Without this the flow fails
-        // for anyone whose central came up first, which is every user who added
-        // a camera before migrating.
-        // The automatic path already released the central while the explainer was
-        // on screen. This covers the manual retry from the device-list card,
-        // where the release would otherwise be milliseconds before the picker.
-        // Kotlin/Native releases the Objective-C manager on its collector, so
-        // give that a moment to actually happen.
-        if (centralShell != null) {
-            stopCentral()
-            delay(CENTRAL_RELEASE_GRACE_MS)
+            // AccessorySetupKit will not migrate while a CBCentralManager exists, so
+            // release it for the duration of the picker. Without this the flow fails
+            // for anyone whose central came up first, which is every user who added
+            // a camera before migrating.
+            // The automatic path already released the central while the explainer was
+            // on screen. This covers the manual retry from the device-list card,
+            // where the release would otherwise be milliseconds before the picker.
+            // Kotlin/Native releases the Objective-C manager on its collector, so
+            // give that a moment to actually happen.
+            if (centralShell != null) {
+                stopCentral()
+                delay(CENTRAL_RELEASE_GRACE_MS)
+            }
+
+            val outcome = showMigrationPickerWithRetries(candidates)
+            logging.i { "Migration picker finished: $outcome" }
+            recomputeMigrationCandidates()
+
+            if (outcome is IosAccessoryShell.PickerOutcome.Failed &&
+                outcome.code != ASErrorCodePickerAlreadyActive
+            ) {
+                // Retries are exhausted. Surface it and offer another attempt: the
+                // cause is usually a CBCentralManager that had not been deallocated
+                // yet, which a second try normally clears. An already-active picker
+                // is transient and excluded so a double tap does not raise this.
+                logging.w { "Migration failed after retries: ${outcome.message}" }
+                _migrationError.value = true
+                _migrationNeedsRestart.value = true
+            }
+            // Always bring the central back: a cancelled or failed migration must not
+            // leave the app without one. No-op when finishMigration already did it.
+            startCentralIfNeeded()
+            return outcome is IosAccessoryShell.PickerOutcome.Completed
+        } finally {
+            _migrationInProgress.value = false
         }
-
-        val outcome = showMigrationPickerWithRetries(candidates)
-        logging.i { "Migration picker finished: $outcome" }
-        recomputeMigrationCandidates()
-
-        if (outcome is IosAccessoryShell.PickerOutcome.Failed &&
-            outcome.code != ASErrorCodePickerAlreadyActive
-        ) {
-            // Retries are exhausted. Surface it and offer another attempt: the
-            // cause is usually a CBCentralManager that had not been deallocated
-            // yet, which a second try normally clears. An already-active picker
-            // is transient and excluded so a double tap does not raise this.
-            logging.w { "Migration failed after retries: ${outcome.message}" }
-            _migrationError.value = true
-            _migrationNeedsRestart.value = true
-        }
-        // Always bring the central back: a cancelled or failed migration must not
-        // leave the app without one. No-op when finishMigration already did it.
-        startCentralIfNeeded()
-        return outcome is IosAccessoryShell.PickerOutcome.Completed
     }
 
     /**

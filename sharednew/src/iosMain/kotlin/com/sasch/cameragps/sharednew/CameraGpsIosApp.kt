@@ -2,9 +2,12 @@ package com.sasch.cameragps.sharednew
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -19,6 +22,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -35,6 +39,7 @@ import cameragps.sharednew.generated.resources.donation_dialog_title
 import cameragps.sharednew.generated.resources.further_help
 import cameragps.sharednew.generated.resources.header_device_list
 import cameragps.sharednew.generated.resources.info_24px
+import cameragps.sharednew.generated.resources.ios_accessory_migration_busy
 import cameragps.sharednew.generated.resources.ios_accessory_migration_dialog_confirm
 import cameragps.sharednew.generated.resources.ios_accessory_migration_dialog_later
 import cameragps.sharednew.generated.resources.ios_accessory_migration_dialog_message
@@ -183,6 +188,7 @@ internal fun CameraGpsIosApp() {
     val migrationCandidates by bluetoothController.migrationCandidates.collectAsState()
     val migrationNeedsRestart by bluetoothController.migrationNeedsRestart.collectAsState()
     val migrationError by bluetoothController.migrationError.collectAsState()
+    val migrationInProgress by bluetoothController.migrationInProgress.collectAsState()
     // No scan effect any more: AccessorySetupKit owns discovery, and with it
     // declared a CoreBluetooth scan can only ever return already-authorized
     // accessories. Cameras are added through the system picker instead.
@@ -205,22 +211,37 @@ internal fun CameraGpsIosApp() {
         }
     }
 
+    // The flow spends seconds releasing the central and retrying a restricted
+    // picker before iOS shows anything, so both dialogs stay up and go busy
+    // rather than vanishing into an apparently dead app.
     if (migrationError) {
         AlertDialog(
-            onDismissRequest = { bluetoothController.clearMigrationError() },
+            onDismissRequest = { if (!migrationInProgress) bluetoothController.clearMigrationError() },
             title = { Text(stringResource(Res.string.ios_accessory_migration_error_title)) },
-            text = { Text(stringResource(Res.string.ios_accessory_migration_error_message)) },
+            text = {
+                if (migrationInProgress) {
+                    MigrationBusyRow()
+                } else {
+                    Text(stringResource(Res.string.ios_accessory_migration_error_message))
+                }
+            },
             confirmButton = {
-                TextButton(onClick = {
-                    bluetoothController.clearMigrationError()
-                    scope.launch { bluetoothController.presentMigrationPicker() }
-                }) {
-                    Text(stringResource(Res.string.ios_accessory_migration_error_retry))
+                if (!migrationInProgress) {
+                    TextButton(onClick = {
+                        scope.launch {
+                            bluetoothController.presentMigrationPicker()
+                            bluetoothController.clearMigrationError()
+                        }
+                    }) {
+                        Text(stringResource(Res.string.ios_accessory_migration_error_retry))
+                    }
                 }
             },
             dismissButton = {
-                TextButton(onClick = { bluetoothController.clearMigrationError() }) {
-                    Text(stringResource(Res.string.ios_accessory_migration_dialog_later))
+                if (!migrationInProgress) {
+                    TextButton(onClick = { bluetoothController.clearMigrationError() }) {
+                        Text(stringResource(Res.string.ios_accessory_migration_dialog_later))
+                    }
                 }
             },
         )
@@ -228,20 +249,32 @@ internal fun CameraGpsIosApp() {
 
     if (showMigrationExplainer) {
         AlertDialog(
-            onDismissRequest = { showMigrationExplainer = false },
+            onDismissRequest = { if (!migrationInProgress) showMigrationExplainer = false },
             title = { Text(stringResource(Res.string.ios_accessory_migration_dialog_title)) },
-            text = { Text(stringResource(Res.string.ios_accessory_migration_dialog_message)) },
+            text = {
+                if (migrationInProgress) {
+                    MigrationBusyRow()
+                } else {
+                    Text(stringResource(Res.string.ios_accessory_migration_dialog_message))
+                }
+            },
             confirmButton = {
-                TextButton(onClick = {
-                    showMigrationExplainer = false
-                    scope.launch { bluetoothController.presentMigrationPicker() }
-                }) {
-                    Text(stringResource(Res.string.ios_accessory_migration_dialog_confirm))
+                if (!migrationInProgress) {
+                    TextButton(onClick = {
+                        scope.launch {
+                            bluetoothController.presentMigrationPicker()
+                            showMigrationExplainer = false
+                        }
+                    }) {
+                        Text(stringResource(Res.string.ios_accessory_migration_dialog_confirm))
+                    }
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showMigrationExplainer = false }) {
-                    Text(stringResource(Res.string.ios_accessory_migration_dialog_later))
+                if (!migrationInProgress) {
+                    TextButton(onClick = { showMigrationExplainer = false }) {
+                        Text(stringResource(Res.string.ios_accessory_migration_dialog_later))
+                    }
                 }
             },
         )
@@ -554,5 +587,17 @@ private fun openAppSettings() {
     val settingsUrl = NSURL.URLWithString(UIApplicationOpenSettingsURLString) ?: return
     if (UIApplication.sharedApplication.canOpenURL(settingsUrl)) {
         UIApplication.sharedApplication.openURL(settingsUrl, emptyMap<Any?, Any>(), {})
+    }
+}
+
+/** Busy row shown inside the migration dialogs while an attempt is running. */
+@Composable
+private fun MigrationBusyRow() {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        CircularProgressIndicator(modifier = Modifier.size(20.dp))
+        Text(stringResource(Res.string.ios_accessory_migration_busy))
     }
 }
