@@ -16,6 +16,7 @@ import com.sasch.cameragps.sharednew.bluetooth.IosBluetoothController.shell
 import com.sasch.cameragps.sharednew.bluetooth.IosBluetoothController.startCentralIfNeeded
 import com.sasch.cameragps.sharednew.bluetooth.IosBluetoothController.transport
 import com.sasch.cameragps.sharednew.bluetooth.accessory.AccessoryMigrationPlanner
+import com.sasch.cameragps.sharednew.bluetooth.accessory.AccessoryPickerRunner
 import com.sasch.cameragps.sharednew.bluetooth.accessory.PendingMigration
 import com.sasch.cameragps.sharednew.bluetooth.session.CameraSession
 import com.sasch.cameragps.sharednew.bluetooth.session.CameraSessionOrchestrator
@@ -106,8 +107,7 @@ object IosBluetoothController : BluetoothController {
         // asynchronous here kills background reconnect.
         //
         // AccessorySetupKit refuses to migrate while a central exists, so the
-        // migration flow tears it down when the app reaches the foreground (see
-        // consumeAutoMigrationPrompt) rather than withholding it at launch.
+        // migration flow tears it down only after explicit confirmation rather than withholding it at launch.
         accessorySession.activate()
         startCentralIfNeeded()
         controllerScope.launch { evaluateMigration() }
@@ -242,8 +242,8 @@ object IosBluetoothController : BluetoothController {
      * central and retrying a restricted picker before iOS shows anything, so the
      * UI keeps its dialog up and busy rather than looking like nothing happened.
      */
-    private val _migrationInProgress = MutableStateFlow(false)
-    val migrationInProgress: StateFlow<Boolean> = _migrationInProgress
+    private val pickerRunner = AccessoryPickerRunner(controllerScope)
+    val migrationInProgress: StateFlow<Boolean> = pickerRunner.migrationInProgress
 
     /** Guards the automatic migration sheet to one attempt per launch. */
     private var migrationAutoAttempted = false
@@ -310,28 +310,13 @@ object IosBluetoothController : BluetoothController {
         shell?.resolveKnownIdentifier(identifier) ?: identifier.uppercase()
 
     /**
-     * Create the CBCentralManager.
-     *
-     * Deliberately unconditional. Two rules pull in opposite directions here and
-     * both matter:
-     *
-     * - The picker is refused with `ASErrorCodePickerRestricted` when the app
-     *   holds global Bluetooth permission AND a central is alive. That is why
-     *   `NSBluetoothAlwaysUsageDescription` is not declared, and why the callers
-     *   below never invoke this while migration is still pending.
-     * - State restoration needs the central recreated SYNCHRONOUSLY inside
-     *   `didFinishLaunchingWithOptions`, within roughly ten seconds, or iOS
-     *   never delivers `willRestoreState` and background reconnect is dead.
-     *
-     * So this must not wait on anything asynchronous. In particular it must not
-     * gate on `accessorySession.authorizedIdentifiers()`: that set is only filled
-     * when AccessorySetupKit delivers its `activated` event, long after launch,
-     * so such a guard is always empty at the one moment restoration needs the
-     * central and silently breaks background reconnect. Keep the decision in the
-     * callers, which know whether migration is settled.
+     * Normal launches create the central synchronously for state restoration and
+     * continuity of existing connections. Only an explicit migration attempt
+     * holds creation off; callbacks must not recreate it underneath the picker.
+     * Never gate launch creation on the asynchronously loaded authorized set.
      */
     private fun startCentralIfNeeded() {
-        if (centralShell != null) return
+        if (centralShell != null || migrationInProgress.value) return
         logging.i { "Creating the CBCentralManager" }
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
         centralScope = scope
@@ -747,13 +732,6 @@ object IosBluetoothController : BluetoothController {
         if (_migrationCandidates.value.isEmpty()) return false
         if (_migrationNeedsRestart.value) return false
         migrationAutoAttempted = true
-        // Release the central now, while the explainer is still being read.
-        // Kotlin/Native hands the Objective-C release to its collector, so the
-        // manager is not gone the instant the reference drops; doing this here
-        // rather than immediately before showPicker gives it those seconds.
-        stopCentral()
-        delay(CENTRAL_RELEASE_GRACE_MS)
-
         logging.i { "Raising the migration explainer" }
         return true
     }
@@ -762,64 +740,50 @@ object IosBluetoothController : BluetoothController {
      * Show the AccessorySetupKit migration flow for the saved cameras. Driven by
      * an explicit user action, as the framework requires.
      */
-    suspend fun presentMigrationPicker(): Boolean {
+    suspend fun presentMigrationPicker(): Boolean = pickerRunner.run(
+        migration = true,
+        recover = { startCentralIfNeeded() },
+    ) {
         migrationAutoAttempted = true
         val candidates = _migrationCandidates.value
-        if (candidates.isEmpty()) return true
+        if (candidates.isEmpty()) return@run true
         _migrationError.value = false
-        _migrationInProgress.value = true
-        try {
 
-            // AccessorySetupKit will not migrate while a CBCentralManager exists, so
-            // release it for the duration of the picker. Without this the flow fails
-            // for anyone whose central came up first, which is every user who added
-            // a camera before migrating.
-            // The automatic path already released the central while the explainer was
-            // on screen. This covers the manual retry from the device-list card,
-            // where the release would otherwise be milliseconds before the picker.
-            // Kotlin/Native releases the Objective-C manager on its collector, so
-            // give that a moment to actually happen.
-            if (centralShell != null) {
-                stopCentral()
-                delay(CENTRAL_RELEASE_GRACE_MS)
-            }
-
-            val outcome = showMigrationPickerWithRetries(candidates)
-            logging.i { "Migration picker finished: $outcome" }
-            recomputeMigrationCandidates()
-
-            if (outcome is IosAccessoryShell.PickerOutcome.Failed &&
-                outcome.code != ASErrorCodePickerAlreadyActive
-            ) {
-                // Retries are exhausted. Surface it and offer another attempt: the
-                // cause is usually a CBCentralManager that had not been deallocated
-                // yet, which a second try normally clears. An already-active picker
-                // is transient and excluded so a double tap does not raise this.
-                logging.w { "Migration failed after retries: ${outcome.message}" }
-                _migrationError.value = true
-                _migrationNeedsRestart.value = true
-            }
-            // Always bring the central back: a cancelled or failed migration must not
-            // leave the app without one. No-op when finishMigration already did it.
-            startCentralIfNeeded()
-            return outcome is IosAccessoryShell.PickerOutcome.Completed
-        } finally {
-            _migrationInProgress.value = false
+        // Interrupt connections only after explicit confirmation. The grace
+        // period is a bounded workaround, not proof of native deallocation.
+        if (centralShell != null) {
+            stopCentral()
+            delay(CENTRAL_RELEASE_GRACE_MS)
         }
+
+        val outcome = showMigrationPickerWithRetries(candidates)
+        logging.i { "Migration picker finished: $outcome" }
+        recomputeMigrationCandidates()
+
+        if (outcome is IosAccessoryShell.PickerOutcome.Failed &&
+            outcome.code != ASErrorCodePickerAlreadyActive
+        ) {
+            // Retries are exhausted. Surface it and offer another attempt: the
+            // cause is usually a CBCentralManager that had not been deallocated
+            // yet, which a second try normally clears. An already-active picker
+            // is transient and excluded so a double tap does not raise this.
+            logging.w { "Migration failed after retries: ${outcome.message}" }
+            _migrationError.value = true
+            _migrationNeedsRestart.value = true
+        }
+        outcome is IosAccessoryShell.PickerOutcome.Completed
     }
 
     /**
      * Show the AccessorySetupKit picker so the user can authorize a new camera.
      * This is the replacement for the old in-app scan list.
      */
-    suspend fun presentAccessoryPicker(): Boolean {
+    suspend fun presentAccessoryPicker(): Boolean = pickerRunner.run(migration = false) {
         val outcome = accessorySession.showDiscoveryPicker()
         logging.i { "Discovery picker finished: $outcome" }
-        // The central is needed to talk to whatever was just authorized. If
-        // migration candidates remain, creating it now closes the migration door
-        // until the app is restarted, so say so rather than failing silently.
+        // Resume use of the newly authorized camera after discovery.
         startCentralForAccessoryUse()
-        return outcome is IosAccessoryShell.PickerOutcome.Completed
+        outcome is IosAccessoryShell.PickerOutcome.Completed
     }
 
     /** Debug only: forget that migration was done so the flow can be re-tested. */

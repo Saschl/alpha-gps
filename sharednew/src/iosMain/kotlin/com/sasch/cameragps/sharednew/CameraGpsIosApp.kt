@@ -230,7 +230,6 @@ internal fun CameraGpsIosApp() {
                     TextButton(onClick = {
                         scope.launch {
                             bluetoothController.presentMigrationPicker()
-                            bluetoothController.clearMigrationError()
                         }
                     }) {
                         Text(stringResource(Res.string.ios_accessory_migration_error_retry))
