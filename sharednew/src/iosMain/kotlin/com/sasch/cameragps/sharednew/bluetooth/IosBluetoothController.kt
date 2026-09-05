@@ -107,7 +107,7 @@ object IosBluetoothController : BluetoothController {
         // asynchronous here kills background reconnect.
         //
         // AccessorySetupKit refuses to migrate while a central exists, so the
-        // migration flow tears it down only after explicit confirmation rather than withholding it at launch.
+        // migration flow tears it down only after the user confirms in the app.
         accessorySession.activate()
         startCentralIfNeeded()
         controllerScope.launch { evaluateMigration() }
@@ -254,15 +254,17 @@ object IosBluetoothController : BluetoothController {
      * picker, so Kotlin/Native's collector can actually deallocate the
      * CBCentralManager. The picker is refused while one is alive.
      */
-    private const val CENTRAL_RELEASE_GRACE_MS = 2_000L
+    // TEMPORARY extended deallocation wait; previously 2_000 ms.
+    private const val CENTRAL_RELEASE_GRACE_MS = 10_000L
 
     /**
      * `ASErrorCodePickerRestricted` means the manager was still alive when the
      * picker was asked for. Deallocation is not deterministic, so back off and
      * try again rather than failing the migration outright.
      */
-    private const val PICKER_RESTRICTED_ATTEMPTS = 4
-    private const val PICKER_RETRY_DELAY_MS = 2_500L
+    // TEMPORARY: previously 4 attempts with 2_500 ms between attempts.
+    private const val PICKER_RESTRICTED_ATTEMPTS = 10
+    private const val PICKER_RETRY_DELAY_MS = 5_000L
 
     /**
      * The CBCentralManager, created on demand by [startCentralIfNeeded].
@@ -674,13 +676,22 @@ object IosBluetoothController : BluetoothController {
      * saved devices from several older versions.
      */
     private suspend fun evaluateMigration() {
-        if (IosAppPreferences.isAccessoryMigrationDone()) return
+        val done = IosAppPreferences.isAccessoryMigrationDone()
+        logging.i {
+            "Migration check: launch=${IosLaunchContext.describe()}, " +
+                    "done=$done, appEnabled=$appEnabled, active=${migrationInProgress.value}"
+        }
+        if (done) {
+            logging.i { "Migration skipped: already recorded as complete" }
+            return
+        }
+        if (migrationInProgress.value) {
+            logging.i { "Migration skipped: an operation is already running" }
+            return
+        }
         if (!accessorySession.awaitActivated()) {
-            // Deliberately does NOT fall back to creating a central. Without
-            // AccessorySetupKit there are no authorized accessories, so a central
-            // would have nothing to see, and creating one is what gets the picker
-            // refused on the next attempt. Migration is retried on the next
-            // launch. This is also the simulator's path.
+            // Leave the launch central running for existing connections. Retry
+            // migration on a later launch once AccessorySetupKit is available.
             logging.e { "AccessorySetupKit did not activate; leaving migration pending" }
             return
         }
@@ -703,11 +714,12 @@ object IosBluetoothController : BluetoothController {
         _migrationCandidates.value = candidates
         if (candidates.isEmpty()) {
             // Nothing saved, or everything already authorized. Never ask again.
+            logging.i { "Migration skipped: no pending candidates" }
             finishMigration()
         } else {
             logging.i { "${candidates.size} saved camera(s) await AccessorySetupKit authorization" }
-            // There is now a concrete reason to ask: without a reminder, someone
-            // who dismisses the sheet has no working app and no way to know.
+            // Populate the foreground prompt without interrupting existing
+            // connections. Background launches never start migration.
             IosMigrationReminder.requestAuthorizationIfForeground()
             IosMigrationReminder.armMigrationPending()
         }
@@ -718,17 +730,12 @@ object IosBluetoothController : BluetoothController {
      * Whether to raise the migration explainer on this launch, consuming the
      * one attempt it gets.
      *
-     * iOS has no post-update hook, so bringing this up by itself the first time
-     * the updated app is opened is the closest thing to automatic migration. It
-     * is an in-app dialog rather than the system sheet directly: the sheet
-     * appearing unannounced explains nothing, and routing through a Continue
-     * button also means the picker is opened by an explicit user action, which
-     * is what AccessorySetupKit asks for.
+     * Foreground launches explain migration before interrupting connections.
      *
      * Once per launch, so declining does not trap the user in a loop; the card
      * in the device list stays available for a manual retry.
      */
-    suspend fun consumeAutoMigrationPrompt(): Boolean {
+    fun consumeAutoMigrationPrompt(): Boolean {
         if (migrationAutoAttempted) return false
         if (_migrationCandidates.value.isEmpty()) return false
         if (_migrationNeedsRestart.value) return false
@@ -738,8 +745,8 @@ object IosBluetoothController : BluetoothController {
     }
 
     /**
-     * Show the AccessorySetupKit migration flow for the saved cameras. Driven by
-     * an explicit user action, as the framework requires.
+     * Migrate saved cameras after the user confirms in the foreground UI.
+     * Migration-only items have shown no system picker in maintainer testing.
      */
     suspend fun presentMigrationPicker(): Boolean = pickerRunner.run {
         migrationAutoAttempted = true
@@ -749,10 +756,11 @@ object IosBluetoothController : BluetoothController {
         try {
             _migrationError.value = false
 
-            // Interrupt connections only after explicit confirmation. The grace
+            // Release the central for migration. The grace
             // period is a bounded workaround, not proof of native deallocation.
             if (centralShell != null) {
                 stopCentral()
+                logging.i { "Waiting ${CENTRAL_RELEASE_GRACE_MS} ms for central release before migration" }
                 delay(CENTRAL_RELEASE_GRACE_MS)
             }
 
@@ -816,8 +824,8 @@ object IosBluetoothController : BluetoothController {
             val restricted = outcome as? IosAccessoryShell.PickerOutcome.Failed
             if (restricted?.code != ASErrorCodePickerRestricted) return outcome
             logging.w {
-                "Migration picker restricted (attempt ${attempt + 1}); " +
-                        "the central is probably still alive, retrying"
+                "Migration picker restricted (attempt ${attempt + 1}/$PICKER_RESTRICTED_ATTEMPTS); " +
+                        "waiting ${PICKER_RETRY_DELAY_MS} ms before retry"
             }
             stopCentral()
             delay(PICKER_RETRY_DELAY_MS)

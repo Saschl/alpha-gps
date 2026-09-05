@@ -105,8 +105,6 @@ internal class IosAccessoryShell(
         return withTimeoutOrNull(timeoutMs.milliseconds) { activated.await() } != null
     }
 
-    val isActivated: Boolean get() = activated.isCompleted
-
     // ---------------------------------------------------------------------------
     // Authorized accessories
     // ---------------------------------------------------------------------------
@@ -142,8 +140,8 @@ internal class IosAccessoryShell(
      * Present the migration flow for cameras that were paired before
      * AccessorySetupKit.
      *
-     * The list must contain ONLY migration items. AccessorySetupKit shows an
-     * informational page for a migration-only picker and migrates every item;
+     * The list must contain ONLY migration items. Maintainer testing observed
+     * no visible system picker for these items;
      * mixing in a regular display item turns it back into a discovery picker and
      * migrates nothing unless a brand-new accessory is set up.
      */
@@ -184,10 +182,6 @@ internal class IosAccessoryShell(
         if (error != null) log.w { "removeAccessory failed: ${error.localizedDescription}" }
         return error == null
     }
-
-    // ---------------------------------------------------------------------------
-    // Internals
-    // ---------------------------------------------------------------------------
 
     private suspend fun presentPicker(items: List<Any>): PickerOutcome {
         val completion = AccessoryPickerCompletion<PickerOutcome>(PickerOutcome.Completed)
