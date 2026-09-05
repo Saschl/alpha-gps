@@ -6,17 +6,11 @@ import com.diamondedge.logging.VariableLogLevel
 import com.diamondedge.logging.logging
 import com.sasch.cameragps.sharednew.IosAppPreferences
 import com.sasch.cameragps.sharednew.IosLaunchContext
-import com.sasch.cameragps.sharednew.IosMigrationReminder
 import com.sasch.cameragps.sharednew.bluetooth.IosBluetoothController.centralShell
 import com.sasch.cameragps.sharednew.bluetooth.IosBluetoothController.clearPairingFailedDevice
 import com.sasch.cameragps.sharednew.bluetooth.IosBluetoothController.ensureInitialized
 import com.sasch.cameragps.sharednew.bluetooth.IosBluetoothController.reconnectToPersistedPeripherals
-import com.sasch.cameragps.sharednew.bluetooth.IosBluetoothController.repository
-import com.sasch.cameragps.sharednew.bluetooth.IosBluetoothController.shell
 import com.sasch.cameragps.sharednew.bluetooth.IosBluetoothController.startCentralIfNeeded
-import com.sasch.cameragps.sharednew.bluetooth.IosBluetoothController.transport
-import com.sasch.cameragps.sharednew.bluetooth.accessory.AccessoryMigrationPlanner
-import com.sasch.cameragps.sharednew.bluetooth.accessory.AccessoryPickerRunner
 import com.sasch.cameragps.sharednew.bluetooth.accessory.PendingMigration
 import com.sasch.cameragps.sharednew.bluetooth.session.CameraSession
 import com.sasch.cameragps.sharednew.bluetooth.session.CameraSessionOrchestrator
@@ -31,13 +25,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import platform.AccessorySetupKit.ASErrorCodePickerAlreadyActive
-import platform.AccessorySetupKit.ASErrorCodePickerRestricted
 import platform.CoreBluetooth.CBPeripheral
 import platform.CoreBluetooth.CBPeripheralStateConnected
 import kotlin.native.runtime.GC
@@ -56,16 +47,13 @@ import kotlin.native.runtime.NativeRuntimeApi
  * This object keeps the decisions: auto-reconnect policy, app/device-enabled
  * lifecycle sweeps, pairing-failure UI state and device-list assembly.
  *
- * Declaration order is load-bearing, in both directions:
- * - [transport] and [repository] must come BEFORE [shell], because
- *   `willRestoreState` can fire synchronously inside the CBCentralManager
- *   constructor and reaches both (see the reentrancy contract on
- *   [IosCentralShell]).
- * - everything else must come AFTER [shell]. Property initializers run in
- *   declaration order, so anything declared above it delays the central's
- *   creation — and iOS gives a restoration launch roughly ten seconds to
- *   recreate it. The location manager and the orchestrator (which opens the
- *   Room database) are therefore declared below, together with the init block.
+ * [IosAccessoryCoordinator] owns accessory setup and migration policy. This
+ * controller retains central ownership and forwards the public migration API.
+ *
+ * Repository, transport and the inert accessory collaborators exist before
+ * ensureInitialized creates the central. Restoration callbacks may run inside
+ * that constructor: use their shell parameter, never the unassigned shell field.
+ * No callback may force lazy central creation or delay launch on authorization.
  *
  * Call [ensureInitialized] from AppDelegate as early as possible.
  */
@@ -110,7 +98,7 @@ object IosBluetoothController : BluetoothController {
         // migration flow tears it down only after the user confirms in the app.
         accessorySession.activate()
         startCentralIfNeeded()
-        controllerScope.launch { evaluateMigration() }
+        controllerScope.launch { accessories.evaluateMigration() }
     }
 
     private val logging = logging()
@@ -171,15 +159,13 @@ object IosBluetoothController : BluetoothController {
     private var appEnabled = IosAppPreferences.isAppEnabled()
 
     /**
-     * Whether the central is powered on. The device-list screen keys its scan
-     * effect on this: power-on no longer starts a scan itself, so without this
-     * signal nothing would resume scanning after the user toggles Bluetooth off
-     * and on again while the app is in the foreground.
+     * Whether the current central is powered on. Exposed for platform UI state;
+     * accessory discovery itself is owned by AccessorySetupKit.
      */
     private val _bluetoothPoweredOn = MutableStateFlow(false)
     val bluetoothPoweredOn: StateFlow<Boolean> = _bluetoothPoweredOn
 
-    // --- Collaborators (shell LAST — see the class KDoc) ---
+    // --- Collaborators (constructed before the central is started at launch) ---
 
     private val repository = IosDeviceRepository(
         deviceDao = { deviceDao },
@@ -205,75 +191,48 @@ object IosBluetoothController : BluetoothController {
         onAccessoriesChanged = { refreshDeviceListFrom(shell) },
         onAccessoryAdded = { id, name -> handleAccessoryAdded(id, name) },
         onAccessoryRemoved = { id -> handleAccessoryRemoved(id) },
-        onMigrationComplete = { handleMigrationComplete() },
+        onMigrationComplete = { accessories.handleMigrationComplete() },
     )
 
-    /**
-     * Cameras saved before the AccessorySetupKit switch that still need the user
-     * to re-authorize them in the system picker. Non-empty means the device list
-     * shows the migration card instead of expecting the central to work.
-     */
-    private val _migrationCandidates = MutableStateFlow<List<PendingMigration>>(emptyList())
-    val migrationCandidates: StateFlow<List<PendingMigration>> = _migrationCandidates
+    private val accessories: IosAccessoryCoordinator = IosAccessoryCoordinator(
+        controllerScope = controllerScope,
+        accessorySession = accessorySession,
+        store = IosAccessoryMigrationStore(repository),
+        connections = object : IosAccessoryCoordinator.Connections {
+            override fun releaseCentral(): Boolean {
+                val hadCentral = centralShell != null
+                stopCentral()
+                return hadCentral
+            }
 
-    /**
-     * True once the central had to be created while candidates were still
-     * pending. AccessorySetupKit will not migrate with a live CBCentralManager,
-     * so the remaining cameras can only be migrated after an app restart.
-     */
-    private val _migrationNeedsRestart = MutableStateFlow(false)
-    val migrationNeedsRestart: StateFlow<Boolean> = _migrationNeedsRestart
+            override fun resumeConnections(reconnectExisting: Boolean) {
+                val alreadyRunning = centralShell != null
+                startCentralIfNeeded()
+                if (alreadyRunning && reconnectExisting) {
+                    controllerScope.launch { reconnectToPersistedPeripherals() }
+                }
+            }
+        },
+        onDevicesChanged = { refreshDeviceListFrom(shell) },
+    )
 
-    /**
-     * The last migration attempt failed after exhausting its retries. Drives an
-     * error dialog offering another try — the retries handle the deallocation
-     * race, but if they run out the user has to be told rather than left with a
-     * sheet that silently never appeared.
-     */
-    private val _migrationError = MutableStateFlow(false)
-    val migrationError: StateFlow<Boolean> = _migrationError
+    val migrationCandidates: StateFlow<List<PendingMigration>> get() = accessories.migrationCandidates
+    val migrationNeedsRestart: StateFlow<Boolean> get() = accessories.migrationNeedsRestart
+    val migrationError: StateFlow<Boolean> get() = accessories.migrationError
+    val migrationInProgress: StateFlow<Boolean> get() = accessories.migrationInProgress
 
-    fun clearMigrationError() {
-        _migrationError.value = false
-    }
-
-    /**
-     * A migration attempt is running. The flow spends seconds releasing the
-     * central and retrying a restricted picker before iOS shows anything, so the
-     * UI keeps its dialog up and busy rather than looking like nothing happened.
-     */
-    private val pickerRunner = AccessoryPickerRunner(controllerScope)
-    private val _migrationInProgress = MutableStateFlow(false)
-    val migrationInProgress: StateFlow<Boolean> = _migrationInProgress
-
-    /** Guards the automatic migration sheet to one attempt per launch. */
-    private var migrationAutoAttempted = false
-
-    /**
-     * How long to wait after releasing the central before showing the migration
-     * picker, so Kotlin/Native's collector can actually deallocate the
-     * CBCentralManager. The picker is refused while one is alive.
-     */
-    // TEMPORARY extended deallocation wait; previously 2_000 ms.
-    private const val CENTRAL_RELEASE_GRACE_MS = 10_000L
-
-    /**
-     * `ASErrorCodePickerRestricted` means the manager was still alive when the
-     * picker was asked for. Deallocation is not deterministic, so back off and
-     * try again rather than failing the migration outright.
-     */
-    // TEMPORARY: previously 4 attempts with 2_500 ms between attempts.
-    private const val PICKER_RESTRICTED_ATTEMPTS = 10
-    private const val PICKER_RETRY_DELAY_MS = 5_000L
+    fun clearMigrationError() = accessories.clearMigrationError()
+    fun consumeAutoMigrationPrompt(): Boolean = accessories.consumeAutoMigrationPrompt()
+    suspend fun presentMigrationPicker(): Boolean = accessories.presentMigrationPicker()
+    suspend fun presentAccessoryPicker(): Boolean = accessories.presentAccessoryPicker()
+    fun resetAccessoryMigrationForTesting() = accessories.resetAccessoryMigrationForTesting()
 
     /**
      * The CBCentralManager, created on demand by [startCentralIfNeeded].
      *
-     * It is deliberately NOT created at object initialization: AccessorySetupKit
-     * refuses to run its migration flow if a CBCentralManager already exists, and
-     * an upgrading user has to migrate before the central is of any use anyway
-     * (with AccessorySetupKit declared, CoreBluetooth only ever sees authorized
-     * accessories). Constructing it may synchronously fire `willRestoreState`.
+     * Created synchronously by ensureInitialized for normal/background launches,
+     * released only during foreground migration. Existing unmigrated cameras can
+     * still connect. Construction may synchronously fire `willRestoreState`.
      */
     private var centralShell: IosCentralShell? = null
 
@@ -340,9 +299,8 @@ object IosBluetoothController : BluetoothController {
         _bluetoothPoweredOn.value = false
         // Dropping the Kotlin reference does not release the Objective-C object
         // straight away: Kotlin/Native hands that to its garbage collector. The
-        // picker checks for a live CBCentralManager, so nudge the collector
-        // rather than hoping. This is a backstop — startCentralIfNeeded not
-        // creating one in the first place is the actual fix.
+        // picker checks for a live CBCentralManager, so nudge the collector.
+        // The coordinator keeps creation blocked until migration ends.
         GC.collect()
     }
 
@@ -671,215 +629,6 @@ object IosBluetoothController : BluetoothController {
     // ---------------------------------------------------------------------------
 
     /**
-     * Work out whether any saved camera still predates AccessorySetupKit. Runs on
-     * every launch until migration is recorded as done, because a user can have
-     * saved devices from several older versions.
-     */
-    private suspend fun evaluateMigration() {
-        val done = IosAppPreferences.isAccessoryMigrationDone()
-        logging.i {
-            "Migration check: launch=${IosLaunchContext.describe()}, " +
-                    "done=$done, appEnabled=$appEnabled, active=${migrationInProgress.value}"
-        }
-        if (done) {
-            logging.i { "Migration skipped: already recorded as complete" }
-            return
-        }
-        if (migrationInProgress.value) {
-            logging.i { "Migration skipped: an operation is already running" }
-            return
-        }
-        if (!accessorySession.awaitActivated()) {
-            // Leave the launch central running for existing connections. Retry
-            // migration on a later launch once AccessorySetupKit is available.
-            logging.e { "AccessorySetupKit did not activate; leaving migration pending" }
-            return
-        }
-        val read = withDatabase("migration check") {
-            repository.loadStoreFromDisk()
-            repository.migrateLegacyDevicesToDatabase()
-            repository.sync()
-        }
-        if (!read) {
-            // An empty device list from a failed read would look like "nothing to
-            // migrate" and permanently record migration as done, stranding every
-            // saved camera. Leave it pending and retry on the next launch.
-            logging.e { "Could not read saved devices; leaving migration pending" }
-            return
-        }
-        val candidates = AccessoryMigrationPlanner.planMigrations(
-            saved = repository.savedDevices.values,
-            authorized = accessorySession.authorizedIdentifiers(),
-        )
-        _migrationCandidates.value = candidates
-        if (candidates.isEmpty()) {
-            // Nothing saved, or everything already authorized. Never ask again.
-            logging.i { "Migration skipped: no pending candidates" }
-            finishMigration()
-        } else {
-            logging.i { "${candidates.size} saved camera(s) await AccessorySetupKit authorization" }
-            // Populate the foreground prompt without interrupting existing
-            // connections. Background launches never start migration.
-            IosMigrationReminder.requestAuthorizationIfForeground()
-            IosMigrationReminder.armMigrationPending()
-        }
-        refreshDeviceListFrom(shell)
-    }
-
-    /**
-     * Whether to raise the migration explainer on this launch, consuming the
-     * one attempt it gets.
-     *
-     * Foreground launches explain migration before interrupting connections.
-     *
-     * Once per launch, so declining does not trap the user in a loop; the card
-     * in the device list stays available for a manual retry.
-     */
-    fun consumeAutoMigrationPrompt(): Boolean {
-        if (migrationAutoAttempted) return false
-        if (_migrationCandidates.value.isEmpty()) return false
-        if (_migrationNeedsRestart.value) return false
-        migrationAutoAttempted = true
-        logging.i { "Raising the migration explainer" }
-        return true
-    }
-
-    /**
-     * Migrate saved cameras after the user confirms in the foreground UI.
-     * Migration-only items have shown no system picker in maintainer testing.
-     */
-    suspend fun presentMigrationPicker(): Boolean = pickerRunner.run {
-        migrationAutoAttempted = true
-        val candidates = _migrationCandidates.value
-        if (candidates.isEmpty()) return@run true
-        _migrationInProgress.value = true
-        try {
-            _migrationError.value = false
-
-            // Release the central for migration. The grace
-            // period is a bounded workaround, not proof of native deallocation.
-            if (centralShell != null) {
-                stopCentral()
-                logging.i { "Waiting ${CENTRAL_RELEASE_GRACE_MS} ms for central release before migration" }
-                delay(CENTRAL_RELEASE_GRACE_MS)
-            }
-
-            val outcome = showMigrationPickerWithRetries(candidates)
-            logging.i { "Migration picker finished: $outcome" }
-            recomputeMigrationCandidates()
-
-            if (outcome is IosAccessoryShell.PickerOutcome.Failed &&
-                outcome.code != ASErrorCodePickerAlreadyActive
-            ) {
-                // Retries are exhausted. Surface it and offer another attempt: the
-                // cause is usually a CBCentralManager that had not been deallocated
-                // yet, which a second try normally clears. An already-active picker
-                // is transient and excluded so a double tap does not raise this.
-                logging.w { "Migration failed after retries: ${outcome.message}" }
-                _migrationError.value = true
-                _migrationNeedsRestart.value = true
-            }
-            outcome is IosAccessoryShell.PickerOutcome.Completed
-        } finally {
-            // Release the guard before recreating the central. Its power-on
-            // callback reconnects saved cameras, including newly migrated ones.
-            _migrationInProgress.value = false
-            startCentralIfNeeded()
-        }
-    }
-
-    /**
-     * Show the AccessorySetupKit picker so the user can authorize a new camera.
-     * This is the replacement for the old in-app scan list.
-     */
-    suspend fun presentAccessoryPicker(): Boolean = pickerRunner.run {
-        val outcome = accessorySession.showDiscoveryPicker()
-        logging.i { "Discovery picker finished: $outcome" }
-        // Resume use of the newly authorized camera after discovery.
-        startCentralForAccessoryUse()
-        outcome is IosAccessoryShell.PickerOutcome.Completed
-    }
-
-    /** Debug only: forget that migration was done so the flow can be re-tested. */
-    fun resetAccessoryMigrationForTesting() {
-        logging.i { "Resetting AccessorySetupKit migration state" }
-        IosAppPreferences.setAccessoryMigrationDone(false)
-        migrationAutoAttempted = false
-        _migrationNeedsRestart.value = false
-        controllerScope.launch { evaluateMigration() }
-    }
-
-    /**
-     * Show the migration picker, retrying while it is refused as restricted.
-     *
-     * That refusal means a CBCentralManager was still alive. Releasing one is
-     * not instantaneous under Kotlin/Native, so each retry tears down again and
-     * waits, rather than giving up on a race.
-     */
-    private suspend fun showMigrationPickerWithRetries(
-        candidates: List<PendingMigration>,
-    ): IosAccessoryShell.PickerOutcome {
-        var outcome = accessorySession.showMigrationPicker(candidates)
-        repeat(PICKER_RESTRICTED_ATTEMPTS - 1) { attempt ->
-            val restricted = outcome as? IosAccessoryShell.PickerOutcome.Failed
-            if (restricted?.code != ASErrorCodePickerRestricted) return outcome
-            logging.w {
-                "Migration picker restricted (attempt ${attempt + 1}/$PICKER_RESTRICTED_ATTEMPTS); " +
-                        "waiting ${PICKER_RETRY_DELAY_MS} ms before retry"
-            }
-            stopCentral()
-            delay(PICKER_RETRY_DELAY_MS)
-            outcome = accessorySession.showMigrationPicker(candidates)
-        }
-        return outcome
-    }
-
-    private fun handleMigrationComplete() {
-        controllerScope.launch { recomputeMigrationCandidates() }
-    }
-
-    private suspend fun recomputeMigrationCandidates() {
-        withDatabase("migration recheck") { repository.sync() }
-        val authorized = accessorySession.authorizedIdentifiers()
-        // Both sides logged verbatim: if AccessorySetupKit ever hands back an
-        // identifier that differs from the CBPeripheral UUID we stored, the
-        // candidate list can never drain and this is the only way to see it.
-        logging.i {
-            "Migration recheck: authorized=$authorized " +
-                    "saved=${repository.savedDevices.keys}"
-        }
-        val remaining = AccessoryMigrationPlanner.planMigrations(
-            saved = repository.savedDevices.values,
-            authorized = authorized,
-        )
-        _migrationCandidates.value = remaining
-        if (remaining.isEmpty()) {
-            finishMigration()
-        } else {
-            logging.i { "${remaining.size} camera(s) still await authorization" }
-            IosMigrationReminder.armMigrationPending()
-        }
-        refreshDeviceListFrom(shell)
-    }
-
-    /** Migration is settled: record it and bring the central up for good. */
-    private fun finishMigration() {
-        IosAppPreferences.setAccessoryMigrationDone(true)
-        _migrationCandidates.value = emptyList()
-        _migrationNeedsRestart.value = false
-        // Nothing left to nudge about, including a dead man's switch armed by
-        // the previous release.
-        IosMigrationReminder.cancel()
-        logging.i { "AccessorySetupKit migration settled" }
-        // When the central is created here, its own power-on runs the reconnect
-        // sweep. Sweeping now would fire retrieve/connect before PoweredOn, where
-        // CoreBluetooth drops both.
-        val alreadyRunning = centralShell != null
-        startCentralIfNeeded()
-        if (alreadyRunning) controllerScope.launch { reconnectToPersistedPeripherals() }
-    }
-
-    /**
      * Bring the central up because the user wants to use an authorized camera,
      * even though some old cameras have not been migrated yet.
      */
@@ -901,7 +650,7 @@ object IosBluetoothController : BluetoothController {
             shell?.retrieveAndConnect(identifier)
             // The user may have re-paired a camera rather than migrating it;
             // without this it would sit in the candidate list for ever.
-            recomputeMigrationCandidates()
+            accessories.recomputeMigrationCandidates()
             refreshDeviceListFrom(shell)
         }
     }

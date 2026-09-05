@@ -34,8 +34,8 @@ import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * AccessorySetupKit mechanics: the [ASAccessorySession], its event stream, the
- * authorized-accessory snapshot and the two pickers. NO policy — what to migrate,
- * when to connect and what the device list shows stay in [IosBluetoothController].
+ * authorized-accessory snapshot and the two pickers. Migration policy lives in
+ * [IosAccessoryCoordinator]; connections and device lists stay in [IosBluetoothController].
  *
  * Written in Kotlin rather than Swift because Kotlin/Native ships a generated
  * `platform.AccessorySetupKit` binding, so the Swift side can stay the thin shell
@@ -50,7 +50,7 @@ internal class IosAccessoryShell(
     private val onAccessoryAdded: (identifier: String, displayName: String?) -> Unit,
     private val onAccessoryRemoved: (identifier: String) -> Unit,
     private val onMigrationComplete: () -> Unit,
-) {
+) : IosAccessoryCoordinator.Picker {
 
     /** Outcome of one picker presentation. */
     sealed interface PickerOutcome {
@@ -100,16 +100,16 @@ internal class IosAccessoryShell(
     }
 
     /** Await the `activated` event. Returns false on timeout. */
-    suspend fun awaitActivated(timeoutMs: Long = ACTIVATION_TIMEOUT_MS): Boolean {
+    override suspend fun awaitActivated(): Boolean {
         activate()
-        return withTimeoutOrNull(timeoutMs.milliseconds) { activated.await() } != null
+        return withTimeoutOrNull(ACTIVATION_TIMEOUT_MS.milliseconds) { activated.await() } != null
     }
 
     // ---------------------------------------------------------------------------
     // Authorized accessories
     // ---------------------------------------------------------------------------
 
-    fun authorizedIdentifiers(): Set<String> = authorized.keys.toSet()
+    override fun authorizedIdentifiers(): Set<String> = authorized.keys.toSet()
 
     fun isAuthorized(identifier: String): Boolean =
         authorized.containsKey(identifier.uppercase())
@@ -125,7 +125,7 @@ internal class IosAccessoryShell(
      * Present the system picker so the person can authorize a new camera.
      * Must be driven by an explicit user action.
      */
-    suspend fun showDiscoveryPicker(): PickerOutcome {
+    override suspend fun showDiscoveryPicker(): PickerOutcome {
         if (!awaitActivated()) return PickerOutcome.Failed("AccessorySetupKit did not activate", ASErrorCodeActivationFailed)
         val item = ASPickerDisplayItem(
             name = PICKER_ITEM_NAME,
@@ -145,7 +145,7 @@ internal class IosAccessoryShell(
      * mixing in a regular display item turns it back into a discovery picker and
      * migrates nothing unless a brand-new accessory is set up.
      */
-    suspend fun showMigrationPicker(candidates: List<PendingMigration>): PickerOutcome {
+    override suspend fun showMigrationPicker(candidates: List<PendingMigration>): PickerOutcome {
         if (candidates.isEmpty()) return PickerOutcome.Completed
         if (!awaitActivated()) return PickerOutcome.Failed("AccessorySetupKit did not activate", ASErrorCodeActivationFailed)
 
