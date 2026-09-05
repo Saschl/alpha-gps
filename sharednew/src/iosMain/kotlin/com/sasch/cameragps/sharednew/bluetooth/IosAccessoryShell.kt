@@ -25,7 +25,6 @@ import platform.AccessorySetupKit.ASErrorCodeUserCancelled
 import platform.AccessorySetupKit.ASErrorDomain
 import platform.AccessorySetupKit.ASMigrationDisplayItem
 import platform.AccessorySetupKit.ASPickerDisplayItem
-import platform.Foundation.NSError
 import platform.Foundation.NSUUID
 import platform.UIKit.UIImage
 import platform.darwin.dispatch_get_main_queue
@@ -79,6 +78,10 @@ internal class IosAccessoryShell(
      * picker is still on screen would run the Sony handshake underneath it.
      */
     private var pendingAccessory: ASAccessory? = null
+
+    // The closure and dismissal event can arrive in either order. Complete once,
+    // and capture each attempt's waiter so a late closure cannot finish a retry.
+    private var pickerCompletion: CompletableDeferred<PickerOutcome>? = null
 
     // ---------------------------------------------------------------------------
     // Lifecycle
@@ -186,18 +189,26 @@ internal class IosAccessoryShell(
     // ---------------------------------------------------------------------------
 
     private suspend fun presentPicker(items: List<Any>): PickerOutcome {
-        val error = suspendCancellableCoroutine { continuation ->
-            session.showPickerForDisplayItems(items) { error -> continuation.resume(error) }
-        }
-        return when {
-            error == null -> PickerOutcome.Completed
-            error.domain == ASErrorDomain && error.code == ASErrorCodeUserCancelled ->
-                PickerOutcome.Cancelled
+        val completion = CompletableDeferred<PickerOutcome>()
+        check(pickerCompletion == null) { "A picker is already pending" }
+        pickerCompletion = completion
+        try {
+            session.showPickerForDisplayItems(items) { error ->
+                val outcome = when {
+                    error == null -> PickerOutcome.Completed
+                    error.domain == ASErrorDomain && error.code == ASErrorCodeUserCancelled ->
+                        PickerOutcome.Cancelled
 
-            else -> {
-                log.w { "Picker failed: ${error.localizedDescription} (${error.code})" }
-                PickerOutcome.Failed(error.localizedDescription, error.code)
+                    else -> {
+                        log.w { "Picker failed: ${error.localizedDescription} (${error.code})" }
+                        PickerOutcome.Failed(error.localizedDescription, error.code)
+                    }
+                }
+                completion.complete(outcome)
             }
+            return completion.await()
+        } finally {
+            if (pickerCompletion === completion) pickerCompletion = null
         }
     }
 
@@ -226,6 +237,9 @@ internal class IosAccessoryShell(
             }
 
             ASAccessoryEventTypePickerDidDismiss -> {
+                // Dismissal is also a terminal signal: do not leave controller
+                // ownership (and the busy dialog) waiting on a late closure.
+                val completion = pickerCompletion
                 val accessory = pendingAccessory
                 pendingAccessory = null
                 if (accessory != null) {
@@ -237,6 +251,7 @@ internal class IosAccessoryShell(
                         log.w { "Accessory added without a bluetooth identifier" }
                     }
                 }
+                completion?.complete(PickerOutcome.Completed)
             }
 
             ASAccessoryEventTypeAccessoryRemoved -> {

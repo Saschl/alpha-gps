@@ -199,6 +199,9 @@ internal fun CameraGpsIosApp() {
     var showMigrationExplainer by remember { mutableStateOf(false) }
     LaunchedEffect(migrationCandidates, isAppInForeground) {
         if (SCREENSHOT_MODE) return@LaunchedEffect
+        if (migrationCandidates.isEmpty()) {
+            showMigrationExplainer = false
+        }
         if (!isAppInForeground) return@LaunchedEffect
         // The notification permission alert cannot be shown from the background
         // and iOS only offers it once, so a request made while backgrounded is
