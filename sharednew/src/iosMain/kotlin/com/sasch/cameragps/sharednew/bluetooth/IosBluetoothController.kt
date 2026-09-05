@@ -243,7 +243,8 @@ object IosBluetoothController : BluetoothController {
      * UI keeps its dialog up and busy rather than looking like nothing happened.
      */
     private val pickerRunner = AccessoryPickerRunner(controllerScope)
-    val migrationInProgress: StateFlow<Boolean> = pickerRunner.migrationInProgress
+    private val _migrationInProgress = MutableStateFlow(false)
+    val migrationInProgress: StateFlow<Boolean> = _migrationInProgress
 
     /** Guards the automatic migration sheet to one attempt per launch. */
     private var migrationAutoAttempted = false
@@ -740,45 +741,50 @@ object IosBluetoothController : BluetoothController {
      * Show the AccessorySetupKit migration flow for the saved cameras. Driven by
      * an explicit user action, as the framework requires.
      */
-    suspend fun presentMigrationPicker(): Boolean = pickerRunner.run(
-        migration = true,
-        recover = { startCentralIfNeeded() },
-    ) {
+    suspend fun presentMigrationPicker(): Boolean = pickerRunner.run {
         migrationAutoAttempted = true
         val candidates = _migrationCandidates.value
         if (candidates.isEmpty()) return@run true
-        _migrationError.value = false
+        _migrationInProgress.value = true
+        try {
+            _migrationError.value = false
 
-        // Interrupt connections only after explicit confirmation. The grace
-        // period is a bounded workaround, not proof of native deallocation.
-        if (centralShell != null) {
-            stopCentral()
-            delay(CENTRAL_RELEASE_GRACE_MS)
+            // Interrupt connections only after explicit confirmation. The grace
+            // period is a bounded workaround, not proof of native deallocation.
+            if (centralShell != null) {
+                stopCentral()
+                delay(CENTRAL_RELEASE_GRACE_MS)
+            }
+
+            val outcome = showMigrationPickerWithRetries(candidates)
+            logging.i { "Migration picker finished: $outcome" }
+            recomputeMigrationCandidates()
+
+            if (outcome is IosAccessoryShell.PickerOutcome.Failed &&
+                outcome.code != ASErrorCodePickerAlreadyActive
+            ) {
+                // Retries are exhausted. Surface it and offer another attempt: the
+                // cause is usually a CBCentralManager that had not been deallocated
+                // yet, which a second try normally clears. An already-active picker
+                // is transient and excluded so a double tap does not raise this.
+                logging.w { "Migration failed after retries: ${outcome.message}" }
+                _migrationError.value = true
+                _migrationNeedsRestart.value = true
+            }
+            outcome is IosAccessoryShell.PickerOutcome.Completed
+        } finally {
+            // Release the guard before recreating the central. Its power-on
+            // callback reconnects saved cameras, including newly migrated ones.
+            _migrationInProgress.value = false
+            startCentralIfNeeded()
         }
-
-        val outcome = showMigrationPickerWithRetries(candidates)
-        logging.i { "Migration picker finished: $outcome" }
-        recomputeMigrationCandidates()
-
-        if (outcome is IosAccessoryShell.PickerOutcome.Failed &&
-            outcome.code != ASErrorCodePickerAlreadyActive
-        ) {
-            // Retries are exhausted. Surface it and offer another attempt: the
-            // cause is usually a CBCentralManager that had not been deallocated
-            // yet, which a second try normally clears. An already-active picker
-            // is transient and excluded so a double tap does not raise this.
-            logging.w { "Migration failed after retries: ${outcome.message}" }
-            _migrationError.value = true
-            _migrationNeedsRestart.value = true
-        }
-        outcome is IosAccessoryShell.PickerOutcome.Completed
     }
 
     /**
      * Show the AccessorySetupKit picker so the user can authorize a new camera.
      * This is the replacement for the old in-app scan list.
      */
-    suspend fun presentAccessoryPicker(): Boolean = pickerRunner.run(migration = false) {
+    suspend fun presentAccessoryPicker(): Boolean = pickerRunner.run {
         val outcome = accessorySession.showDiscoveryPicker()
         logging.i { "Discovery picker finished: $outcome" }
         // Resume use of the newly authorized camera after discovery.

@@ -1,6 +1,7 @@
 package com.sasch.cameragps.sharednew.bluetooth
 
 import com.diamondedge.logging.logging
+import com.sasch.cameragps.sharednew.bluetooth.accessory.AccessoryPickerCompletion
 import com.sasch.cameragps.sharednew.bluetooth.accessory.PendingMigration
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.coroutines.CompletableDeferred
@@ -81,7 +82,7 @@ internal class IosAccessoryShell(
 
     // The closure and dismissal event can arrive in either order. Complete once,
     // and capture each attempt's waiter so a late closure cannot finish a retry.
-    private var pickerCompletion: CompletableDeferred<PickerOutcome>? = null
+    private var pickerCompletion: AccessoryPickerCompletion<PickerOutcome>? = null
 
     // ---------------------------------------------------------------------------
     // Lifecycle
@@ -189,7 +190,7 @@ internal class IosAccessoryShell(
     // ---------------------------------------------------------------------------
 
     private suspend fun presentPicker(items: List<Any>): PickerOutcome {
-        val completion = CompletableDeferred<PickerOutcome>()
+        val completion = AccessoryPickerCompletion<PickerOutcome>(PickerOutcome.Completed)
         check(pickerCompletion == null) { "A picker is already pending" }
         pickerCompletion = completion
         try {
@@ -204,7 +205,7 @@ internal class IosAccessoryShell(
                         PickerOutcome.Failed(error.localizedDescription, error.code)
                     }
                 }
-                completion.complete(outcome)
+                completion.onCompletion(outcome)
             }
             return completion.await()
         } finally {
@@ -223,10 +224,15 @@ internal class IosAccessoryShell(
             }
 
             ASAccessoryEventTypeMigrationComplete -> {
+                val completion = pickerCompletion
                 refreshAuthorized()
                 log.i { "Migration complete; ${authorized.size} accessory(ies) authorized" }
                 onAccessoriesChanged(this)
                 onMigrationComplete()
+                // Migration is now terminal even if dismissal/the showPicker
+                // closure arrive later. Release ownership so recovery can create
+                // the central and its power-on sweep can reconnect immediately.
+                completion?.onMigrationComplete()
             }
 
             ASAccessoryEventTypeAccessoryAdded -> {
@@ -251,7 +257,7 @@ internal class IosAccessoryShell(
                         log.w { "Accessory added without a bluetooth identifier" }
                     }
                 }
-                completion?.complete(PickerOutcome.Completed)
+                completion?.onDismissed()
             }
 
             ASAccessoryEventTypeAccessoryRemoved -> {
