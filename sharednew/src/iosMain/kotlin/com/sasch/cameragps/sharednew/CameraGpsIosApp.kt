@@ -189,6 +189,9 @@ internal fun CameraGpsIosApp() {
     val migrationNeedsRestart by bluetoothController.migrationNeedsRestart.collectAsState()
     val migrationError by bluetoothController.migrationError.collectAsState()
     val migrationInProgress by bluetoothController.migrationInProgress.collectAsState()
+    val transmissionNotificationsEnabled by bluetoothController.transmissionNotificationsEnabled.collectAsState()
+    val transmissionNotificationsPermissionDenied by
+    bluetoothController.transmissionNotificationsPermissionDenied.collectAsState()
     // No scan effect any more: AccessorySetupKit owns discovery, and with it
     // declared a CoreBluetooth scan can only ever return already-authorized
     // accessories. Cameras are added through the system picker instead.
@@ -413,6 +416,10 @@ internal fun CameraGpsIosApp() {
         IosScreen.Settings -> {
             IosSettingsScreen(
                 isAppEnabled = isAppEnabled,
+                transmissionNotificationsEnabled = transmissionNotificationsEnabled,
+                transmissionNotificationsPermissionDenied = transmissionNotificationsPermissionDenied,
+                onTransmissionNotificationsEnabledChange = bluetoothController::setTransmissionNotificationsEnabled,
+                onOpenNotificationSettings = { openAppSettings() },
                 autoScanEnabled = autoScanEnabled,
                 scrollToTipJarOnOpen = scrollToTipJarOnSettingsOpen,
                 onBackClick = { currentScreen = IosScreen.Devices },

@@ -48,5 +48,15 @@
 
     <string name="ios_accessory_migration_busy">Confirming your cameras…</string>
 
+    <string name="ios_transmission_notifications_setting">Transmission notification</string>
+    <string name="ios_transmission_notifications_description">Show a silent notification while location is being sent to your cameras.</string>
+    <string name="ios_transmission_notifications_denied">Notifications are disabled in iOS Settings. Enable them there to see transmission status.</string>
+    <string name="ios_transmission_notifications_open_settings">Open iOS Settings</string>
+    <string name="ios_transmission_notification_title">Location transmission active</string>
+    <plurals name="ios_transmission_notification_body">
+        <item quantity="one">Transmitting location data to %1$d camera</item>
+        <item quantity="other">Transmitting location data to %1$d cameras</item>
+    </plurals>
+
 </resources>
 

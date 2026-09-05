@@ -6,6 +6,7 @@ import com.diamondedge.logging.VariableLogLevel
 import com.diamondedge.logging.logging
 import com.sasch.cameragps.sharednew.IosAppPreferences
 import com.sasch.cameragps.sharednew.IosLaunchContext
+import com.sasch.cameragps.sharednew.IosTransmissionNotifications
 import com.sasch.cameragps.sharednew.bluetooth.IosBluetoothController.centralShell
 import com.sasch.cameragps.sharednew.bluetooth.IosBluetoothController.clearPairingFailedDevice
 import com.sasch.cameragps.sharednew.bluetooth.IosBluetoothController.ensureInitialized
@@ -98,6 +99,7 @@ object IosBluetoothController : BluetoothController {
         // migration flow tears it down only after the user confirms in the app.
         accessorySession.activate()
         startCentralIfNeeded()
+        transmissionNotifications.start()
         controllerScope.launch { accessories.evaluateMigration() }
     }
 
@@ -321,6 +323,14 @@ object IosBluetoothController : BluetoothController {
         },
         isTransmissionAllowed = { appEnabled },
     )
+
+    private val transmissionNotifications = IosTransmissionNotifications(
+        controllerScope, orchestrator.sessions, orchestrator.locationManager.isTransmitting,
+    )
+    val transmissionNotificationsEnabled: StateFlow<Boolean> get() = transmissionNotifications.enabled
+    val transmissionNotificationsPermissionDenied: StateFlow<Boolean> get() = transmissionNotifications.permissionDenied
+    fun setTransmissionNotificationsEnabled(enabled: Boolean) =
+        transmissionNotifications.setEnabled(enabled)
 
     fun hasPreciseAccuracyAuthorization(): Boolean = locationSource.hasPreciseAuthorization()
 

@@ -39,14 +39,16 @@ import androidx.compose.ui.unit.dp
 import cameragps.sharednew.generated.resources.Res
 import cameragps.sharednew.generated.resources.app_controls
 import cameragps.sharednew.generated.resources.arrow_back_24px
-import cameragps.sharednew.generated.resources.auto_scan
-import cameragps.sharednew.generated.resources.auto_scan_description
 import cameragps.sharednew.generated.resources.back
 import cameragps.sharednew.generated.resources.cancel_button
 import cameragps.sharednew.generated.resources.enable_app
 import cameragps.sharednew.generated.resources.enable_app_description
 import cameragps.sharednew.generated.resources.haptic_feedback
 import cameragps.sharednew.generated.resources.haptic_feedback_description
+import cameragps.sharednew.generated.resources.ios_transmission_notifications_denied
+import cameragps.sharednew.generated.resources.ios_transmission_notifications_description
+import cameragps.sharednew.generated.resources.ios_transmission_notifications_open_settings
+import cameragps.sharednew.generated.resources.ios_transmission_notifications_setting
 import cameragps.sharednew.generated.resources.log_level
 import cameragps.sharednew.generated.resources.log_settings
 import cameragps.sharednew.generated.resources.settings
@@ -79,6 +81,10 @@ internal fun IosSettingsScreen(
     isAppEnabled: Boolean,
     autoScanEnabled: Boolean,
     hapticsEnabled: Boolean,
+    transmissionNotificationsEnabled: Boolean,
+    transmissionNotificationsPermissionDenied: Boolean,
+    onTransmissionNotificationsEnabledChange: (Boolean) -> Unit,
+    onOpenNotificationSettings: () -> Unit,
     scrollToTipJarOnOpen: Boolean = false,
     onBackClick: () -> Unit,
     onOpenHelp: () -> Unit,
@@ -127,6 +133,21 @@ internal fun IosSettingsScreen(
                         checked = isAppEnabled,
                         onCheckedChange = onAppEnabledChange,
                     )
+                    SharedToggleRow(
+                        title = stringResource(Res.string.ios_transmission_notifications_setting),
+                        description = stringResource(Res.string.ios_transmission_notifications_description),
+                        checked = transmissionNotificationsEnabled,
+                        onCheckedChange = onTransmissionNotificationsEnabledChange,
+                    )
+                    if (transmissionNotificationsEnabled && transmissionNotificationsPermissionDenied) {
+                        Text(
+                            stringResource(Res.string.ios_transmission_notifications_denied),
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                        TextButton(onClick = onOpenNotificationSettings) {
+                            Text(stringResource(Res.string.ios_transmission_notifications_open_settings))
+                        }
+                    }
                     SharedToggleRow(
                         title = stringResource(Res.string.haptic_feedback),
                         description = stringResource(Res.string.haptic_feedback_description),

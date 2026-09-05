@@ -14,11 +14,13 @@ import androidx.lifecycle.lifecycleScope
 import com.sasch.cameragps.sharednew.bluetooth.SonyBluetoothConstants.locationTransmissionNotificationId
 import com.sasch.cameragps.sharednew.bluetooth.session.CameraSessionOrchestrator
 import com.sasch.cameragps.sharednew.bluetooth.session.OrchestratorEvent
+import com.sasch.cameragps.sharednew.notification.TransmissionNotificationCoordinator
 import com.saschl.cameragps.AppServices
-import com.saschl.cameragps.R
+import com.saschl.cameragps.notification.AndroidTransmissionNotificationPublisher
 import com.saschl.cameragps.notification.NotificationsHelper
 import com.saschl.cameragps.service.coordinator.ServiceShutdownCoordinator
 import com.saschl.cameragps.service.transport.AndroidBleTransport
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -38,6 +40,7 @@ class LocationSenderService : LifecycleService() {
     private lateinit var bluetoothStateReceiver: BluetoothStateBroadcastReceiver
     private val commandMutex = Mutex()
     private val commandRouter = ServiceCommandRouter()
+    private var transmissionNotificationJob: Job? = null
 
     // The BLE/location graph is app-scoped (see [AppServices]); the service
     // borrows it for the duration of a foreground session.
@@ -71,11 +74,19 @@ class LocationSenderService : LifecycleService() {
         lifecycleScope.launch {
             orchestrator.events.collect { event -> handleEvent(event) }
         }
+        transmissionNotificationJob = TransmissionNotificationCoordinator(
+            scope = lifecycleScope,
+            sessions = orchestrator.sessions,
+            transmitting = orchestrator.locationManager.isTransmitting,
+            publisher = AndroidTransmissionNotificationPublisher(this),
+        ).start()
     }
 
     @SuppressLint("MissingPermission")
     override fun onDestroy() {
         isRunning = false
+        // Stop publishing before shutdown clears sessions; teardown must not repost standby.
+        transmissionNotificationJob?.cancel()
         super.onDestroy()
         runCatching {
             if (::bluetoothStateReceiver.isInitialized) unregisterReceiver(bluetoothStateReceiver)
@@ -119,20 +130,10 @@ class LocationSenderService : LifecycleService() {
         when (event) {
             is OrchestratorEvent.DeviceConnected -> {
                 eventSoundPlayer.play(TransmissionSoundEvent.CAMERA_CONNECTED)
-                val notification = NotificationsHelper.buildNotification(
-                    this,
-                    orchestrator.connectedDeviceCount()
-                )
-                NotificationsHelper.showNotification(
-                    this,
-                    locationTransmissionNotificationId,
-                    notification
-                )
             }
 
             is OrchestratorEvent.DeviceDisconnected -> {
                 eventSoundPlayer.play(TransmissionSoundEvent.CAMERA_DISCONNECTED)
-                updateNotificationAfterDisconnect()
             }
 
             is OrchestratorEvent.HandshakeCompleted -> {
@@ -232,48 +233,12 @@ class LocationSenderService : LifecycleService() {
         }
     }
 
-    // ==================== Notification helpers ====================
-
-    private fun updateNotificationAfterDisconnect() {
-        val connectedCount = orchestrator.connectedDeviceCount()
-        if (connectedCount == 0) {
-            val notification = NotificationsHelper.buildNotification(
-                this,
-                getString(R.string.app_standby_title),
-                getString(R.string.app_standby_content)
-            )
-            NotificationsHelper.showNotification(
-                this,
-                locationTransmissionNotificationId,
-                notification
-            )
-            Timber.d("No active cameras remaining")
-        } else {
-            Timber.d("Active cameras remaining, updating notification")
-            val notification = NotificationsHelper.buildNotification(
-                this,
-                connectedCount,
-                channelId = NotificationsHelper.DISCONNECT_NOTIFICATION_CHANNEL
-            )
-            NotificationsHelper.showNotification(
-                this,
-                locationTransmissionNotificationId,
-                notification
-            )
-        }
-    }
-
     private fun startAsForegroundService(): Boolean {
         try {
             ServiceCompat.startForeground(
                 this,
                 locationTransmissionNotificationId,
-                NotificationsHelper.buildNotification(
-                    this,
-                    getString(R.string.app_standby_title),
-                    getString(R.string.app_standby_content),
-                    NotificationsHelper.NOTIFICATION_CHANNEL_ID
-                ),
+                NotificationsHelper.buildWaitingNotification(this),
                 ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION or ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE,
             )
         } catch (e: SecurityException) {

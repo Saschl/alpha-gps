@@ -54,6 +54,16 @@ internal object NotificationsHelper {
         notificationManager.notify(notificationId, notification)
     }
 
+    fun buildWaitingNotification(
+        context: Context,
+        channelId: String = NOTIFICATION_CHANNEL_ID,
+    ): Notification = buildNotification(
+        context,
+        context.getString(R.string.app_standby_title),
+        context.getString(R.string.app_standby_content),
+        channelId,
+    )
+
     fun buildNotification(
         context: Context,
         activeCameras: Int,

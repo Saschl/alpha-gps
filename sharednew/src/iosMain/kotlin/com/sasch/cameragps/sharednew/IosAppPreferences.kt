@@ -10,6 +10,7 @@ internal object IosAppPreferences {
     private const val keyShowWelcome = "ios.showWelcome"
     private const val keyAppEnabled = "ios.appEnabled"
     private const val keyAutoScanEnabled = "ios.autoScanEnabled"
+    private const val keyTransmissionNotifications = "ios.transmissionNotifications"
     private const val keyHapticsEnabled = "ios.hapticsEnabled"
     private const val keyDonationHintLastShown = "ios.donationHintLastShown"
     private const val keyDonationHintShownTimes = "ios.donationHintShownTimes"
@@ -64,6 +65,15 @@ internal object IosAppPreferences {
 
     fun setHapticsEnabled(enabled: Boolean) {
         defaults.setBool(enabled, forKey = keyHapticsEnabled)
+    }
+
+    fun isTransmissionNotificationsEnabled(): Boolean =
+        defaults.objectForKey(keyTransmissionNotifications)?.let {
+            defaults.boolForKey(keyTransmissionNotifications)
+        } ?: true
+
+    fun setTransmissionNotificationsEnabled(enabled: Boolean) {
+        defaults.setBool(enabled, forKey = keyTransmissionNotifications)
     }
 
     fun donationHintLastShownDaysAgo(initialize: Boolean = false): Long {
