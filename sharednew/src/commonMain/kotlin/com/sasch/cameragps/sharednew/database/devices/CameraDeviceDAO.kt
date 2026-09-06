@@ -20,6 +20,10 @@ interface CameraDeviceDAO {
     @Insert(onConflict = IGNORE)
     suspend fun insertDevice(device: CameraDevice)
 
+    /** Update identity text without replacing per-camera settings. */
+    @Query("UPDATE camera_devices SET deviceName = :name WHERE mac = UPPER(:deviceId)")
+    suspend fun setDeviceName(deviceId: String, name: String)
+
     @Delete
     suspend fun deleteDevice(device: CameraDevice)
 
@@ -53,4 +57,3 @@ interface CameraDeviceDAO {
     @Query("UPDATE camera_devices SET handshakeDelayMs = :delayMs WHERE mac = UPPER(:deviceId)")
     suspend fun setHandshakeDelayMs(deviceId: String, delayMs: Long)
 }
-

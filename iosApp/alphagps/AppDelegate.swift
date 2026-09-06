@@ -26,6 +26,7 @@ class AppDelegate: NSObject, UIApplicationDelegate {
             return true
         }
         #endif
+        AccessoryDiscoveryNaming.install()
         IosLaunchContext.shared.record(
             bluetooth: launchOptions?[.bluetoothCentrals] != nil,
             location: launchOptions?[.location] != nil

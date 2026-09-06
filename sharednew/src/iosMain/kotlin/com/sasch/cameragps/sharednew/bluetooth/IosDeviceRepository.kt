@@ -1,6 +1,7 @@
 package com.sasch.cameragps.sharednew.bluetooth
 
 import com.diamondedge.logging.logging
+import com.sasch.cameragps.sharednew.bluetooth.accessory.AccessoryCameraName
 import com.sasch.cameragps.sharednew.database.devices.CameraDevice
 import com.sasch.cameragps.sharednew.database.devices.CameraDeviceDAO
 
@@ -73,13 +74,21 @@ internal class IosDeviceRepository(
                 ?: CameraDevice(mac = normalized, deviceEnabled = enabled)
     }
 
-    /** Insert-if-absent a device record and update the cache with [resolvedName]. */
-    suspend fun ensureDeviceRecord(identifier: String, resolvedName: String) {
+    /** Insert if absent, or persist only a name change without resetting device settings. */
+    suspend fun ensureDeviceRecord(identifier: String, accessoryName: String?, bluetoothName: String? = null) {
         val normalized = identifier.uppercase()
+        val dao = deviceDao()
+        // Read the real row: the in-memory cache may not be populated yet at launch.
+        val existing = dao.getAllCameraDevices().firstOrNull { it.mac.equals(normalized, ignoreCase = true) }
+        val resolvedName = AccessoryCameraName.resolve(accessoryName, bluetoothName, existing?.deviceName)
         val entry = CameraDevice(mac = normalized, deviceName = resolvedName)
-        deviceDao().insertDevice(entry)
+        if (existing == null) {
+            dao.insertDevice(entry)
+        } else if (existing.deviceName != resolvedName) {
+            dao.setDeviceName(normalized, resolvedName)
+        }
         persistedDevices[normalized] =
-            persistedDevices[normalized]?.copy(deviceName = resolvedName) ?: entry
+            existing?.copy(deviceName = resolvedName) ?: entry
     }
 
     suspend fun deleteDevice(identifier: String) {

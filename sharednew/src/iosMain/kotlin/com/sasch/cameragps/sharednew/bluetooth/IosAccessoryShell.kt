@@ -19,15 +19,10 @@ import platform.AccessorySetupKit.ASAccessoryEventTypePickerDidDismiss
 import platform.AccessorySetupKit.ASAccessoryEventTypePickerDidPresent
 import platform.AccessorySetupKit.ASAccessoryEventTypePickerSetupFailed
 import platform.AccessorySetupKit.ASAccessorySession
-import platform.AccessorySetupKit.ASAccessorySupportBluetoothPairingLE
-import platform.AccessorySetupKit.ASDiscoveryDescriptor
 import platform.AccessorySetupKit.ASErrorCodeActivationFailed
+import platform.AccessorySetupKit.ASErrorCodeInvalidated
 import platform.AccessorySetupKit.ASErrorCodeUserCancelled
 import platform.AccessorySetupKit.ASErrorDomain
-import platform.AccessorySetupKit.ASMigrationDisplayItem
-import platform.AccessorySetupKit.ASPickerDisplayItem
-import platform.Foundation.NSUUID
-import platform.UIKit.UIImage
 import platform.darwin.dispatch_get_main_queue
 import kotlin.coroutines.resume
 import kotlin.time.Duration.Companion.milliseconds
@@ -80,9 +75,10 @@ internal class IosAccessoryShell(
      */
     private var pendingAccessory: ASAccessory? = null
 
-    // The closure and dismissal event can arrive in either order. Complete once,
-    // and capture each attempt's waiter so a late closure cannot finish a retry.
+    // Discovery owns its handler until dismissal, even after a successful
+    // showPicker callback. Capture each waiter so late callbacks cannot finish a retry.
     private var pickerCompletion: AccessoryPickerCompletion<PickerOutcome>? = null
+    private var discoveryCustomizer: IosAccessoryDiscoveryCustomizer? = null
 
     // ---------------------------------------------------------------------------
     // Lifecycle
@@ -127,13 +123,17 @@ internal class IosAccessoryShell(
      */
     override suspend fun showDiscoveryPicker(): PickerOutcome {
         if (!awaitActivated()) return PickerOutcome.Failed("AccessorySetupKit did not activate", ASErrorCodeActivationFailed)
-        val item = ASPickerDisplayItem(
-            name = PICKER_ITEM_NAME,
-            productImage = productImage(),
-            descriptor = sonyDescriptor(),
-        )
+        val item = IosAccessoryPickerItems.discovery()
         log.i { "Presenting the discovery picker" }
-        return presentPicker(listOf(item))
+        val customizer = IosAccessoryDiscoverySupport.create(session)
+        discoveryCustomizer = customizer
+        try {
+            customizer?.start()
+            return presentPicker(listOf(item), waitForDismissalOnSuccess = true)
+        } finally {
+            customizer?.stop()
+            if (discoveryCustomizer === customizer) discoveryCustomizer = null
+        }
     }
 
     /**
@@ -149,16 +149,7 @@ internal class IosAccessoryShell(
         if (candidates.isEmpty()) return PickerOutcome.Completed
         if (!awaitActivated()) return PickerOutcome.Failed("AccessorySetupKit did not activate", ASErrorCodeActivationFailed)
 
-        val image = productImage()
-        val items = candidates.map { candidate ->
-            ASMigrationDisplayItem(
-                name = candidate.displayName,
-                productImage = image,
-                descriptor = sonyDescriptor(),
-            ).apply {
-                setPeripheralIdentifier(NSUUID(uUIDString = candidate.identifier))
-            }
-        }
+        val items = IosAccessoryPickerItems.migration(candidates)
         log.i { "Presenting the migration picker for ${items.size} camera(s)" }
         return presentPicker(items)
     }
@@ -183,8 +174,14 @@ internal class IosAccessoryShell(
         return error == null
     }
 
-    private suspend fun presentPicker(items: List<Any>): PickerOutcome {
-        val completion = AccessoryPickerCompletion<PickerOutcome>(PickerOutcome.Completed)
+    private suspend fun presentPicker(
+        items: List<Any>,
+        waitForDismissalOnSuccess: Boolean = false,
+    ): PickerOutcome {
+        val completion = AccessoryPickerCompletion<PickerOutcome>(
+            PickerOutcome.Completed,
+            waitForDismissalOnSuccess = waitForDismissalOnSuccess,
+        )
         check(pickerCompletion == null) { "A picker is already pending" }
         pickerCompletion = completion
         try {
@@ -199,6 +196,9 @@ internal class IosAccessoryShell(
                         PickerOutcome.Failed(error.localizedDescription, error.code)
                     }
                 }
+                log.i {
+                    "Picker callback: $outcome; waitForDismissalOnSuccess=$waitForDismissalOnSuccess"
+                }
                 completion.onCompletion(outcome)
             }
             return completion.await()
@@ -209,6 +209,7 @@ internal class IosAccessoryShell(
 
     private fun handleEvent(event: ASAccessoryEvent?) {
         val type = event?.eventType ?: return
+        discoveryCustomizer?.onEvent(event)
         when (type) {
             ASAccessoryEventTypeActivated -> {
                 refreshAuthorized()
@@ -237,6 +238,7 @@ internal class IosAccessoryShell(
             }
 
             ASAccessoryEventTypePickerDidDismiss -> {
+                log.i { "Picker dismissed" }
                 // Dismissal is also a terminal signal: do not leave controller
                 // ownership (and the busy dialog) waiting on a late closure.
                 val completion = pickerCompletion
@@ -245,8 +247,12 @@ internal class IosAccessoryShell(
                 if (accessory != null) {
                     val id = accessory.identifierString()
                     if (id != null) {
-                        log.i { "Accessory added: $id (${accessory.displayName})" }
-                        onAccessoryAdded(id, accessory.displayName)
+                        refreshAuthorized()
+                        // Renaming can deliver accessoryChanged with a new
+                        // snapshot after accessoryAdded. Save the final name.
+                        val name = displayName(id) ?: accessory.displayName
+                        log.i { "Accessory added: $id ($name)" }
+                        onAccessoryAdded(id, name)
                     } else {
                         log.w { "Accessory added without a bluetooth identifier" }
                     }
@@ -274,13 +280,16 @@ internal class IosAccessoryShell(
                 // would need a fresh object, and the app has no way to recover
                 // the picker mid-flight anyway.
                 log.e { "AccessorySetupKit session invalidated" }
+                pickerCompletion?.onCompletion(
+                    PickerOutcome.Failed("AccessorySetupKit session invalidated", ASErrorCodeInvalidated),
+                )
                 authorized.clear()
                 onAccessoriesChanged(this)
             }
 
             ASAccessoryEventTypePickerSetupFailed -> log.w { "Accessory setup failed" }
 
-            ASAccessoryEventTypePickerDidPresent -> log.d { "Picker presented" }
+            ASAccessoryEventTypePickerDidPresent -> log.i { "Picker presented" }
 
             else -> log.d { "Unhandled AccessorySetupKit event $type" }
         }
@@ -296,22 +305,7 @@ internal class IosAccessoryShell(
     private fun ASAccessory.identifierString(): String? =
         bluetoothIdentifier?.UUIDString?.uppercase()
 
-    private fun productImage(): UIImage =
-        UIImage.systemImageNamed(PRODUCT_IMAGE_SYMBOL) ?: UIImage()
-
-    private fun sonyDescriptor(): ASDiscoveryDescriptor = ASDiscoveryDescriptor().apply {
-        // Matches what the Android CompanionDeviceManager filter already does.
-        // Sony cameras do not advertise their 128-bit service UUID, so the
-        // company identifier is the only usable matcher. It MUST also appear in
-        // NSAccessorySetupBluetoothCompanyIdentifiers or the app crashes here.
-        setBluetoothCompanyIdentifier(SONY_COMPANY_ID)
-        setSupportedOptions(ASAccessorySupportBluetoothPairingLE)
-    }
-
     private companion object {
         const val ACTIVATION_TIMEOUT_MS = 5_000L
-        const val SONY_COMPANY_ID: UShort = 0x012Du
-        const val PICKER_ITEM_NAME = "Sony camera"
-        const val PRODUCT_IMAGE_SYMBOL = "camera.fill"
     }
 }

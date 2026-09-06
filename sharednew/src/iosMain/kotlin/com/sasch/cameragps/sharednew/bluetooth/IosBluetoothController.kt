@@ -1,5 +1,7 @@
 package com.sasch.cameragps.sharednew.bluetooth
 
+import com.sasch.cameragps.sharednew.bluetooth.accessory.AccessoryCameraName
+
 import com.diamondedge.logging.LogLevel
 import com.diamondedge.logging.logging
 import com.sasch.cameragps.sharednew.IosAppPreferences
@@ -425,6 +427,11 @@ object IosBluetoothController : BluetoothController {
     private fun handlePeripheralConnected(identifier: String) {
         repository.markAutoReconnect(identifier)
         refreshDeviceListFrom(shell)
+        // The hardware name may only become available after authorization/connection.
+        controllerScope.launch {
+            withDatabase("camera name after connection") { ensureDeviceRecord(identifier) }
+            refreshDeviceListFrom(shell)
+        }
     }
 
     // ---------------------------------------------------------------------------
@@ -574,6 +581,7 @@ object IosBluetoothController : BluetoothController {
         val central = shell ?: return
         central.retrievePeripherals(ids).forEach { peripheral ->
             val id = peripheral.identifier.UUIDString
+            repository.ensureDeviceRecord(id, accessorySession.displayName(id), peripheral.name)
             if (!repository.isDeviceEnabled(id)) {
                 return@forEach
             }
@@ -604,10 +612,11 @@ object IosBluetoothController : BluetoothController {
                 val identifier = discoveredEntry?.key ?: (persistedEntry?.mac ?: normalizedId)
                 BluetoothDeviceInfo(
                     identifier = identifier,
-                    name = accessorySession.displayName(normalizedId)
-                        ?: peripheral?.name
-                        ?: persistedEntry?.deviceName
-                        ?: "Unknown device",
+                    name = AccessoryCameraName.resolve(
+                        accessoryName = accessorySession.displayName(normalizedId),
+                        bluetoothName = peripheral?.name,
+                        savedName = persistedEntry?.deviceName,
+                    ),
                     isConnected = connectedByNormalized.containsKey(normalizedId),
                     isSaved = repository.isSaved(identifier),
                 )
@@ -651,7 +660,9 @@ object IosBluetoothController : BluetoothController {
         controllerScope.launch {
             startCentralForAccessoryUse()
             withDatabase("accessory added") {
-                repository.ensureDeviceRecord(identifier.uppercase(), displayName ?: "N/A")
+                val hardwareName = shell?.peripheralName(identifier)
+                    ?: shell?.retrieveNames(listOf(identifier))?.get(identifier.uppercase())
+                repository.ensureDeviceRecord(identifier, displayName, hardwareName)
                 repository.sync()
             }
             repository.markAutoReconnect(identifier)
@@ -678,10 +689,11 @@ object IosBluetoothController : BluetoothController {
     }
 
     suspend fun ensureDeviceRecord(identifier: String, deviceName: String? = null) {
-        val resolvedName = deviceName
-            ?: shell?.peripheralName(identifier)
-            ?: "N/A"
-        repository.ensureDeviceRecord(identifier, resolvedName)
+        repository.ensureDeviceRecord(
+            identifier,
+            accessoryName = accessorySession.displayName(identifier),
+            bluetoothName = shell?.peripheralName(identifier) ?: deviceName,
+        )
         repository.sync()
         refreshDeviceListFrom(shell)
     }
