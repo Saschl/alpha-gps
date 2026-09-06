@@ -20,6 +20,12 @@ navigationeventVersion = "1.1.2"
 review = "2.0.2"
 reviewKtx = "2.0.2"
 sentry = "8.54.0"
+# iOS crash reporting. sentryKotlinMultiplatform is added to the iosMain source
+# set ONLY, so the Android foss (F-Droid) flavor never sees Sentry. The Cocoa
+# version is pinned by the KMP SDK release notes and MUST match the Swift
+# package pinned in iosApp/alphagps.xcodeproj.
+sentryKotlinMultiplatform = "0.27.0"
+sentryCocoa = "8.58.2"
 room = "2.8.4"
 runtimeLivedata = "1.12.0"
 coreSplashscreen = "1.2.0"
@@ -71,6 +77,7 @@ review = { module = "com.google.android.play:review", version.ref = "review" }
 review-ktx = { module = "com.google.android.play:review-ktx", version.ref = "reviewKtx" }
 sentry-android = { module = "io.sentry:sentry-android", version.ref = "sentry" }
 sentry-android-timber = { module = "io.sentry:sentry-android-timber", version.ref = "sentry" }
+sentry-kotlin-multiplatform = { module = "io.sentry:sentry-kotlin-multiplatform", version.ref = "sentryKotlinMultiplatform" }
 timber = { group = "com.jakewharton.timber", name = "timber", version = "5.0.1" }
 accompanist-permissions = { module = "com.google.accompanist:accompanist-permissions", version.ref = "accompanist" }
 google-play-services-location = { group = "com.google.android.gms", name = "play-services-location", version.ref = "googlePlayServicesLocation" }
@@ -104,5 +111,9 @@ jetbrains-compose = { id = "org.jetbrains.compose", version.ref = "composeMultip
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 jetbrains-kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlinSerialization"}
 android-lint = { id = "com.android.lint", version.ref = "agp" }
+# Apple-only: links the Sentry Cocoa framework into the iOS binaries. Its
+# dependency auto-install is switched OFF in :sharednew so it can never add
+# Sentry to commonMain (which would reach the Android foss flavor).
+sentry-kotlin-multiplatform = { id = "io.sentry.kotlin.multiplatform.gradle", version.ref = "sentryKotlinMultiplatform" }
 
 
