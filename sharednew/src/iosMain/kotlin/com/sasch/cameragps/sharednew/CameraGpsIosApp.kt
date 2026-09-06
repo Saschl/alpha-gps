@@ -73,6 +73,7 @@ import com.sasch.cameragps.sharednew.database.getDatabaseBuilder
 import com.sasch.cameragps.sharednew.database.logging.LogRepository
 import com.sasch.cameragps.sharednew.logging.IosLogFormatter
 import com.sasch.cameragps.sharednew.logging.IosLogging
+import com.sasch.cameragps.sharednew.review.IosReviewPromptEffect
 import com.sasch.cameragps.sharednew.ui.device.SharedDevicesScreen
 import com.sasch.cameragps.sharednew.ui.devicelist.DeviceListViewModel
 import com.sasch.cameragps.sharednew.ui.devicelist.IosDeviceListDataSource
@@ -89,6 +90,7 @@ import platform.UIKit.UIApplicationDidBecomeActiveNotification
 import platform.UIKit.UIApplicationDidEnterBackgroundNotification
 import platform.UIKit.UIApplicationOpenSettingsURLString
 import platform.UIKit.UIApplicationState.UIApplicationStateActive
+import platform.UIKit.UIViewController
 
 internal enum class IosScreen {
     Welcome,
@@ -101,7 +103,7 @@ internal enum class IosScreen {
 }
 
 @Composable
-internal fun CameraGpsIosApp() {
+internal fun CameraGpsIosApp(requestReview: (UIViewController) -> Boolean) {
     val bluetoothController = IosBluetoothController
     val realDevices by bluetoothController.devices.collectAsState()
     val devices = if (SCREENSHOT_MODE) mockDevices else realDevices
@@ -189,15 +191,9 @@ internal fun CameraGpsIosApp() {
     val migrationError by bluetoothController.migrationError.collectAsState()
     val migrationInProgress by bluetoothController.migrationInProgress.collectAsState()
     val transmissionNotificationsEnabled by bluetoothController.transmissionNotificationsEnabled.collectAsState()
-    val transmissionNotificationsPermissionDenied by
-    bluetoothController.transmissionNotificationsPermissionDenied.collectAsState()
-    // No scan effect any more: AccessorySetupKit owns discovery, and with it
-    // declared a CoreBluetooth scan can only ever return already-authorized
-    // accessories. Cameras are added through the system picker instead.
+    val transmissionNotificationsPermissionDenied by bluetoothController.transmissionNotificationsPermissionDenied.collectAsState()
 
-    // iOS has no post-update hook, so the migration sheet is raised on the first
-    // foreground pass after the update instead of waiting for the user to find
-    // the card. The controller limits this to one attempt per launch.
+
     var showMigrationExplainer by remember { mutableStateOf(false) }
     LaunchedEffect(migrationCandidates, isAppInForeground) {
         if (SCREENSHOT_MODE) return@LaunchedEffect
@@ -326,6 +322,22 @@ internal fun CameraGpsIosApp() {
             forceDonationDialogThisLaunch = false
         }
     }
+
+    IosReviewPromptEffect(
+        isForeground = !SCREENSHOT_MODE && isAppInForeground,
+        hasSavedCamera = devices.any { it.isSaved },
+        canPresent = currentScreen == IosScreen.Devices &&
+                lifecycleState == Lifecycle.State.RESUMED && isAppEnabled,
+        hasCompetingPrompt = showDonationDialog || forceDonationDialogThisLaunch ||
+                showSentryConsentDialog ||
+                CrashReportPolicy.shouldShowConsentDialog(
+                    available = IosCrashReporting.AVAILABLE,
+                    consentDialogDismissed = IosAppPreferences.isSentryConsentDialogDismissed(),
+                ) || showMigrationExplainer || migrationError || migrationInProgress ||
+                pairingFailedDeviceName != null || showRequestPreciseAccuracyPermissionDialog ||
+                (needsAlwaysLocationAuthorization && !alwaysLocationHintDismissed),
+        requestReview = requestReview,
+    )
 
     when (currentScreen) {
         IosScreen.Welcome -> {

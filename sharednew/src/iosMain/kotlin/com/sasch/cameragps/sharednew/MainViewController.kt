@@ -7,14 +7,14 @@ import platform.UIKit.UIViewController
 /**
  * Entry point for the iOS host application.
  *
- * The Xcode project should call:
- *   CameraGpsShared.MainViewControllerKt.MainViewController()
- * and embed the returned UIViewController as the root view controller.
+ * The Swift host supplies the StoreKit request callback and embeds the returned
+ * controller. The callback returns whether it could issue a request, not whether
+ * Apple displayed the prompt or the user left a review.
  */
 @Suppress("FunctionName", "unused")
-fun MainViewController(): UIViewController =
+fun MainViewController(requestReview: (UIViewController) -> Boolean): UIViewController =
     ComposeUIViewController {
         CameraGpsTheme {
-            CameraGpsIosApp()
+            CameraGpsIosApp(requestReview = requestReview)
         }
 }
