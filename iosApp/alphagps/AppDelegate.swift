@@ -21,6 +21,11 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
+        #if DEBUG && targetEnvironment(simulator)
+        if ProcessInfo.processInfo.environment["ALPHA_GPS_SCREENSHOT"] != nil {
+            return true
+        }
+        #endif
         IosLaunchContext.shared.record(
             bluetooth: launchOptions?[.bluetoothCentrals] != nil,
             location: launchOptions?[.location] != nil
