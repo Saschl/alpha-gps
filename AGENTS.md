@@ -68,11 +68,17 @@ Platform shells own only sockets and lifecycle:
   `com.saschl.cameragps.central`, Sony manufacturer-ID `0x012D` scan filter,
   connect/disconnect await-machinery — mechanics only) + `IosAccessoryShell`
   (AccessorySetupKit session, pickers, authorized-accessory snapshot — mechanics
-  only) + `IosDeviceRepository` (device DB, legacy `IosAutoReconnectStore` for
-  migration, enabled-state caches) + `IosBluetoothController` (policy:
-  auto-reconnect decisions, app/device-enabled sweeps, pairing-failure state, the
-  AccessorySetupKit migration gate, device-list assembly; also the stable facade
-  the shared iOS Compose UI consumes — keep its public surface stable).
+  only) + `IosAccessoryCoordinator` (migration candidates/UI state, foreground
+  prompt, exclusive picker operations, retry policy and migration completion) +
+  `IosDeviceRepository` (device DB, legacy `IosAutoReconnectStore` for migration,
+  enabled-state caches) + `IosBluetoothController` (central ownership,
+  auto-reconnect decisions, app/device-enabled sweeps, pairing-failure state,
+  device-list assembly; also the stable facade the shared iOS Compose UI consumes
+  — keep its public surface stable). `IosAccessoryMigrationStore` adapts the
+  existing repository, migration preference and reminders for the coordinator.
+  The coordinator uses the controller's Main.immediate scope; construction of
+  the coordinator and its adapters must remain inert. Accessory added/removed
+  callbacks stay in the controller because they also update connection state.
   **Reentrancy rule:** `transport` and `repository` are declared BEFORE the
   central and everything else AFTER it; the shell's `central` is ITS last
   property — `willRestoreState` can fire synchronously during CBCentralManager
@@ -114,8 +120,12 @@ migration on restoration launches or background connection callbacks. Existing
 unmigrated cameras still work; keep normal synchronous central creation and
 reconnection at launch. Candidate checks may run at launch, but migration itself
 starts only after the user confirms in the foreground UI.
-The foreground operation releases the central, runs migration, then clears its
-guard and recreates the central in `finally`. Keep the increased waits for now:
+`IosAccessoryCoordinator.presentMigrationPicker` releases the central, runs
+migration, then clears its guard and resumes connections in a visible `finally`.
+The controller implements release/resume and checks the coordinator's guard in
+`startCentralIfNeeded`; it alone constructs the native central. The public
+migration methods and flows on the controller delegate to the coordinator.
+Keep the increased waits for now:
 10 seconds after release, 10 total attempts, 5 seconds between restricted retries.
 If activation fails, retain the launch central and leave migration pending.
 `migrationComplete` must release the picker wait even if no dismissal or completion
@@ -126,6 +136,103 @@ explainer must not interrupt existing connections.
 A migration call must contain ONLY `ASMigrationDisplayItem`s — mixing in a regular
 display item changes the flow to discovery. Never delete a row for skipped or
 failed migration; preserve per-device settings and keep manual retry available.
+
+**Transmission notifications:** both platforms use `TransmissionNotificationCoordinator`
+for counts, transmission gating and deduplication. Android's `LocationSenderService`
+starts foreground synchronously with the waiting notification, then uses
+`AndroidTransmissionNotificationPublisher` for updates; idle keeps the waiting
+notification instead of removing it. Cancel the publishing job before service teardown
+clears sessions, so shutdown cannot repost standby. Connection sounds remain event-driven.
+`IosTransmissionNotifications` is app-scoped,
+started by `ensureInitialized` after synchronous central creation. It owns notification
+authorization, the retained notification-center delegate and one silent status request;
+`TransmissionNotificationCoordinator` combines sessions, transmission and preferences.
+`LocationTransmissionManager.isTransmitting` becomes true only after a location packet
+is queued and resets when tracking stops — `isActive` alone also includes waiting for
+the first GPS fix. Show only a positive transmitting-camera count; clear on stop,
+disconnect or opt-out, and leave migration reminders untouched. The settings toggle
+defaults on. Request permission only in the foreground, when transmission starts or
+the user enables the setting; background restoration only checks existing permission.
+
+**Crash reporting (Sentry, both platforms):** the rules live in
+`commonMain/.../crash/CrashReportPolicy` — log-priority → breadcrumb/event
+thresholds, MAC-address redaction and the consent gate (`enabled &&
+consentDialogDismissed`, so an untouched default never opts anyone in). The
+consent dialog and settings card are shared UI
+(`ui/settings/SharedSentrySettings`); each platform only persists the answer.
+Log lines go to Sentry three ways, and they are orthogonal, not alternatives:
+INFO+ becomes a **breadcrumb** (context for a later event), ERROR+ becomes an
+**issue**, and INFO+ is *also* mirrored into Sentry's structured **Logs** view
+(`CrashReportPolicy.shouldSendAsLog`, matching Android's
+`SentryTimberIntegration(minLogsLevel = INFO)`). Breadcrumbs only ever surface
+attached to an event, so the Logs view is what you read when nothing crashed —
+folding either rule into the other silently empties one of the two views.
+
+`commonMain` and `androidMain` MUST stay free of any Sentry import: the
+Android SDK is `gplayImplementation` only and `io.sentry:sentry-kotlin-multiplatform`
+is declared in the **iosMain source set only**, which is the whole reason the
+foss (F-Droid) flavor still builds without proprietary dependencies. Verify with
+`./gradlew :app:dependencies --configuration fossDebugRuntimeClasspath | grep -i sentry`
+(must be empty).
+
+iOS specifics: `crash/IosCrashReporting` owns `Sentry.init` (DSN constant; blank
+DSN = disabled, never a crash) and is started from
+`IosBluetoothController.ensureInitialized` right after the loggers exist, so
+background relaunches are covered too. `crash/SentryCrashLogger` is a `KmLogging`
+`Logger` that mirrors Android's `SentryTimberIntegration`; it needs
+`options.logs.enabled = true` for the Logs half to work, and it escapes `%` in
+the body because Sentry runs it through `%s` template substitution even with no
+arguments (a literal `%%` would otherwise collapse to `%`). **`KmLogging.setLoggers`
+replaces the entire logger list**, so every reconfiguration goes through
+`logging/IosLogging.install` or Sentry silently stops receiving log lines until
+the next launch. `enableUnhandledCppExceptionMonitoring = false` is deliberate:
+with it on, an unhandled Kotlin exception from a Compose callback is reported as
+Kotlin/Native's internal `ExceptionObjHolderImpl` instead of reaching the KMP
+hook that knows the real Kotlin stack trace.
+
+Sentry Cocoa is a Swift Package (product **`Sentry-Dynamic`** — the Kotlin
+framework is dynamic, and the other products either build from source or don't
+exist; `SentrySPM` in particular needs `EXPERIMENTAL_SPM_BUILDS=1` and will fail
+with "Missing package product"). It is pinned in `iosApp/alphagps.xcodeproj` +
+`Package.resolved`.
+
+Linking is done by the official `io.sentry.kotlin.multiplatform.gradle` plugin
+(note the `.gradle` suffix — the README's shorter id does not exist). In
+`sharednew/build.gradle.kts` it is configured with:
+
+- `autoInstall.enabled = false` — **this is the foss guarantee.** By default the
+  plugin injects `api("io.sentry:sentry-kotlin-multiplatform")` into commonMain,
+  which lands in :sharednew's Android artifact and therefore in the F-Droid
+  flavor. Off, the plugin does linking only and the dependency stays hand-declared
+  in `iosMain`. Never remove this.
+- `linker.xcodeprojPath` — otherwise the plugin file-walks the repo root hunting
+  for a `.xcodeproj`, i.e. through `website/node_modules`.
+- `linker.frameworkPath` ← `-Psentry.cocoa.frameworkPath`, the escape hatch for a
+  checkout that has never been opened in Xcode.
+
+The plugin is inert for Android work: it only touches Apple binaries, only on a
+Mac host, and only when an Apple compile task is in the requested task graph
+(F-Droid's Linux builders skip it entirely). It resolves the framework via
+`ManualSearchStrategy` — a `find` over `~/Library/Developer/Xcode/DerivedData` —
+because CLI `xcodebuild -showBuildSettings` reports `BUILD_DIR = iosApp/build`,
+which its DerivedData strategy rejects. If it finds nothing it throws and fails
+the **whole** Gradle invocation, including any Android tasks in the same command;
+`xcodebuild -resolvePackageDependencies` (or one Xcode build) fixes that.
+
+Bumping Sentry: the KMP SDK is compiled against one exact Cocoa version, and a
+mismatch shows up as undefined-symbol link errors. Read the required version off
+the artifact rather than the README's compatibility table (which lags releases):
+
+```bash
+V=0.27.0
+curl -sL "https://repo1.maven.org/maven2/io/sentry/sentry-kotlin-multiplatform/$V/sentry-kotlin-multiplatform-$V-sources.jar" \
+  | bsdtar -xOf - 'commonMain/io/sentry/kotlin/multiplatform/BuildKonfig.kt' | grep SENTRY_COCOA_VERSION
+```
+
+Then update `sentryKotlinMultiplatform` (drives both the SDK and the plugin),
+`sentryCocoa` (documentation only — nothing reads it) and the Xcode pin together.
+Renovate can bump the Gradle side alone; such a PR is incomplete until the Xcode
+pin matches.
 
 **Displayed session state rule:** per-device UI state lives in `CameraSession` only.
 To surface a new field: add it to `CameraSession`, set it via a `BleGattPort` setter
@@ -209,7 +316,9 @@ community protocol docs, not the script, and needs real-camera confirmation.
 ./gradlew :sharednew:compileKotlinIosArm64 :sharednew:compileKotlinIosSimulatorArm64 \
           :sharednew:compileAndroidMain :app:compileGplayDebugKotlin :app:compileFossDebugKotlin
 
-# iOS app (generic destination without ARCHS fails on x86_64 — iosX64 is disabled)
+# iOS app (generic destination without ARCHS fails on x86_64 — iosX64 is disabled).
+# Resolves the Sentry Cocoa Swift package on first run; `xcodebuild
+# -resolvePackageDependencies` alone is enough to unblock a Gradle-only iOS link.
 xcodebuild -project iosApp/alphagps.xcodeproj -scheme alphagps \
   -destination 'generic/platform=iOS Simulator' ARCHS=arm64 build
 ```
