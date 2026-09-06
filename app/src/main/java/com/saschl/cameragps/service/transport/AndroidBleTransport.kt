@@ -55,10 +55,6 @@ class AndroidBleTransport(
     private val pendingSubscribeEnable =
         Collections.synchronizedMap(mutableMapOf<String, Boolean>())
 
-    // ---------------------------------------------------------------------------
-    // Connection management (called by the service / shutdown coordinator)
-    // ---------------------------------------------------------------------------
-
     fun connect(mac: String): Boolean {
         val address = mac.uppercase()
         if (connections.containsKey(address)) {

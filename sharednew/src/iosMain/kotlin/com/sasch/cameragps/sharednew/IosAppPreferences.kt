@@ -17,6 +17,14 @@ internal object IosAppPreferences {
     private const val keyForceDonationDialogOnNextStart = "ios.forceDonationDialogOnNextStart"
 
     /**
+     * Crash reporting opt-in. Both default to false and both have to be true
+     * before Sentry starts — see
+     * [com.sasch.cameragps.sharednew.crash.CrashReportPolicy.shouldInitialize].
+     */
+    private const val keySentryEnabled = "ios.sentryEnabled"
+    private const val keySentryConsentDialogDismissed = "ios.sentryConsentDialogDismissed"
+
+    /**
      * Set once every camera saved before the AccessorySetupKit switch has been
      * re-authorized through the system picker (or once there was nothing to
      * migrate). Until then the CBCentralManager is not created, because
@@ -118,6 +126,19 @@ internal object IosAppPreferences {
             defaults.removeObjectForKey(keyForceDonationDialogOnNextStart)
         }
         return shouldForce
+    }
+
+    fun isSentryEnabled(): Boolean = defaults.boolForKey(keySentryEnabled)
+
+    fun setSentryEnabled(enabled: Boolean) {
+        defaults.setBool(enabled, forKey = keySentryEnabled)
+    }
+
+    fun isSentryConsentDialogDismissed(): Boolean =
+        defaults.boolForKey(keySentryConsentDialogDismissed)
+
+    fun setSentryConsentDialogDismissed(dismissed: Boolean) {
+        defaults.setBool(dismissed, forKey = keySentryConsentDialogDismissed)
     }
 
     fun getLogLevel(): String = defaults.stringForKey(logLevel) ?: LogLevel.Info.name

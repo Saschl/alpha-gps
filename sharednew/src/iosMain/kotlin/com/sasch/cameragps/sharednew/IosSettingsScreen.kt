@@ -61,6 +61,7 @@ import cameragps.sharednew.generated.resources.tip_jar_thank_you
 import cameragps.sharednew.generated.resources.tip_jar_unavailable
 import com.diamondedge.logging.LogLevel
 import com.sasch.cameragps.sharednew.bluetooth.IosBluetoothController
+import com.sasch.cameragps.sharednew.ui.settings.SharedSentrySettingsCard
 import com.sasch.cameragps.sharednew.ui.settings.SharedSettingsCard
 import com.sasch.cameragps.sharednew.ui.settings.SharedSettingsScreen
 import com.sasch.cameragps.sharednew.ui.settings.SharedToggleRow
@@ -91,6 +92,8 @@ internal fun IosSettingsScreen(
     onAppEnabledChange: (Boolean) -> Unit,
     onAutoScanEnabledChange: (Boolean) -> Unit,
     onHapticsEnabledChange: (Boolean) -> Unit,
+    sentryEnabled: Boolean,
+    onSentryEnabledChange: (Boolean) -> Unit,
     onShowWelcomeAgain: () -> Unit,
     onChangeLogLevel: (LogLevel) -> Unit,
     onTipJarScrollConsumed: () -> Unit = {},
@@ -170,6 +173,15 @@ internal fun IosSettingsScreen(
             }
 
             item {
+                // Unconditional: unlike Android there is no foss variant on iOS,
+                // so a build without a crash reporter does not exist here.
+                SharedSentrySettingsCard(
+                    enabled = sentryEnabled,
+                    onEnabledChange = onSentryEnabledChange,
+                )
+            }
+
+            item {
                 IosTipJarCard()
             }
 
@@ -182,7 +194,9 @@ internal fun IosSettingsScreen(
     }
 }
 
-private const val TIP_JAR_ITEM_INDEX = 2
+// App controls, log settings, crash reporting, tip jar — keep in sync with the
+// item order above; the donation prompt scrolls straight to the tip jar.
+private const val TIP_JAR_ITEM_INDEX = 3
 
 @Composable
 private fun IosDebugCard() {

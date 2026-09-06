@@ -1,6 +1,7 @@
 package com.saschl.cameragps
 
 import android.app.Application
+import com.sasch.cameragps.sharednew.crash.CrashReportPolicy
 import com.saschl.cameragps.service.FileTree
 import com.saschl.cameragps.service.GlobalExceptionHandler
 import com.saschl.cameragps.utils.CrashReporting
@@ -26,8 +27,10 @@ class CameraGpsApplication : Application() {
         // Crash reporting only after consent — the consent dialog does the
         // first init. No-op in the foss flavor.
         if (CrashReporting.AVAILABLE &&
-            PreferencesManager.sentryEnabled(this) &&
-            PreferencesManager.isSentryConsentDialogDismissed(this)
+            CrashReportPolicy.shouldInitialize(
+                enabled = PreferencesManager.sentryEnabled(this),
+                consentDialogDismissed = PreferencesManager.isSentryConsentDialogDismissed(this),
+            )
         ) {
             CrashReporting.init(this)
         }

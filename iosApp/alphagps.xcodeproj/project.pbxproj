@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		2B2597FC2F7146300006B4E3 /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2B2597FB2F7146300006B4E3 /* StoreKit.framework */; };
+		2BAB7506304CDA98002DE729 /* Sentry-Dynamic in Frameworks */ = {isa = PBXBuildFile; productRef = 2BAB7505304CDA98002DE729 /* Sentry-Dynamic */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -41,6 +42,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				2BAB7506304CDA98002DE729 /* Sentry-Dynamic in Frameworks */,
 				2B2597FC2F7146300006B4E3 /* StoreKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -94,6 +96,7 @@
 			);
 			name = alphagps;
 			packageProductDependencies = (
+				2BAB7505304CDA98002DE729 /* Sentry-Dynamic */,
 			);
 			productName = alphagps;
 			productReference = 2BE082CC2F6824510077F638 /* alphagps.app */;
@@ -123,6 +126,9 @@
 			);
 			mainGroup = 2BE082C32F6824510077F638;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				2BAB7504304CDA98002DE729 /* XCRemoteSwiftPackageReference "sentry-cocoa" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 2BE082CD2F6824510077F638 /* Products */;
 			projectDirPath = "";
@@ -413,6 +419,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		2BAB7504304CDA98002DE729 /* XCRemoteSwiftPackageReference "sentry-cocoa" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/getsentry/sentry-cocoa.git";
+			requirement = {
+				kind = exactVersion;
+				version = 8.58.2;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		2BAB7505304CDA98002DE729 /* Sentry-Dynamic */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 2BAB7504304CDA98002DE729 /* XCRemoteSwiftPackageReference "sentry-cocoa" */;
+			productName = "Sentry-Dynamic";
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 2BE082C42F6824510077F638 /* Project object */;
 }

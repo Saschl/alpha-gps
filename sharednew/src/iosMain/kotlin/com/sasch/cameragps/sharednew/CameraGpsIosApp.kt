@@ -65,18 +65,19 @@ import cameragps.sharednew.generated.resources.welcome_get_started_button
 import cameragps.sharednew.generated.resources.welcome_settings_note
 import cameragps.sharednew.generated.resources.welcome_subtitle
 import cameragps.sharednew.generated.resources.welcome_title
-import com.diamondedge.logging.KmLogging
 import com.diamondedge.logging.LogLevel
-import com.diamondedge.logging.VariableLogLevel
 import com.sasch.cameragps.sharednew.bluetooth.IosBluetoothController
+import com.sasch.cameragps.sharednew.crash.CrashReportPolicy
+import com.sasch.cameragps.sharednew.crash.IosCrashReporting
 import com.sasch.cameragps.sharednew.database.getDatabaseBuilder
-import com.sasch.cameragps.sharednew.database.logging.DatabaseLogger
 import com.sasch.cameragps.sharednew.database.logging.LogRepository
 import com.sasch.cameragps.sharednew.logging.IosLogFormatter
+import com.sasch.cameragps.sharednew.logging.IosLogging
 import com.sasch.cameragps.sharednew.ui.device.SharedDevicesScreen
 import com.sasch.cameragps.sharednew.ui.devicelist.DeviceListViewModel
 import com.sasch.cameragps.sharednew.ui.devicelist.IosDeviceListDataSource
 import com.sasch.cameragps.sharednew.ui.logs.SharedLogViewerScreen
+import com.sasch.cameragps.sharednew.ui.settings.SharedSentryConsentDialog
 import com.sasch.cameragps.sharednew.ui.welcome.SharedWelcomeScreen
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
@@ -120,12 +121,15 @@ internal fun CameraGpsIosApp() {
     var isAppEnabled by remember { mutableStateOf(IosAppPreferences.isAppEnabled()) }
     var autoScanEnabled by remember { mutableStateOf(IosAppPreferences.isAutoScanEnabled()) }
     var hapticsEnabled by remember { mutableStateOf(IosAppPreferences.isHapticsEnabled()) }
+    var sentryEnabled by remember { mutableStateOf(IosAppPreferences.isSentryEnabled()) }
     var isAppInForeground by remember {
         mutableStateOf(
             UIApplication.sharedApplication.applicationState == UIApplicationStateActive
         )
     }
     var showDonationDialog by remember { mutableStateOf(false) }
+
+    var showSentryConsentDialog by remember { mutableStateOf(false) }
     val pairingFailedDeviceName by bluetoothController.pairingFailedDevice.collectAsState()
     var showRequestPreciseAccuracyPermissionDialog by remember { mutableStateOf(false) }
     val needsAlwaysLocationAuthorization by
@@ -163,12 +167,7 @@ internal fun CameraGpsIosApp() {
     }
 
     LaunchedEffect(Unit) {
-        KmLogging.setLoggers(
-            DatabaseLogger(
-                logRepository,
-                VariableLogLevel(LogLevel.valueOf(IosAppPreferences.getLogLevel()))
-            )
-        )
+        IosLogging.install(logRepository, LogLevel.valueOf(IosAppPreferences.getLogLevel()))
         forceDonationDialogThisLaunch = IosAppPreferences.consumeForceDonationDialogOnNextAppStart()
     }
 
@@ -215,6 +214,21 @@ internal fun CameraGpsIosApp() {
         if (bluetoothController.consumeAutoMigrationPrompt()) {
             showMigrationExplainer = true
         }
+    }
+
+    // Asked once, and last in line: migration and the donation prompt also live
+    // on the device list, and stacked alerts are unusable. Updating from a
+    // version without crash reporting is exactly when all three can come due.
+    LaunchedEffect(currentScreen, showMigrationExplainer, migrationError, showDonationDialog) {
+        showSentryConsentDialog = !SCREENSHOT_MODE &&
+                currentScreen == IosScreen.Devices &&
+                !showMigrationExplainer &&
+                !migrationError &&
+                !showDonationDialog &&
+                CrashReportPolicy.shouldShowConsentDialog(
+                    available = IosCrashReporting.AVAILABLE,
+                    consentDialogDismissed = IosAppPreferences.isSentryConsentDialogDismissed(),
+                )
     }
 
     // The flow spends seconds releasing the central and retrying a restricted
@@ -440,12 +454,25 @@ internal fun CameraGpsIosApp() {
                     hapticsEnabled = enabled
                     IosAppPreferences.setHapticsEnabled(enabled)
                 },
+                sentryEnabled = sentryEnabled,
+                onSentryEnabledChange = { enabled ->
+                    sentryEnabled = enabled
+                    IosAppPreferences.setSentryEnabled(enabled)
+                    // Answering here counts as answering the consent question,
+                    // so the dialog does not turn up afterwards and overwrite
+                    // the choice that was just made.
+                    IosAppPreferences.setSentryConsentDialogDismissed(true)
+                    // Enabling takes effect immediately; disabling cannot (the
+                    // SDK has no clean mid-process shutdown), hence the restart
+                    // hint the shared card shows.
+                    if (enabled) IosCrashReporting.start()
+                },
                 onShowWelcomeAgain = {
                     IosAppPreferences.setShowWelcomeOnLaunch(true)
                     currentScreen = IosScreen.Welcome
                 },
                 onChangeLogLevel = { level ->
-                    KmLogging.setLoggers(DatabaseLogger(logRepository, VariableLogLevel(level)))
+                    IosLogging.install(logRepository, level)
                 },
                 onTipJarScrollConsumed = {
                     scrollToTipJarOnSettingsOpen = false
@@ -477,6 +504,30 @@ internal fun CameraGpsIosApp() {
                 onBackClick = { currentScreen = IosScreen.Devices }
             )
         }
+    }
+
+    if (showSentryConsentDialog) {
+        SharedSentryConsentDialog(
+            onAllow = {
+                IosAppPreferences.setSentryEnabled(true)
+                IosAppPreferences.setSentryConsentDialogDismissed(true)
+                sentryEnabled = true
+                IosCrashReporting.start()
+                showSentryConsentDialog = false
+            },
+            onDecline = {
+                IosAppPreferences.setSentryEnabled(false)
+                IosAppPreferences.setSentryConsentDialogDismissed(true)
+                sentryEnabled = false
+                showSentryConsentDialog = false
+            },
+            onDontShowAgain = {
+                IosAppPreferences.setSentryEnabled(false)
+                IosAppPreferences.setSentryConsentDialogDismissed(true)
+                sentryEnabled = false
+                showSentryConsentDialog = false
+            },
+        )
     }
 
     if (showDonationDialog) {
