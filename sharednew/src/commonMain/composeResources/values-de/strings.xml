@@ -1,5 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Hinweise vor der Kamera-Suche im Systemdialog. -->
+    <string name="pairing_preparation_title">Kopplungsmodus aktivieren</string>
+    <string name="pairing_preparation_step_bluetooth">Schalte deine Kamera ein und aktiviere Bluetooth in ihren Einstellungen.</string>
+    <string name="pairing_preparation_step_pairing">Öffne den Bildschirm für die Bluetooth-Kopplung an der Kamera und starte die Kopplung.</string>
+    <string name="pairing_preparation_step_ready">Lass diesen Bildschirm geöffnet, halte die Kamera in der Nähe und tippe auf Kamera suchen.</string>
+    <string name="pairing_preparation_note">Bluetooth allein einzuschalten reicht nicht aus. Die Kamera muss im Kopplungsmodus sein, damit dein Smartphone sie finden kann. Die Menünamen unterscheiden sich je nach Kameramodell.</string>
+    <string name="pairing_preparation_search">Kamera suchen</string>
+    <string name="pairing_preparation_searching">Kamera wird gesucht…</string>
+    <string name="pairing_preparation_help">Brauchst du Hilfe?</string>
     <string name="app_name" translatable="false">AlphaGPS</string>
     <string name="app_name_ui" translatable="false">Alpha GPS</string>
     <string name="header_device_list">Meine Kameras</string>

@@ -1,5 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Instructions shown before opening the native camera discovery picker. -->
+    <string name="pairing_preparation_title">Put your camera in pairing mode</string>
+    <string name="pairing_preparation_step_bluetooth">Turn on your camera and enable Bluetooth in its settings.</string>
+    <string name="pairing_preparation_step_pairing">Open the camera’s Bluetooth pairing screen and start pairing.</string>
+    <string name="pairing_preparation_step_ready">Leave that screen open, keep the camera nearby, then tap Search for camera.</string>
+    <string name="pairing_preparation_note">Enabling Bluetooth alone is not enough. The camera must be in pairing mode so your phone can find it. Menu names vary by camera model.</string>
+    <string name="pairing_preparation_search">Search for camera</string>
+    <string name="pairing_preparation_searching">Searching for camera…</string>
+    <string name="pairing_preparation_help">Need help?</string>
     <string name="app_name" translatable="false">AlphaGPS</string>
     <string name="app_name_ui" translatable="false">Alpha GPS</string>
     <string name="header_device_list">My Cameras</string>

@@ -78,6 +78,8 @@ import com.sasch.cameragps.sharednew.ui.device.SharedDevicesScreen
 import com.sasch.cameragps.sharednew.ui.devicelist.DeviceListViewModel
 import com.sasch.cameragps.sharednew.ui.devicelist.IosDeviceListDataSource
 import com.sasch.cameragps.sharednew.ui.logs.SharedLogViewerScreen
+import com.sasch.cameragps.sharednew.ui.pairing.PairingPreparationState
+import com.sasch.cameragps.sharednew.ui.pairing.SharedPairingPreparationScreen
 import com.sasch.cameragps.sharednew.ui.settings.SharedSentryConsentDialog
 import com.sasch.cameragps.sharednew.ui.welcome.SharedWelcomeScreen
 import kotlinx.coroutines.launch
@@ -95,6 +97,7 @@ import platform.UIKit.UIViewController
 internal enum class IosScreen {
     Welcome,
     Devices,
+    PairingPreparation,
     DeviceDetails,
     Settings,
     Help,
@@ -113,6 +116,8 @@ internal fun CameraGpsIosApp(requestReview: (UIViewController) -> Boolean) {
     val realListItems by listViewModel.items.collectAsState()
     val listItems = if (SCREENSHOT_MODE) mockDeviceListItems else realListItems
     val scope = rememberCoroutineScope()
+    val pairingPreparation = remember { PairingPreparationState() }
+    val isCameraPickerActive by pairingPreparation.isSearching.collectAsState()
     val lifecycleState by LocalLifecycleOwner.current.lifecycle.currentStateFlow.collectAsState()
     val logRepository = remember { LogRepository(getDatabaseBuilder()) }
     var currentScreen by remember {
@@ -393,7 +398,7 @@ internal fun CameraGpsIosApp(requestReview: (UIViewController) -> Boolean) {
                     migrationCandidates = migrationCandidates,
                     migrationNeedsRestart = migrationNeedsRestart,
                     onMigrate = { scope.launch { bluetoothController.presentMigrationPicker() } },
-                    onAddCamera = { scope.launch { bluetoothController.presentAccessoryPicker() } },
+                    onAddCamera = { currentScreen = IosScreen.PairingPreparation },
                     onOpenSettings = { currentScreen = IosScreen.Settings },
                     onOpenHelp = {
                         troubleshootingReturnScreen = IosScreen.Devices
@@ -423,6 +428,24 @@ internal fun CameraGpsIosApp(requestReview: (UIViewController) -> Boolean) {
                     },
                 )
             }
+        }
+
+        IosScreen.PairingPreparation -> {
+            SharedPairingPreparationScreen(
+                isSearching = isCameraPickerActive,
+                onSearch = {
+                    scope.launch {
+                        if (pairingPreparation.search { bluetoothController.presentAccessoryPicker() }) {
+                            currentScreen = IosScreen.Devices
+                        }
+                    }
+                },
+                onBack = { currentScreen = IosScreen.Devices },
+                onHelp = {
+                    troubleshootingReturnScreen = IosScreen.PairingPreparation
+                    currentScreen = IosScreen.Troubleshooting
+                },
+            )
         }
 
         IosScreen.DeviceDetails -> {
