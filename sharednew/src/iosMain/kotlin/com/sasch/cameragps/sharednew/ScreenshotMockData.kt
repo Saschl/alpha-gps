@@ -47,6 +47,7 @@ internal val mockDevices = listOf(
 internal val mockDeviceListItems = mapOf(
     "ILCE-7M4" to DeviceListItem(
         identifier = "ILCE-7M4",
+        customName = null,
         isAlwaysOnEnabled = false,
         isTransmissionActive = true,
         isRemoteFeatureActive = true,

@@ -34,6 +34,13 @@ class DeviceDetailViewModel(
         }
     }
 
+    /** In-app rename. iOS accessories rename through the system sheet instead. */
+    fun renameDevice(device: String, name: String) {
+        viewModelScope.launch {
+            stateStore.setDeviceName(device, name)
+        }
+    }
+
     fun setRemoteControlStatus(enabled: Boolean, device: String) {
         val normalizedDevice = device.uppercase()
         viewModelScope.launch {

@@ -190,7 +190,7 @@ object IosBluetoothController : BluetoothController {
      * activates it, so it cannot call back before the rest of the graph exists.
      */
     private val accessorySession = IosAccessoryShell(
-        onAccessoriesChanged = { refreshDeviceListFrom(shell) },
+        onAccessoriesChanged = { persistAccessoryNames() },
         onAccessoryAdded = { id, name -> handleAccessoryAdded(id, name) },
         onAccessoryRemoved = { id -> handleAccessoryRemoved(id) },
         onMigrationComplete = { accessories.handleMigrationComplete() },
@@ -612,10 +612,11 @@ object IosBluetoothController : BluetoothController {
                 val identifier = discoveredEntry?.key ?: (persistedEntry?.mac ?: normalizedId)
                 BluetoothDeviceInfo(
                     identifier = identifier,
-                    name = AccessoryCameraName.resolve(
+                    name = AccessoryCameraName.resolveName(
                         accessoryName = accessorySession.displayName(normalizedId),
                         bluetoothName = peripheral?.name,
                         savedName = persistedEntry?.deviceName,
+                        savedNameIsCustom = persistedEntry?.deviceNameIsCustom == true,
                     ),
                     isConnected = connectedByNormalized.containsKey(normalizedId),
                     isSaved = repository.isSaved(identifier),
@@ -686,6 +687,51 @@ object IosBluetoothController : BluetoothController {
             }
             refreshDeviceListFrom(shell)
         }
+    }
+
+    /**
+     * True when the camera is an authorized AccessorySetupKit accessory, and can
+     * therefore be renamed in the system record instead of only in the app.
+     * Cameras paired before AccessorySetupKit have no accessory record, so they
+     * fall back to the shared in-app rename dialog.
+     */
+    fun canRenameInSystem(identifier: String): Boolean =
+        accessorySession.isAuthorized(identifier)
+
+    /**
+     * Present Apple's rename sheet. The chosen name is not returned here; it
+     * arrives as an accessoryChanged event and is persisted by
+     * [persistAccessoryNames].
+     */
+    fun presentSystemRename(identifier: String) {
+        controllerScope.launch { accessorySession.rename(identifier) }
+    }
+
+    /** Redraw the device list after an in-app rename wrote straight to the DAO. */
+    fun refreshDeviceNames() {
+        controllerScope.launch {
+            withDatabase("device renamed") { repository.sync() }
+            refreshDeviceListFrom(shell)
+        }
+    }
+
+    /** Persist names from a refreshed accessory snapshot, then redraw the list. */
+    private fun persistAccessoryNames() {
+        val shell = shell
+        controllerScope.launch {
+            withDatabase("accessory names changed") {
+                repository.savedDevices.keys.toList().forEach { id ->
+                    repository.ensureDeviceRecord(
+                        id,
+                        accessorySession.displayName(id),
+                        shell?.peripheralName(id),
+                    )
+                }
+                repository.sync()
+            }
+            refreshDeviceListFrom(shell)
+        }
+        refreshDeviceListFrom(shell)
     }
 
     suspend fun ensureDeviceRecord(identifier: String, deviceName: String? = null) {

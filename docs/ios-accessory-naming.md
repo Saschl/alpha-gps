@@ -84,17 +84,44 @@ selected name, including a user rename, reaches the device record.
 The picker's hardware-name subtitle is separate from its app-provided display
 name. If discovery does not expose a Bluetooth local name, the system may still
 show `Camera` with `ILCE-6700` underneath. After authorization, the controller
-uses the retrieved `CBPeripheral.name` as a fallback. `AccessoryCameraName`
-chooses a non-placeholder AccessorySetupKit name first, then a saved meaningful
-name, then the Bluetooth name, and finally `Camera`. The reserved placeholders
-are `Camera`, the old `Sony camera`, `N/A`, `Unknown device`, and blank values.
-This keeps custom names while upgrading default names, including existing
-saved cameras when their hardware name becomes available on reconnect.
+uses the retrieved `CBPeripheral.name` as a fallback.
+
+`AccessoryCameraName` resolves the displayed name from two facts rather than
+from a list of strings that "look generic". The app sets the discovery item's
+name to `FALLBACK` (`Camera`) itself, so an AccessorySetupKit name that differs
+from it can only have been typed by a person in the system rename sheet; and an
+in-app rename is stored as `deviceNameIsCustom`. The order is therefore: a
+system rename, then a stored custom name, then the live hardware name, then the
+last stored name, then `Camera`. **Do not reintroduce a placeholder list.** The
+previous one treated `Camera`, `Sony camera`, `N/A` and `Unknown device` as
+"unnamed" and silently overwrote anyone who deliberately chose one of them;
+`AccessoryCameraNameTest` pins that behaviour.
 
 The resolved name is persisted with a name-only SQL update; insert-if-absent
 alone would leave an existing `Camera` row unchanged. Device enabled state,
-Always On, remote control, and handshake delay remain untouched. This does not
-rename the system's accessory record or change the native picker's subtitle.
+Always On, remote control, and handshake delay remain untouched.
+
+## Renaming
+
+`ASAccessorySession.renameAccessory` takes no name string — it presents Apple's
+own sheet — and its completion handler reports an error, not the chosen name.
+The new name arrives afterwards as an `accessoryChanged` event, which is why
+`IosBluetoothController.persistAccessoryNames` writes the refreshed snapshot to
+the database instead of only redrawing the list. Because renaming goes through
+the system, the app and Settings → Accessories never disagree; an app-side text
+field for an authorized accessory would silently diverge, so iOS only falls back
+to the shared dialog for cameras paired before AccessorySetupKit, which have no
+accessory record (`canRenameInSystem`).
+
+Android renames in the database only. The CompanionDeviceManager association
+keeps its own name and is never rewritten; `DeviceListItem.customName` makes the
+list prefer a chosen name over the association name. Android inserts the device
+row on demand in `ensureDeviceExists`, because a rename needs a row to update and
+the pairing flow may not have created one yet.
+
+What still cannot be fixed: the display item name must be `Camera`, and nothing
+can seed the hardware name into the system record. An un-renamed camera therefore
+reads `ILCE-6700` in the app and `Camera` in Settings.
 
 Run `./gradlew :sharednew:iosSimulatorArm64Test --tests '*Accessory*'` for the
 picker configuration and migration regressions. A real camera is required to

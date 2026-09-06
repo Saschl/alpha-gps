@@ -37,6 +37,7 @@ import cameragps.sharednew.generated.resources.device_name_with_address
 import cameragps.sharednew.generated.resources.help_menu_item
 import cameragps.sharednew.generated.resources.remove
 import com.sasch.cameragps.sharednew.database.LogDatabase
+import com.sasch.cameragps.sharednew.database.devices.CameraDevice
 import com.sasch.cameragps.sharednew.database.devices.CameraDeviceDAO
 import com.sasch.cameragps.sharednew.database.getDatabaseBuilder
 import com.sasch.cameragps.sharednew.ui.device.DeviceDetailContent
@@ -53,7 +54,9 @@ import timber.log.Timber
 private fun createAndroidDataSource(dao: CameraDeviceDAO): DeviceDetailDataSource {
     return object : DeviceDetailDataSource {
         override suspend fun ensureDeviceExists(deviceId: String, deviceName: String?) {
-            // Android device records are managed by companion/pairing flows.
+            // Companion/pairing flows own the row's settings, but a rename needs
+            // a row to update: insert-if-absent never touches an existing one.
+            dao.insertDevice(CameraDevice(mac = deviceId.uppercase()))
         }
 
         override suspend fun isDeviceEnabled(deviceId: String) = dao.isDeviceEnabled(deviceId)
@@ -80,6 +83,14 @@ private fun createAndroidDataSource(dao: CameraDeviceDAO): DeviceDetailDataSourc
 
         override suspend fun setHandshakeDelayMs(deviceId: String, delayMs: Long) {
             dao.setHandshakeDelayMs(deviceId, delayMs)
+        }
+
+        override suspend fun getDeviceName(deviceId: String) = dao.getDeviceName(deviceId)
+
+        // Database only: the CompanionDeviceManager association keeps its own
+        // name, which Android never shows to the user once a custom one exists.
+        override suspend fun setDeviceName(deviceId: String, name: String) {
+            dao.setDeviceName(deviceId, name, isCustom = true)
         }
     }
 }
@@ -145,7 +156,7 @@ fun DeviceDetailScreen(
             viewModel = viewModel,
             deviceId = device.address,
             modifier = Modifier.padding(innerPadding),
-            headerContent = {
+            headerContent = { resolvedName ->
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -155,7 +166,7 @@ fun DeviceDetailScreen(
                         Text(
                             text = stringResource(
                                 Res.string.device_name_with_address,
-                                device.name,
+                                resolvedName.ifEmpty { device.name },
                                 device.address
                             )
                         )

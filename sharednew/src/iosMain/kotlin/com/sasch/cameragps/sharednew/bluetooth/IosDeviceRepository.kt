@@ -80,15 +80,29 @@ internal class IosDeviceRepository(
         val dao = deviceDao()
         // Read the real row: the in-memory cache may not be populated yet at launch.
         val existing = dao.getAllCameraDevices().firstOrNull { it.mac.equals(normalized, ignoreCase = true) }
-        val resolvedName = AccessoryCameraName.resolve(accessoryName, bluetoothName, existing?.deviceName)
-        val entry = CameraDevice(mac = normalized, deviceName = resolvedName)
+        val resolved = AccessoryCameraName.resolve(
+            accessoryName = accessoryName,
+            bluetoothName = bluetoothName,
+            savedName = existing?.deviceName,
+            savedNameIsCustom = existing?.deviceNameIsCustom == true,
+        )
+        val entry = CameraDevice(
+            mac = normalized,
+            deviceName = resolved.name,
+            deviceNameIsCustom = resolved.isCustom,
+        )
         if (existing == null) {
             dao.insertDevice(entry)
-        } else if (existing.deviceName != resolvedName) {
-            dao.setDeviceName(normalized, resolvedName)
+        } else if (
+            existing.deviceName != resolved.name ||
+            existing.deviceNameIsCustom != resolved.isCustom
+        ) {
+            dao.setDeviceName(normalized, resolved.name, resolved.isCustom)
         }
-        persistedDevices[normalized] =
-            existing?.copy(deviceName = resolvedName) ?: entry
+        persistedDevices[normalized] = existing?.copy(
+            deviceName = resolved.name,
+            deviceNameIsCustom = resolved.isCustom,
+        ) ?: entry
     }
 
     suspend fun deleteDevice(identifier: String) {

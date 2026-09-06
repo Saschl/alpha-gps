@@ -64,7 +64,9 @@ fun AssociatedDevicesList(
     val devices = associatedDevices.map { compat ->
         BluetoothDeviceInfo(
             identifier = compat.address.uppercase(),
-            name = compat.name,
+            // A name the user chose wins over the association name; CDM is left
+            // alone, so its own record keeps whatever the pairing flow set.
+            name = items[compat.address.uppercase()]?.customName ?: compat.name,
             // Drives the card's status line; mirrors the old "remote text only
             // while transmitting" gating
             isConnected = items[compat.address.uppercase()]?.isTransmissionActive == true,

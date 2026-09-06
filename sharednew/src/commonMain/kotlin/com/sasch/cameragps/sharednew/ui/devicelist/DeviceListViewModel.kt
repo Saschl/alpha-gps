@@ -30,6 +30,11 @@ interface DeviceListDataSource {
  */
 data class DeviceListItem(
     val identifier: String,
+    /**
+     * A name a person chose, or null when the row should keep the identity name
+     * its platform already has (a CDM association name, a peripheral name).
+     */
+    val customName: String?,
     val isAlwaysOnEnabled: Boolean,
     val isTransmissionActive: Boolean,
     val isRemoteFeatureActive: Boolean,
@@ -51,9 +56,12 @@ class DeviceListViewModel(dataSource: DeviceListDataSource) : ViewModel() {
         val settingsByMac = settings.associateBy { it.mac.uppercase() }
         (sessions.keys + settingsByMac.keys).associateWith { identifier ->
             val session = sessions[identifier]
+            val persisted = settingsByMac[identifier]
             DeviceListItem(
                 identifier = identifier,
-                isAlwaysOnEnabled = settingsByMac[identifier]?.alwaysOnEnabled == true,
+                customName = persisted?.takeIf { it.deviceNameIsCustom }?.deviceName
+                    ?.takeUnless { it.isBlank() },
+                isAlwaysOnEnabled = persisted?.alwaysOnEnabled == true,
                 isTransmissionActive =
                     session?.phase == BleSessionPhase.Transmitting && transmissionActive,
                 isRemoteFeatureActive = session?.remoteFeatureActive == true,

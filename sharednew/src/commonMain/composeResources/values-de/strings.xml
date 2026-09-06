@@ -9,6 +9,11 @@
     <string name="pairing_preparation_search">Kamera suchen</string>
     <string name="pairing_preparation_searching">Kamera wird gesucht…</string>
     <string name="pairing_preparation_help">Brauchst du Hilfe?</string>
+    <!-- Kamera umbenennen. Unter iOS öffnet dies Apples System-Dialog. -->
+    <string name="rename_camera_title">Umbenennen</string>
+    <string name="rename_camera_label">Kameraname</string>
+    <string name="rename_camera_save">Speichern</string>
+    <string name="rename_camera_hint">Dieser Name wird nur in Alpha GPS verwendet.</string>
     <string name="app_name" translatable="false">AlphaGPS</string>
     <string name="app_name_ui" translatable="false">Alpha GPS</string>
     <string name="header_device_list">Meine Kameras</string>

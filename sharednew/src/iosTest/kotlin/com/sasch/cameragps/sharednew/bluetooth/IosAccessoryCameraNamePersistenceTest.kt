@@ -38,9 +38,10 @@ class IosAccessoryCameraNamePersistenceTest {
     @Test
     fun savedCustomNameSurvivesGenericSystemMetadataWithAnEmptyCache() = runTest {
         withRepository { dao, repository ->
-            dao.insertDevice(SAVED.copy(deviceName = "Travel camera"))
+            val named = SAVED.copy(deviceName = "Travel camera", deviceNameIsCustom = true)
+            dao.insertDevice(named)
             repository.ensureDeviceRecord(ID, "Camera", "ILCE-6700")
-            assertEquals(SAVED.copy(deviceName = "Travel camera"), dao.getAllCameraDevices().single())
+            assertEquals(named, dao.getAllCameraDevices().single())
         }
     }
 
@@ -49,7 +50,40 @@ class IosAccessoryCameraNamePersistenceTest {
         withRepository { dao, repository ->
             dao.insertDevice(SAVED.copy(deviceName = "ILCE-6700"))
             repository.ensureDeviceRecord(ID, "Travel camera", "ILCE-6700")
-            assertEquals(SAVED.copy(deviceName = "Travel camera"), dao.getAllCameraDevices().single())
+            assertEquals(
+                SAVED.copy(deviceName = "Travel camera", deviceNameIsCustom = true),
+                dao.getAllCameraDevices().single(),
+            )
+        }
+    }
+
+    /**
+     * A rename made in the app writes the flag directly; a later reconnect must
+     * not treat the chosen name as a stale hardware name and overwrite it.
+     */
+    @Test
+    fun inAppRenameSurvivesTheNextConnection() = runTest {
+        withRepository { dao, repository ->
+            dao.insertDevice(SAVED.copy(deviceName = "ILCE-6700"))
+            dao.setDeviceName(ID, "Beach camera", isCustom = true)
+            repository.ensureDeviceRecord(ID, "Camera", "ILCE-6700")
+            assertEquals(
+                SAVED.copy(deviceName = "Beach camera", deviceNameIsCustom = true),
+                dao.getAllCameraDevices().single(),
+            )
+        }
+    }
+
+    /**
+     * The old placeholder list overwrote anyone who deliberately used one of its
+     * strings. With a stored flag the name is kept whatever it says.
+     */
+    @Test
+    fun deliberateNameThatLooksLikeAPlaceholderIsKept() = runTest {
+        withRepository { dao, repository ->
+            dao.insertDevice(SAVED.copy(deviceName = "Camera", deviceNameIsCustom = true))
+            repository.ensureDeviceRecord(ID, "Camera", "ILCE-6700")
+            assertEquals("Camera", dao.getAllCameraDevices().single().deviceName)
         }
     }
 

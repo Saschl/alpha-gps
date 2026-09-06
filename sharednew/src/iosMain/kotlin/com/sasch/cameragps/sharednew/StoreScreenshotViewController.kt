@@ -70,6 +70,7 @@ fun StoreScreenshotViewController(scenario: String): UIViewController {
                 val items = devices.associate { device ->
                     device.identifier to DeviceListItem(
                         identifier = device.identifier,
+                        customName = null,
                         isAlwaysOnEnabled = false,
                         isTransmissionActive = device.isConnected,
                         isRemoteFeatureActive = device.isConnected,

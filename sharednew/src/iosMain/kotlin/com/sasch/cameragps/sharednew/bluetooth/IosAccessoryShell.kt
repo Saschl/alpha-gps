@@ -155,6 +155,31 @@ internal class IosAccessoryShell(
     }
 
     /**
+     * Present the system's rename sheet for an authorized accessory.
+     *
+     * There is no way to set the name programmatically — `renameAccessory` takes
+     * no string, it only displays Apple's own view — and its completion handler
+     * reports an error, not the chosen name. The new name arrives afterwards as
+     * an `accessoryChanged` event, which refreshes the authorized snapshot.
+     * Renaming here is what keeps the app and the system accessory record in
+     * step; an app-side text field would silently diverge from Settings.
+     */
+    suspend fun rename(identifier: String): Boolean {
+        val accessory = authorized[identifier.uppercase()] ?: run {
+            log.w { "Cannot rename $identifier: it is not an authorized accessory" }
+            return false
+        }
+        val error = suspendCancellableCoroutine { continuation ->
+            // No rename options: ASAccessoryRenameSSID is for Wi-Fi accessories.
+            session.renameAccessory(accessory, options = 0uL) { error ->
+                continuation.resume(error)
+            }
+        }
+        if (error != null) log.w { "renameAccessory failed: ${error.localizedDescription}" }
+        return error == null
+    }
+
+    /**
      * Remove the accessory from the system, which also drops the Bluetooth bond.
      * This is what makes "forget this camera" work without sending people to
      * Settings.
