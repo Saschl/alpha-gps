@@ -1,0 +1,16 @@
+{
+  "en-US": [
+    {"id":"geotagging","eyebrow":"GPS GEOTAGGING","title":"Every photo.\nA sense of place.","subtitle":"Your phone’s GPS, sent straight\nto your compatible camera.","chip":"For compatible Alpha, ILCE & ZV cameras","note":"Location linking over Bluetooth"},
+    {"id":"reconnect","eyebrow":"AUTOMATIC RECONNECTION","title":"Camera on.\nYou’re connected.","subtitle":"Pair once. Reconnect automatically\nand sync locations in the background.","chip":"Keep your attention on the shot","note":"Background location permission required"},
+    {"id":"remote","eyebrow":"REMOTE SHUTTER","title":"Your next shot.\nOne tap away.","subtitle":"Release the shutter from your phone\non cameras with remote control enabled.","chip":"Remote shutter, built in","note":"Available on supported camera models"},
+    {"id":"multiple","eyebrow":"MULTIPLE CAMERAS","title":"More cameras.\nOne GPS source.","subtitle":"Send your location to several\nconnected cameras at the same time.","chip":"One phone. Your camera collection.","note":"Independent camera companion"},
+    {"id":"privacy","eyebrow":"YOU’RE IN CONTROL","title":"Your location.\nYour choice.","subtitle":"Open source. No ads.\nDiagnostic reporting is optional.","chip":"Made for photographers","note":"Choose your preferences in the app"}
+  ],
+  "de-DE": [
+    {"id":"geotagging","eyebrow":"GPS-GEOTAGGING","title":"Jedes Foto.\nMit Aufnahmeort.","subtitle":"Die GPS-Daten deines Smartphones\ndirekt an deine kompatible Kamera.","chip":"Für kompatible Alpha-, ILCE- & ZV-Kameras","note":"Standortverknüpfung per Bluetooth"},
+    {"id":"reconnect","eyebrow":"AUTOMATISCHE VERBINDUNG","title":"Kamera an.\nWieder verbunden.","subtitle":"Einmal koppeln. Automatisch verbinden.\nGPS-Daten im Hintergrund übertragen.","chip":"Konzentrier dich aufs Fotografieren","note":"Standortfreigabe im Hintergrund erforderlich"},
+    {"id":"remote","eyebrow":"FERNAUSLÖSER","title":"Dein nächstes Foto.\nNur einen Tipp weg.","subtitle":"Löse deine Kamera vom Smartphone aus –\nbei aktivierter Fernsteuerung.","chip":"Fernauslöser inklusive","note":"Für unterstützte Kameramodelle"},
+    {"id":"multiple","eyebrow":"MEHRERE KAMERAS","title":"Mehr Kameras.\nEine GPS-Quelle.","subtitle":"Übertrage deinen Standort gleichzeitig\nan mehrere verbundene Kameras.","chip":"Ein Smartphone. Deine Kameras.","note":"Unabhängige Kamera-App"},
+    {"id":"privacy","eyebrow":"DU HAST DIE KONTROLLE","title":"Dein Standort.\nDeine Entscheidung.","subtitle":"Open Source. Ohne Werbung.\nFehlerberichte bleiben optional.","chip":"Für Menschen, die gern fotografieren","note":"Passe die App an deine Wünsche an"}
+  ]
+}
