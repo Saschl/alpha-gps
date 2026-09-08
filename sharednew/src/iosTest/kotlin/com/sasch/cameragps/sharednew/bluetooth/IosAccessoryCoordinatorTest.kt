@@ -37,7 +37,6 @@ class IosAccessoryCoordinatorTest {
         assertEquals(0, f.picker.migrationCalls)
         assertEquals(0L, testScheduler.currentTime)
         assertFalse(f.store.migrationDone)
-        assertEquals(listOf(true), f.store.reminders)
     }
 
     @Test
@@ -55,7 +54,6 @@ class IosAccessoryCoordinatorTest {
         assertTrue(f.connections.running)
         assertEquals(0, f.connections.releaseCalls)
         assertEquals(0, f.picker.migrationCalls)
-        assertEquals(0, f.store.cancelledReminders)
     }
 
     @Test
@@ -68,7 +66,6 @@ class IosAccessoryCoordinatorTest {
         assertEquals(0, f.picker.migrationCalls)
         assertEquals(0, f.connections.releaseCalls)
         assertEquals(1, f.connections.reconnectSweeps)
-        assertEquals(1, f.store.cancelledReminders)
     }
 
     @Test
@@ -196,7 +193,23 @@ class IosAccessoryCoordinatorTest {
             f.coordinator.migrationCandidates.value.map { it.identifier })
         assertEquals(listOf(CAMERA, SECOND_CAMERA), f.store.savedDevices)
         assertTrue(f.connections.running)
-        assertEquals(listOf(true, false), f.store.reminders)
+    }
+
+    @Test
+    fun discoveryCanReopenWithAnAuthorizedCameraWithoutInterruptingConnections() = runTest {
+        val f = Fixture(backgroundScope)
+        f.picker.authorized = setOf(CAMERA.mac)
+        f.coordinator.evaluateMigration()
+
+        repeat(2) {
+            assertTrue(f.coordinator.presentAccessoryPicker())
+            assertTrue(f.connections.running)
+            assertEquals(listOf(CAMERA), f.store.savedDevices)
+        }
+
+        assertEquals(2, f.picker.discoveryCalls)
+        assertEquals(0, f.picker.migrationCalls)
+        assertEquals(0, f.connections.releaseCalls)
     }
 
     @Test
@@ -253,21 +266,12 @@ class IosAccessoryCoordinatorTest {
         override var savedDevices = listOf(CAMERA)
         var loads = 0
         var failLoad = false
-        val reminders = mutableListOf<Boolean>()
-        var cancelledReminders = 0
         override suspend fun loadSavedDevices() {
             loads++
             if (failLoad) error("Protected database unavailable")
         }
 
         override suspend fun sync() = Unit
-        override suspend fun remindMigrationPending(requestPermission: Boolean) {
-            reminders += requestPermission
-        }
-
-        override fun cancelReminder() {
-            cancelledReminders++
-        }
     }
 
     private class FakeConnections(private val migrationInProgress: () -> Boolean) :

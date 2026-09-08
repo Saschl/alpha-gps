@@ -32,6 +32,23 @@ class PairingPreparationStateTest {
     }
 
     @Test
+    fun successfulPairingAllowsAddingAnotherCamera() = runTest {
+        val state = PairingPreparationState()
+        var calls = 0
+
+        repeat(2) {
+            assertTrue(state.search {
+                calls++
+                assertTrue(state.isSearching.value)
+                true
+            })
+            assertFalse(state.isSearching.value)
+        }
+
+        assertEquals(2, calls)
+    }
+
+    @Test
     fun repeatedTapsDoNotOpenAnotherPickerAndFailureAllowsRetry() = runTest {
         val state = PairingPreparationState()
         val result = CompletableDeferred<Boolean>()

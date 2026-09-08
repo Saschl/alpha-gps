@@ -27,14 +27,6 @@
     <string name="ios_no_cameras_message">Put your camera into pairing mode, then add it. iOS shows its own list of nearby Sony cameras.</string>
     <string name="ios_add_camera">Add camera</string>
 
-
-    <string name="ios_update_reminder_title">Open Alpha GPS once</string>
-    <string name="ios_update_reminder_body">A recent update changed how iOS pairs cameras. Open the app once to confirm your cameras, otherwise it cannot connect to them. If everything already works, you can ignore this.</string>
-
-    <string name="ios_migration_reminder_title">Your cameras are not set up yet</string>
-    <string name="ios_migration_reminder_body">Alpha GPS still needs you to confirm your cameras in the iOS setup sheet. Until you do, it cannot connect to them and photos will not be geotagged.</string>
-
-
     <string name="ios_accessory_migration_dialog_title">Confirm your cameras</string>
     <string name="ios_accessory_migration_dialog_message">iOS now handles camera pairing itself, so Alpha GPS has to ask you once to confirm the cameras you already use.\n\nTapping Continue opens an iOS window listing them. Confirm it and everything carries over, including all your settings. Nothing is lost and you do not have to pair the cameras again.\n\nUntil you do this, the app cannot connect to your cameras.</string>
     <string name="ios_accessory_migration_dialog_confirm">Continue</string>

@@ -206,10 +206,6 @@ internal fun CameraGpsIosApp(requestReview: (UIViewController) -> Boolean) {
             showMigrationExplainer = false
         }
         if (!isAppInForeground) return@LaunchedEffect
-        // The notification permission alert cannot be shown from the background
-        // and iOS only offers it once, so a request made while backgrounded is
-        // parked and run here instead.
-        IosMigrationReminder.flushDeferredAuthorizationRequest()
         // Explain before the system sheet appears, rather than letting it show
         // up unannounced. Continue then opens the picker as a user action.
         if (bluetoothController.consumeAutoMigrationPrompt()) {

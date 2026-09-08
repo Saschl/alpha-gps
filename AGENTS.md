@@ -75,7 +75,7 @@ Platform shells own only sockets and lifecycle:
   auto-reconnect decisions, app/device-enabled sweeps, pairing-failure state,
   device-list assembly; also the stable facade the shared iOS Compose UI consumes
   — keep its public surface stable). `IosAccessoryMigrationStore` adapts the
-  existing repository, migration preference and reminders for the coordinator.
+  existing repository and migration preference for the coordinator.
   The coordinator uses the controller's Main.immediate scope; construction of
   the coordinator and its adapters must remain inert. Accessory added/removed
   callbacks stay in the controller because they also update connection state.
@@ -150,7 +150,7 @@ authorization, the retained notification-center delegate and one silent status r
 `LocationTransmissionManager.isTransmitting` becomes true only after a location packet
 is queued and resets when tracking stops — `isActive` alone also includes waiting for
 the first GPS fix. Show only a positive transmitting-camera count; clear on stop,
-disconnect or opt-out, and leave migration reminders untouched. The settings toggle
+disconnect or opt-out. The settings toggle
 defaults on. Request permission only in the foreground, when transmission starts or
 the user enables the setting; background restoration only checks existing permission.
 

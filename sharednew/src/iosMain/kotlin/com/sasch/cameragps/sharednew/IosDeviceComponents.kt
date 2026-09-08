@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
@@ -144,6 +145,14 @@ internal fun DeviceListContent(
 
             else -> {
                 Column(modifier = Modifier.fillMaxSize()) {
+                    Button(
+                        onClick = onAddCamera,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                    ) {
+                        Text(stringResource(Res.string.ios_add_camera))
+                    }
                     // Above the list rather than instead of it: a camera that is
                     // already confirmed has to stay usable while another one is
                     // still waiting.

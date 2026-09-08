@@ -17,7 +17,7 @@ import platform.AccessorySetupKit.ASErrorCodePickerRestricted
 
 /**
  * Foreground accessory setup policy: migration state, picker ownership, retries,
- * preferences and reminders. Construction is inert; launch evaluation only
+ * preferences. Construction is inert; launch evaluation only
  * prepares the prompt and never interrupts existing connections.
  *
  * The controller owns the central and its restoration wiring. Both collaborators
@@ -39,14 +39,12 @@ internal class IosAccessoryCoordinator(
         suspend fun showDiscoveryPicker(): PickerOutcome
     }
 
-    /** Migration persistence and reminders; the production adapter shares the device repository. */
+    /** Migration persistence; the production adapter shares the device repository. */
     interface Store {
         var migrationDone: Boolean
         val savedDevices: Collection<CameraDevice>
         suspend fun loadSavedDevices()
         suspend fun sync()
-        suspend fun remindMigrationPending(requestPermission: Boolean)
-        fun cancelReminder()
     }
 
     interface Connections {
@@ -143,9 +141,6 @@ internal class IosAccessoryCoordinator(
             finishMigration()
         } else {
             logging.i { "${candidates.size} saved camera(s) await AccessorySetupKit authorization" }
-            // Populate the foreground prompt without interrupting existing
-            // connections. Background launches never start migration.
-            store.remindMigrationPending(requestPermission = true)
         }
         onDevicesChanged()
     }
@@ -280,7 +275,6 @@ internal class IosAccessoryCoordinator(
             finishMigration()
         } else {
             logging.i { "${remaining.size} camera(s) still await authorization" }
-            store.remindMigrationPending(requestPermission = false)
         }
         onDevicesChanged()
     }
@@ -290,9 +284,6 @@ internal class IosAccessoryCoordinator(
         store.migrationDone = true
         _migrationCandidates.value = emptyList()
         _migrationNeedsRestart.value = false
-        // Nothing left to nudge about, including a dead man's switch armed by
-        // the previous release.
-        store.cancelReminder()
         logging.i { "AccessorySetupKit migration settled" }
         // When the central is created here, its own power-on runs the reconnect
         // sweep. Sweeping now would fire retrieve/connect before PoweredOn, where
