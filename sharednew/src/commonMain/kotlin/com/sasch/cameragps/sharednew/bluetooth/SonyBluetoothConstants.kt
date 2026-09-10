@@ -41,6 +41,11 @@ object SonyBluetoothConstants {
     // GPS enable command bytes
     val GPS_ENABLE_COMMAND = byteArrayOf(0x01)
 
+    // DD01 notifications verified
+    val LOCATION_TRANSFER_DISABLED = byteArrayOf(0x03, 0x01, 0x02, 0x00)
+    val LOCATION_TRANSFER_AVAILABLE = byteArrayOf(0x03, 0x01, 0x03, 0x01)
+    val LOCATION_LOCK_RELEASE_COMMAND = byteArrayOf(0x00)
+
     // remote control commands (see tools/sony_shutter/intervalometer.py)
     val FULL_SHUTTER_DOWN_COMMAND = byteArrayOf(0x01, 0x09)
     val FULL_SHUTTER_UP_COMMAND = byteArrayOf(0x01, 0x08)

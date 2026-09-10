@@ -391,7 +391,7 @@ internal fun CameraGpsIosApp(requestReview: (UIViewController) -> Boolean) {
                     isAppEnabled = isAppEnabled,
                     hapticsEnabled = hapticsEnabled,
                     migrationCandidates = migrationCandidates,
-                    onMigrate = { scope.launch { bluetoothController.presentMigrationPicker() } },
+                    onMigrate = { showMigrationExplainer = true },
                     onAddCamera = { currentScreen = IosScreen.PairingPreparation },
                     onOpenSettings = { currentScreen = IosScreen.Settings },
                     onOpenHelp = {

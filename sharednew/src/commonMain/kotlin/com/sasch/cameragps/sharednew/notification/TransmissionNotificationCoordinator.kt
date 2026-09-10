@@ -1,6 +1,5 @@
 package com.sasch.cameragps.sharednew.notification
 
-import com.sasch.cameragps.sharednew.bluetooth.BleSessionPhase
 import com.sasch.cameragps.sharednew.bluetooth.session.CameraSession
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -32,7 +31,7 @@ class TransmissionNotificationCoordinator(
 
     val transmittingCameraCount: StateFlow<Int> =
         combine(sessions, transmitting) { current, active ->
-            if (active) current.values.count { it.phase == BleSessionPhase.Transmitting } else 0
+            if (active) current.values.count { it.isLocationReady } else 0
         }.stateIn(scope, SharingStarted.Eagerly, 0)
 
     val visibleCameraCount: StateFlow<Int> = combine(

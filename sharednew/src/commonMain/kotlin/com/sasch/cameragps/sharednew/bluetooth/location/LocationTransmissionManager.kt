@@ -93,6 +93,7 @@ class LocationTransmissionManager(
 
     private fun startIfNeeded() {
         if (!isTransmissionAllowed()) return
+        if (readySessions().isEmpty()) return
         if (_isActive.value) return
 
         // Discard a fix cached from a previous session if it is too old
@@ -161,6 +162,7 @@ class LocationTransmissionManager(
 
     private fun sendImmediateIfCached(identifier: String) {
         if (!isTransmissionAllowed()) return
+        if (identifier !in readySessions()) return
         latest?.let {
             if (hasSessionLocation || isFreshFix(it)) {
                 sendToDevice(identifier, it)

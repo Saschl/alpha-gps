@@ -19,7 +19,12 @@ data class CameraSession(
     val pairingRetryCount: Int = 0,
     /** One-shot retry guard for the config read (intermittent GATT 133 on Android). */
     val hasRetriedConfigRead: Boolean = false,
-)
+    /** The camera explicitly disabled location linking; remote control can remain active. */
+    val locationDisabledByCamera: Boolean = false,
+) {
+    val isLocationReady: Boolean
+        get() = phase == BleSessionPhase.Transmitting && !locationDisabledByCamera
+}
 
 /**
  * Per-device session registry, exposed as a StateFlow for both platform UIs.
@@ -56,7 +61,7 @@ class CameraSessionRegistry {
 
     /** Devices whose handshake completed and are receiving location packets. */
     fun readyIdentifiers(): Set<String> =
-        _sessions.value.filterValues { it.phase == BleSessionPhase.Transmitting }.keys
+        _sessions.value.filterValues { it.isLocationReady }.keys
 
     /** Number of devices with a live connection (any phase past connecting, minus errors). */
     fun activeCount(): Int = _sessions.value.values.count { it.phase.isActiveConnection() }

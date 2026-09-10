@@ -1,5 +1,8 @@
 package com.sasch.cameragps.sharednew.bluetooth.location
 
+import com.diamondedge.logging.FixedLogLevel
+import com.diamondedge.logging.KmLogging
+import com.diamondedge.logging.PlatformLogger
 import com.sasch.cameragps.sharednew.bluetooth.SonyBluetoothConstants
 import com.sasch.cameragps.sharednew.bluetooth.coordinator.BleGattPort
 import kotlinx.coroutines.CoroutineScope
@@ -8,6 +11,8 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -15,6 +20,16 @@ import kotlin.time.Clock
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class LocationTransmissionStateTest {
+    @BeforeTest
+    fun disablePlatformLogging() {
+        KmLogging.setLoggers()
+    }
+
+    @AfterTest
+    fun restorePlatformLogging() {
+        KmLogging.setLoggers(PlatformLogger(FixedLogLevel(true)))
+    }
+
     @Test
     fun requiresQueuedLocationAndClearsOnDisconnectOrAppDisable() = runTest {
         val f = Fixture(backgroundScope)
@@ -94,6 +109,8 @@ class LocationTransmissionStateTest {
         override fun isRemoteFeatureActive(identifier: String) = false
         override fun setRemoteFeatureActive(identifier: String, active: Boolean) = Unit
         override fun setShutterSequenceActive(identifier: String, active: Boolean) = Unit
+        override fun setLocationDisabledByCamera(identifier: String, disabled: Boolean) = Unit
+        override fun isLocationDisabledByCamera(identifier: String) = false
         override fun readCharacteristic(identifier: String, characteristicUuid: String) = false
         override fun hasCharacteristic(identifier: String, characteristicUuid: String) = true
     }

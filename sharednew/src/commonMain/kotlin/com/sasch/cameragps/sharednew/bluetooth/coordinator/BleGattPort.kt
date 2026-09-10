@@ -52,6 +52,10 @@ interface BleGattPort {
      */
     fun setShutterSequenceActive(identifier: String, active: Boolean)
 
+    /** Camera-side location-linking state, independent of remote control and BLE connection. */
+    fun setLocationDisabledByCamera(identifier: String, disabled: Boolean)
+    fun isLocationDisabledByCamera(identifier: String): Boolean
+
     /**
      * Read the value of [characteristicUuid] on device [identifier].
      * The result arrives asynchronously via the platform's characteristic-read callback.
@@ -65,5 +69,3 @@ interface BleGattPort {
      */
     fun hasCharacteristic(identifier: String, characteristicUuid: String): Boolean
 }
-
-

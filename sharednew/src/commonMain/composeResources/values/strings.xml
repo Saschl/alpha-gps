@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="location_linking_disabled_by_camera">Location linking is disabled by the camera. Enable Location Info. Link in the camera settings to resume.</string>
     <!-- Instructions shown before opening the native camera discovery picker. -->
     <string name="pairing_preparation_title">Put your camera in pairing mode</string>
     <string name="pairing_preparation_step_bluetooth">Turn on your camera and enable Bluetooth in its settings.</string>

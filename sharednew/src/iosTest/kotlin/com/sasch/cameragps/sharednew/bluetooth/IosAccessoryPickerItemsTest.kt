@@ -4,7 +4,6 @@ import com.sasch.cameragps.sharednew.bluetooth.accessory.PendingMigration
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.useContents
 import platform.AccessorySetupKit.ASAccessorySupportBluetoothPairingLE
-import platform.AccessorySetupKit.ASPickerDisplayItemSetupRename
 import platform.UIKit.UIImageRenderingMode.UIImageRenderingModeAlwaysOriginal
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -29,9 +28,9 @@ class IosAccessoryPickerItemsTest {
     }
 
     @Test
-    fun discoveryOffersRenamingWithoutChangingTheBluetoothMatcherOrPairing() {
+    fun discoverySkipsExtraSetupStepsWithoutChangingTheBluetoothMatcherOrPairing() {
         val item = IosAccessoryPickerItems.discovery()
-        assertTrue(item.setupOptions and ASPickerDisplayItemSetupRename != 0uL)
+        assertEquals(0uL, item.setupOptions)
         assertEquals(0x012Du.toUShort(), item.descriptor.bluetoothCompanyIdentifier)
         assertEquals(ASAccessorySupportBluetoothPairingLE, item.descriptor.supportedOptions)
     }

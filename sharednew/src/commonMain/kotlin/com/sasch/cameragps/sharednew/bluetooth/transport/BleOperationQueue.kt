@@ -49,6 +49,8 @@ class BleOperationQueue(
     private val scope: CoroutineScope,
     private val operationTimeoutMs: Long = DEFAULT_OPERATION_TIMEOUT_MS,
     private val discoveryTimeoutMs: Long = DEFAULT_DISCOVERY_TIMEOUT_MS,
+    /** Recheck eligibility at execution time: queued location packets may have become obsolete. */
+    private val shouldExecute: (String, BleOperation) -> Boolean = { _, _ -> true },
 ) {
     private val log = logging()
 
@@ -63,6 +65,11 @@ class BleOperationQueue(
         val worker: Job = scope.launch {
             for (queued in channel) {
                 if (queued.result.isCompleted) continue // cancelled while parked
+
+                if (!shouldExecute(identifier, queued.operation)) {
+                    queued.result.complete(BleOperationResult.Cancelled)
+                    continue
+                }
 
                 log.d { "${queued.operation.describe()} on $identifier: initiating" }
                 if (!initiate(identifier, queued.operation)) {
@@ -108,16 +115,19 @@ class BleOperationQueue(
     /**
      * Completion matching. Must be called for EVERY transport event, before the
      * event is routed anywhere else.
+     * Returns the matched operation so callers can distinguish different
+     * commands written to the same characteristic (e.g. acquire/release).
      */
-    fun onTransportEvent(event: BleTransportEvent) {
+    fun onTransportEvent(event: BleTransportEvent): BleOperation? {
         if (event is BleTransportEvent.Disconnected) {
             cancelOperations(event.identifier, "disconnected")
-            return
+            return null
         }
 
-        val pending = lanes[event.identifier.uppercase()]?.pending ?: return
-        val result = matchCompletion(pending.operation, event) ?: return
+        val pending = lanes[event.identifier.uppercase()]?.pending ?: return null
+        val result = matchCompletion(pending.operation, event) ?: return null
         pending.result.complete(result)
+        return pending.operation
     }
 
     /**

@@ -49,6 +49,26 @@ class TransmissionNotificationCoordinatorTest {
     }
 
     @Test
+    fun cameraDisablingLocationIsExcludedWhileOtherCamerasKeepTransmitting() = runTest {
+        val f = Fixture(backgroundScope)
+        runCurrent()
+        f.transmitting.value = true
+        f.sessions.value = mapOf("A" to ready("A"), "B" to ready("B"))
+        runCurrent()
+        f.sessions.value = f.sessions.value +
+                ("A" to ready("A").copy(
+                    locationDisabledByCamera = true,
+                    remoteFeatureActive = true
+                ))
+        runCurrent()
+        assertEquals(1, f.coordinator.transmittingCameraCount.value)
+        f.sessions.value = f.sessions.value +
+                ("B" to ready("B").copy(locationDisabledByCamera = true))
+        runCurrent()
+        assertEquals(listOf(0, 2, 1, 0), f.publisher.updates)
+    }
+
+    @Test
     fun disablingTransmissionPreferenceOrPermissionClearsStatus() = runTest {
         val f = Fixture(backgroundScope)
         runCurrent()

@@ -56,4 +56,11 @@ internal class QueuedBleGattPort(
     override fun setShutterSequenceActive(identifier: String, active: Boolean) {
         registry.updateIfPresent(identifier) { it.copy(shutterSequenceActive = active) }
     }
+
+    override fun setLocationDisabledByCamera(identifier: String, disabled: Boolean) {
+        registry.updateIfPresent(identifier) { it.copy(locationDisabledByCamera = disabled) }
+    }
+
+    override fun isLocationDisabledByCamera(identifier: String): Boolean =
+        registry.get(identifier)?.locationDisabledByCamera == true
 }

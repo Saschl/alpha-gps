@@ -60,7 +60,16 @@ class CameraSessionOrchestrator(
 
     val registry = CameraSessionRegistry()
 
-    private val queue = BleOperationQueue(transport, scope)
+    private val queue = BleOperationQueue(transport, scope, shouldExecute = { id, operation ->
+        // A packet already in flight cannot be recalled, but parked packets must
+        // not reach a camera after it disables linking (or while setup resumes).
+        operation !is BleOperation.Write ||
+                !operation.characteristicUuid.equals(
+                    SonyBluetoothConstants.CHARACTERISTIC_UUID,
+                    true
+                ) ||
+                registry.get(id)?.isLocationReady == true
+    })
     private val port: BleGattPort = QueuedBleGattPort(queue, transport, registry)
     private val remoteControl = RemoteControlCoordinator(port, scope)
     private val sessionCoordinator = BleSessionCoordinator(port, remoteControl)
@@ -99,8 +108,8 @@ class CameraSessionOrchestrator(
             transport.events.collect { event ->
                 // Completion matching must run before any other routing so the
                 // queue can release its lane for the next operation.
-                queue.onTransportEvent(event)
-                handleTransportEvent(event)
+                val completedOperation = queue.onTransportEvent(event)
+                handleTransportEvent(event, completedOperation)
             }
         }
         scope.launch {
@@ -179,7 +188,7 @@ class CameraSessionOrchestrator(
 
     // ---- Transport event routing ----
 
-    private fun handleTransportEvent(event: BleTransportEvent) {
+    private fun handleTransportEvent(event: BleTransportEvent, completedOperation: BleOperation?) {
         when (event) {
             is BleTransportEvent.Connected -> handleConnected(event.identifier)
 
@@ -189,21 +198,53 @@ class CameraSessionOrchestrator(
                 _events.tryEmit(OrchestratorEvent.DeviceDisconnected(event.identifier.uppercase()))
             }
 
-            is BleTransportEvent.CharacteristicWritten -> handleWritten(event)
+            is BleTransportEvent.CharacteristicWritten -> {
+                // DD30 is shared by lock acquisition and release. A release
+                // completion must not advance/restart the GPS-enable handshake.
+                val isLocationLockRelease = completedOperation is BleOperation.Write &&
+                        completedOperation.characteristicUuid.equals(
+                            SonyBluetoothConstants.CHARACTERISTIC_ENABLE_UNLOCK_GPS_COMMAND, true,
+                        ) && completedOperation.value.contentEquals(SonyBluetoothConstants.LOCATION_LOCK_RELEASE_COMMAND)
+                if (!isLocationLockRelease) handleWritten(event)
+            }
 
             is BleTransportEvent.CharacteristicRead -> handleRead(event)
 
             is BleTransportEvent.SubscriptionChanged -> handleSubscriptionChanged(event)
 
-            is BleTransportEvent.CharacteristicChanged ->
-                sessionCoordinator.onCharacteristicChanged(
-                    event.identifier,
-                    event.characteristicUuid,
-                    event.value,
-                )
+            is BleTransportEvent.CharacteristicChanged -> handleCharacteristicChanged(event)
 
             is BleTransportEvent.ServicesDiscovered -> Unit // consumed by the queue
         }
+    }
+
+    private fun handleCharacteristicChanged(event: BleTransportEvent.CharacteristicChanged) {
+        val wasDisabled = registry.get(event.identifier)?.locationDisabledByCamera == true
+        val handled = sessionCoordinator.onCharacteristicChanged(
+            event.identifier, event.characteristicUuid, event.value,
+        )
+        if (!handled || !event.characteristicUuid.equals(
+                SonyBluetoothConstants.CHARACTERISTIC_LOCATION_ENABLED_IN_CAMERA, true,
+            )
+        ) return
+
+        val isDisabled = registry.get(event.identifier)?.locationDisabledByCamera == true
+        if (!wasDisabled && isDisabled && port.hasCharacteristic(
+                event.identifier, SonyBluetoothConstants.CHARACTERISTIC_ENABLE_UNLOCK_GPS_COMMAND,
+            )
+        ) {
+            // unlock when the setting is turned of by the camera
+            port.writeCharacteristic(
+                event.identifier, SonyBluetoothConstants.CHARACTERISTIC_ENABLE_UNLOCK_GPS_COMMAND,
+                SonyBluetoothConstants.LOCATION_LOCK_RELEASE_COMMAND,
+            )
+        } else if (wasDisabled && !isDisabled) {
+            // Availability is permission to try setup again, not proof that the
+            // camera is already accepting GPS. Reuse the normal handshake.
+            registry.updateIfPresent(event.identifier) { it.copy(phase = BleSessionPhase.Connected) }
+            sessionCoordinator.beginHandshake(event.identifier)
+        }
+        locationManager.updateTracking()
     }
 
     private fun handleConnected(identifier: String) {
@@ -214,6 +255,7 @@ class CameraSessionOrchestrator(
                 phase = BleSessionPhase.Connected,
                 pairingRetryCount = 0,
                 hasRetriedConfigRead = false,
+                locationDisabledByCamera = false,
             )
         }
         _events.tryEmit(OrchestratorEvent.DeviceConnected(id))

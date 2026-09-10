@@ -178,7 +178,9 @@ private class FakeBleGattPort : BleGattPort {
 
     override fun readCharacteristic(identifier: String, characteristicUuid: String): Boolean = true
 
+    override fun setLocationDisabledByCamera(identifier: String, disabled: Boolean) = Unit
+    override fun isLocationDisabledByCamera(identifier: String) = false
+
     override fun hasCharacteristic(identifier: String, characteristicUuid: String): Boolean =
         identifier in devicesWithRemoteControl
 }
-

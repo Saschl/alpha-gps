@@ -2,7 +2,6 @@ package com.sasch.cameragps.sharednew.ui.devicelist
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.sasch.cameragps.sharednew.bluetooth.BleSessionPhase
 import com.sasch.cameragps.sharednew.bluetooth.session.CameraSession
 import com.sasch.cameragps.sharednew.database.devices.CameraDevice
 import kotlinx.coroutines.flow.Flow
@@ -39,6 +38,7 @@ data class DeviceListItem(
     val isTransmissionActive: Boolean,
     val isRemoteFeatureActive: Boolean,
     val isShutterActive: Boolean,
+    val locationDisabledByCamera: Boolean = false,
 )
 
 /**
@@ -63,9 +63,10 @@ class DeviceListViewModel(dataSource: DeviceListDataSource) : ViewModel() {
                     ?.takeUnless { it.isBlank() },
                 isAlwaysOnEnabled = persisted?.alwaysOnEnabled == true,
                 isTransmissionActive =
-                    session?.phase == BleSessionPhase.Transmitting && transmissionActive,
+                    session?.isLocationReady == true && transmissionActive,
                 isRemoteFeatureActive = session?.remoteFeatureActive == true,
                 isShutterActive = session?.shutterSequenceActive == true,
+                locationDisabledByCamera = session?.locationDisabledByCamera == true,
             )
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())

@@ -26,7 +26,8 @@ class AppDelegate: NSObject, UIApplicationDelegate {
             return true
         }
         #endif
-        AccessoryDiscoveryNaming.install()
+        // causes an extra confirmation screen bxy IOS, we'll leave it disabled as renaming can be done in the app
+        // AccessoryDiscoveryNaming.install()
         IosLaunchContext.shared.record(
             bluetooth: launchOptions?[.bluetoothCentrals] != nil,
             location: launchOptions?[.location] != nil

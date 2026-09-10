@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="location_linking_disabled_by_camera">Die Kamera hat die Standortverknüpfung deaktiviert. Aktiviere die Standortinformationen-Verknüpfung in den Kameraeinstellungen, um fortzufahren.</string>
     <!-- Hinweise vor der Kamera-Suche im Systemdialog. -->
     <string name="pairing_preparation_title">Kopplungsmodus aktivieren</string>
     <string name="pairing_preparation_step_bluetooth">Schalte deine Kamera ein und aktiviere Bluetooth in ihren Einstellungen.</string>

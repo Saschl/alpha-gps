@@ -50,6 +50,19 @@ class BleSessionCoordinator(
         port.setRemoteFeatureActive(id, false)
         emitPhase(id, BleSessionPhase.DiscoveringServices)
 
+        if (port.hasCharacteristic(
+                id,
+                SonyBluetoothConstants.CHARACTERISTIC_LOCATION_ENABLED_IN_CAMERA
+            )
+        ) {
+            // Queue the subscription before setup so a camera-side refusal during
+            // the handshake is observed too. Older cameras may omit DD01.
+            port.subscribeToNotifications(
+                id,
+                SonyBluetoothConstants.CHARACTERISTIC_LOCATION_ENABLED_IN_CAMERA
+            )
+        }
+
         if (port.hasCharacteristic(id, SonyBluetoothConstants.CHARACTERISTIC_READ_UUID)) {
             log.d { "Handshake[$id]: requesting config read" }
             emitPhase(id, BleSessionPhase.ReadingConfig)
@@ -124,6 +137,26 @@ class BleSessionCoordinator(
     ): Boolean {
         val id = identifier.uppercase()
         if (characteristicUuid.equals(
+                SonyBluetoothConstants.CHARACTERISTIC_LOCATION_ENABLED_IN_CAMERA,
+                ignoreCase = true,
+            ) && port.isConnected(id)
+        ) {
+            when {
+                value.contentEquals(SonyBluetoothConstants.LOCATION_TRANSFER_DISABLED) -> {
+                    log.i { "Camera $id disabled location linking" }
+                    port.setLocationDisabledByCamera(id, true)
+                }
+
+                value.contentEquals(SonyBluetoothConstants.LOCATION_TRANSFER_AVAILABLE) -> {
+                    log.i { "Camera $id reports location transfer available" }
+                    port.setLocationDisabledByCamera(id, false)
+                }
+
+                else -> return false
+            }
+            return true
+        }
+        if (characteristicUuid.equals(
                 SonyBluetoothConstants.REMOTE_STATUS_UUID,
                 ignoreCase = true
             )
@@ -171,6 +204,10 @@ class BleSessionCoordinator(
     // ---- Private handshake flow ----
 
     private fun enableGps(identifier: String) {
+        if (port.isLocationDisabledByCamera(identifier)) {
+            sendTimeSyncOrComplete(identifier)
+            return
+        }
         if (port.hasCharacteristic(
                 identifier,
                 SonyBluetoothConstants.CHARACTERISTIC_ENABLE_UNLOCK_GPS_COMMAND
@@ -190,6 +227,10 @@ class BleSessionCoordinator(
     }
 
     private fun handleGpsUnlockResponse(identifier: String) {
+        if (port.isLocationDisabledByCamera(identifier)) {
+            sendTimeSyncOrComplete(identifier)
+            return
+        }
         if (port.hasCharacteristic(
                 identifier,
                 SonyBluetoothConstants.CHARACTERISTIC_ENABLE_LOCK_GPS_COMMAND
@@ -239,4 +280,3 @@ class BleSessionCoordinator(
         _events.trySend(BleSessionEvent.PhaseChanged(identifier, phase))
     }
 }
-

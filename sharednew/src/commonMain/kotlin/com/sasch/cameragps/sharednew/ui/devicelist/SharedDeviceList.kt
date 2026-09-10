@@ -18,7 +18,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilledTonalButton
@@ -58,6 +57,7 @@ import cameragps.sharednew.generated.resources.enable_pairing_mode_continue
 import cameragps.sharednew.generated.resources.enable_pairing_mode_message
 import cameragps.sharednew.generated.resources.enable_pairing_mode_title
 import cameragps.sharednew.generated.resources.keyboard_arrow_right_24px
+import cameragps.sharednew.generated.resources.location_linking_disabled_by_camera
 import cameragps.sharednew.generated.resources.nearby_cameras
 import cameragps.sharednew.generated.resources.not_paired_tap_to_pair_again
 import cameragps.sharednew.generated.resources.remote_feature_inactive
@@ -381,11 +381,12 @@ private fun DeviceCard(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    val transmissionStatusDescription = if (isTransmissionActive) {
-                        stringResource(Res.string.transmission_active)
+                    val transmissionStatusDescription = when {
+                        item?.locationDisabledByCamera == true ->
+                            stringResource(Res.string.location_linking_disabled_by_camera)
 
-                    } else {
-                        stringResource(Res.string.transmission_inactive)
+                        isTransmissionActive -> stringResource(Res.string.transmission_active)
+                        else -> stringResource(Res.string.transmission_inactive)
                     }
                     TransmissionDot(
                         isTransmissionActive,
@@ -406,6 +407,13 @@ private fun DeviceCard(
             if (!device.isPaired) {
                 Text(
                     text = stringResource(Res.string.not_paired_tap_to_pair_again),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
+            if (item?.locationDisabledByCamera == true) {
+                Text(
+                    text = stringResource(Res.string.location_linking_disabled_by_camera),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
                 )
