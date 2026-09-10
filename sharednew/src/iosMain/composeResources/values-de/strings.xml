@@ -1,6 +1,5 @@
 <resources>
     <string name="ios_no_devices_message">Stelle sicher, dass deine Kamera eingeschaltet ist und sich im Bluetooth-Kopplungs- oder Erkennungsmodus befindet.</string>
-    <string name="ios_troubleshooting_need_help">Brauchst du Hilfe?</string>
     <string name="ios_troubleshooting_title">Probleme beim Verbinden?</string>
     <string name="ios_troubleshooting_step_1_bluetooth">1. Aktiviere Bluetooth sowohl auf deinem iPhone als auch auf der Kamera.</string>
     <string name="ios_troubleshooting_step_2_pairing_mode">2. Falls die Kamera noch nicht gekoppelt ist, aktiviere den Kopplungsmodus an der Kamera, bevor du auf "Verbinden" tippst.</string>
@@ -24,7 +23,6 @@
 
     <string name="ios_no_cameras_title">Noch keine Kameras</string>
     <string name="ios_no_cameras_message">Versetze deine Kamera in den Kopplungsmodus und füge sie dann hinzu. iOS zeigt dir eine eigene Liste der Sony-Kameras in der Nähe.</string>
-    <string name="ios_add_camera">Kamera hinzufügen</string>
 
     <string name="ios_accessory_migration_dialog_title">Kameras bestätigen</string>
     <string name="ios_accessory_migration_dialog_message">iOS verwaltet die Kamerakopplung jetzt selbst. Deshalb muss Alpha GPS deine gespeicherten Kameras einmal an iOS übergeben.\n\nTippe auf "Weiter" — den Rest erledigt iOS von allein, meist in wenigen Sekunden und ohne Rückfrage. Alles wird übernommen, inklusive sämtlicher Einstellungen. Es geht nichts verloren und du musst die Kameras nicht neu koppeln.\n\nDeine Kameras funktionieren in der Zwischenzeit weiter, du kannst das also auch später erledigen.</string>

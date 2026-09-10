@@ -211,12 +211,12 @@ fun SharedDeviceList(
 }
 
 @Composable
-internal fun EmptyStateCard(
+fun EmptyStateCard(
     title: String,
     message: String,
     /** Null hides the action button, for a card that only explains something. */
-    actionLabel: String?,
-    onAction: () -> Unit,
+    actionLabel: String? = null,
+    onAction: () -> Unit = {},
 ) {
     Box(
         modifier = Modifier.fillMaxSize(),

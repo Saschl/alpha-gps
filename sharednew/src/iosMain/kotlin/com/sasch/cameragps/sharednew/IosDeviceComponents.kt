@@ -1,20 +1,15 @@
 package com.sasch.cameragps.sharednew
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -22,11 +17,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import cameragps.sharednew.generated.resources.Res
+import cameragps.sharednew.generated.resources.add_camera
 import cameragps.sharednew.generated.resources.app_disabled_message
 import cameragps.sharednew.generated.resources.app_disabled_title
 import cameragps.sharednew.generated.resources.app_settings
@@ -34,11 +29,9 @@ import cameragps.sharednew.generated.resources.further_help
 import cameragps.sharednew.generated.resources.ios_accessory_migration_action
 import cameragps.sharednew.generated.resources.ios_accessory_migration_message
 import cameragps.sharednew.generated.resources.ios_accessory_migration_title
-import cameragps.sharednew.generated.resources.ios_add_camera
 import cameragps.sharednew.generated.resources.ios_no_cameras_message
 import cameragps.sharednew.generated.resources.ios_no_cameras_title
 import cameragps.sharednew.generated.resources.ios_troubleshooting_got_it
-import cameragps.sharednew.generated.resources.ios_troubleshooting_need_help
 import cameragps.sharednew.generated.resources.ios_troubleshooting_step_1_bluetooth
 import cameragps.sharednew.generated.resources.ios_troubleshooting_step_2_pairing_mode
 import cameragps.sharednew.generated.resources.ios_troubleshooting_step_3_location_linking
@@ -48,15 +41,16 @@ import cameragps.sharednew.generated.resources.ios_troubleshooting_step_6_remote
 import cameragps.sharednew.generated.resources.ios_troubleshooting_title
 import com.sasch.cameragps.sharednew.bluetooth.BluetoothDeviceInfo
 import com.sasch.cameragps.sharednew.bluetooth.accessory.PendingMigration
+import com.sasch.cameragps.sharednew.ui.devicelist.AddCameraButton
 import com.sasch.cameragps.sharednew.ui.devicelist.DeviceListItem
+import com.sasch.cameragps.sharednew.ui.devicelist.DeviceListLayout
 import com.sasch.cameragps.sharednew.ui.devicelist.EmptyStateCard
 import com.sasch.cameragps.sharednew.ui.devicelist.SharedDeviceList
 import org.jetbrains.compose.resources.stringResource
 
 /**
- * iOS list host: owns the scanning/disabled empty states and the
- * troubleshooting footer and dialog; the device list itself is the shared
- * [SharedDeviceList].
+ * iOS host: supplies accessory actions, disabled/migration states and
+ * troubleshooting advice to the shared device-list presentation.
  */
 @Composable
 internal fun DeviceListContent(
@@ -110,7 +104,21 @@ internal fun DeviceListContent(
         )
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    DeviceListLayout(
+        onNeedHelp = { showTroubleshootingDialog = true },
+        header = {
+            if (isAppEnabled && devices.isNotEmpty()) {
+                AddCameraButton(onClick = onAddCamera)
+                // Keep confirmed cameras usable while others await migration.
+                if (migrationCandidates.isNotEmpty()) {
+                    MigrationCard(
+                        onMigrate = onMigrate,
+                        modifier = Modifier.padding(top = 16.dp),
+                    )
+                }
+            }
+        },
+    ) {
         when {
             !isAppEnabled -> {
                 EmptyStateCard(
@@ -133,59 +141,21 @@ internal fun DeviceListContent(
                 EmptyStateCard(
                     title = stringResource(Res.string.ios_no_cameras_title),
                     message = stringResource(Res.string.ios_no_cameras_message),
-                    actionLabel = stringResource(Res.string.ios_add_camera),
+                    actionLabel = stringResource(Res.string.add_camera),
                     onAction = onAddCamera,
                 )
             }
 
             else -> {
-                Column(modifier = Modifier.fillMaxSize()) {
-                    Button(
-                        onClick = onAddCamera,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
-                    ) {
-                        Text(stringResource(Res.string.ios_add_camera))
-                    }
-                    // Above the list rather than instead of it: a camera that is
-                    // already confirmed has to stay usable while another one is
-                    // still waiting.
-                    if (migrationCandidates.isNotEmpty()) {
-                        MigrationCard(
-                            onMigrate = onMigrate,
-                            modifier = Modifier.padding(top = 16.dp),
-                        )
-                    }
-                    // Reserve the footer's measured height, including larger text,
-                    // before giving the scrolling list the remaining space.
-                    Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
-                        SharedDeviceList(
-                            devices = devices,
-                            items = items,
-                            hapticsEnabled = hapticsEnabled,
-                            onConnect = onConnect,
-                            onTriggerRemoteShutter = onTriggerRemoteShutter,
-                            onDelete = onDelete,
-                            onOpenDetails = onOpenDetails,
-                        )
-                    }
-                    Surface(modifier = Modifier.fillMaxWidth()) {
-                        Column {
-                            HorizontalDivider()
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 4.dp),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                TextButton(onClick = { showTroubleshootingDialog = true }) {
-                                    Text(stringResource(Res.string.ios_troubleshooting_need_help))
-                                }
-                            }
-                        }
-                    }
-                }
+                SharedDeviceList(
+                    devices = devices,
+                    items = items,
+                    hapticsEnabled = hapticsEnabled,
+                    onConnect = onConnect,
+                    onTriggerRemoteShutter = onTriggerRemoteShutter,
+                    onDelete = onDelete,
+                    onOpenDetails = onOpenDetails,
+                )
             }
         }
     }

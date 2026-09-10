@@ -2,33 +2,18 @@ package com.saschl.cameragps.ui
 
 import android.content.Intent
 import android.os.Build
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import cameragps.sharednew.generated.resources.Res
-import cameragps.sharednew.generated.resources.camera_24px
 import cameragps.sharednew.generated.resources.no_devices_message
 import cameragps.sharednew.generated.resources.no_devices_title
 import com.sasch.cameragps.sharednew.bluetooth.BluetoothDeviceInfo
 import com.sasch.cameragps.sharednew.bluetooth.SonyBluetoothConstants
 import com.sasch.cameragps.sharednew.ui.devicelist.DeviceListViewModel
+import com.sasch.cameragps.sharednew.ui.devicelist.EmptyStateCard
 import com.sasch.cameragps.sharednew.ui.devicelist.SharedDeviceList
 import com.saschl.cameragps.AppServices
 import com.saschl.cameragps.service.AssociatedDeviceCompat
@@ -36,7 +21,6 @@ import com.saschl.cameragps.service.LocationSenderService
 import com.saschl.cameragps.ui.device.SCREENSHOT_MODE
 import com.saschl.cameragps.ui.device.mockDeviceListItems
 import com.saschl.cameragps.utils.PreferencesManager
-import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 
 /**
@@ -57,7 +41,10 @@ fun AssociatedDevicesList(
     val items = if (SCREENSHOT_MODE) mockDeviceListItems else realItems
 
     if (associatedDevices.isEmpty()) {
-        EmptyDevicesCard()
+        EmptyStateCard(
+            title = stringResource(Res.string.no_devices_title),
+            message = stringResource(Res.string.no_devices_message),
+        )
         return
     }
 
@@ -84,7 +71,6 @@ fun AssociatedDevicesList(
         showKeepAliveHint = Build.VERSION.SDK_INT < Build.VERSION_CODES.S,
         // Read on every recomposition so a toggle in settings applies on return
         hapticsEnabled = PreferencesManager.isHapticsEnabled(context),
-        contentPadding = PaddingValues(top = 16.dp, bottom = 16.dp),
         onConnect = { }, // tap-to-pair path: Android never lists unsaved devices
         onTriggerRemoteShutter = { info ->
             if (!SCREENSHOT_MODE) {
@@ -101,42 +87,4 @@ fun AssociatedDevicesList(
         onDelete = { info -> resolve(info)?.let(onDisassociate) },
         onOpenDetails = { info -> resolve(info)?.let(onConnect) },
     )
-}
-
-@Composable
-private fun EmptyDevicesCard() {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        )
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Icon(
-                painterResource(Res.drawable.camera_24px),
-                contentDescription = null,
-                modifier = Modifier.size(48.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-                text = stringResource(Res.string.no_devices_title),
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-                text = stringResource(Res.string.no_devices_message),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center
-            )
-        }
-    }
 }

@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="add_camera">Add camera</string>
+    <string name="device_list_need_help">Need help?</string>
+
     <string name="location_linking_disabled_by_camera">Location linking is disabled by the camera. Enable Location Info. Link in the camera settings to resume.</string>
     <!-- Instructions shown before opening the native camera discovery picker. -->
     <string name="pairing_preparation_title">Put your camera in pairing mode</string>
