@@ -1,0 +1,5 @@
+/* Location permission for background geotagging, including while the phone is locked. */
+"NSLocationAlwaysAndWhenInUseUsageDescription" = "This app uses your location to send GPS coordinates to your connected camera, enabling automatic geotagging of your photos, even when the phone is locked. Select \"Always\" to enable geotagging in the background.";
+
+/* Location permission for sending GPS coordinates to the connected camera. */
+"NSLocationWhenInUseUsageDescription" = "This app needs constant access to location services to send GPS coordinates to your connected camera, enabling automatic geotagging of your photos.";

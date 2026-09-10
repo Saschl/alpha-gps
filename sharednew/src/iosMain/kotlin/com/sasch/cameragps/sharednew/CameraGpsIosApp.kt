@@ -192,7 +192,6 @@ internal fun CameraGpsIosApp(requestReview: (UIViewController) -> Boolean) {
 
     }
     val migrationCandidates by bluetoothController.migrationCandidates.collectAsState()
-    val migrationNeedsRestart by bluetoothController.migrationNeedsRestart.collectAsState()
     val migrationError by bluetoothController.migrationError.collectAsState()
     val migrationInProgress by bluetoothController.migrationInProgress.collectAsState()
     val transmissionNotificationsEnabled by bluetoothController.transmissionNotificationsEnabled.collectAsState()
@@ -392,7 +391,6 @@ internal fun CameraGpsIosApp(requestReview: (UIViewController) -> Boolean) {
                     isAppEnabled = isAppEnabled,
                     hapticsEnabled = hapticsEnabled,
                     migrationCandidates = migrationCandidates,
-                    migrationNeedsRestart = migrationNeedsRestart,
                     onMigrate = { scope.launch { bluetoothController.presentMigrationPicker() } },
                     onAddCamera = { currentScreen = IosScreen.PairingPreparation },
                     onOpenSettings = { currentScreen = IosScreen.Settings },

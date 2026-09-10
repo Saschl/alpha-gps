@@ -12,7 +12,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import platform.AccessorySetupKit.ASErrorCodePickerAlreadyActive
 import platform.AccessorySetupKit.ASErrorCodePickerRestricted
 
 /**
@@ -65,13 +64,6 @@ internal class IosAccessoryCoordinator(
     val migrationCandidates: StateFlow<List<PendingMigration>> = _migrationCandidates
 
     /**
-     * A picker failure exhausted retries. Kept for the existing UI's restart
-     * hint; another foreground attempt remains available.
-     */
-    private val _migrationNeedsRestart = MutableStateFlow(false)
-    val migrationNeedsRestart: StateFlow<Boolean> = _migrationNeedsRestart
-
-    /**
      * The last migration attempt failed after exhausting its retries. Drives an
      * error dialog offering another try — the retries handle the deallocation
      * race, but if they run out the user has to be told rather than left with a
@@ -93,6 +85,10 @@ internal class IosAccessoryCoordinator(
     private val _migrationInProgress = MutableStateFlow(false)
     val migrationInProgress: StateFlow<Boolean> = _migrationInProgress
 
+    /** Both picker flows hold this guard until their native operation finishes. */
+    var centralCreationBlocked: Boolean = false
+        private set
+
     /** Guards the automatic migration sheet to one attempt per launch. */
     private var migrationAutoAttempted = false
 
@@ -110,7 +106,7 @@ internal class IosAccessoryCoordinator(
             logging.i { "Migration skipped: already recorded as complete" }
             return
         }
-        if (migrationInProgress.value) {
+        if (centralCreationBlocked) {
             logging.i { "Migration skipped: an operation is already running" }
             return
         }
@@ -157,7 +153,6 @@ internal class IosAccessoryCoordinator(
     fun consumeAutoMigrationPrompt(): Boolean {
         if (migrationAutoAttempted) return false
         if (_migrationCandidates.value.isEmpty()) return false
-        if (_migrationNeedsRestart.value) return false
         migrationAutoAttempted = true
         logging.i { "Raising the migration explainer" }
         return true
@@ -171,37 +166,35 @@ internal class IosAccessoryCoordinator(
         migrationAutoAttempted = true
         val candidates = _migrationCandidates.value
         if (candidates.isEmpty()) return@run true
+        centralCreationBlocked = true
         _migrationInProgress.value = true
         try {
             _migrationError.value = false
 
-            // Release the central for migration. The grace
-            // period is a bounded workaround, not proof of native deallocation.
-            if (connections.releaseCentral()) {
-                logging.i { "Waiting ${CENTRAL_RELEASE_GRACE_MS} ms for central release before migration" }
-                delay(CENTRAL_RELEASE_GRACE_MS)
+            val outcome = showPickerWithRetries("Migration") {
+                accessorySession.showMigrationPicker(candidates)
             }
-
-            val outcome = showMigrationPickerWithRetries(candidates)
             logging.i { "Migration picker finished: $outcome" }
             recomputeMigrationCandidates()
 
-            if (outcome is PickerOutcome.Failed &&
-                outcome.code != ASErrorCodePickerAlreadyActive
-            ) {
+            if (outcome is PickerOutcome.Failed) {
                 // Retries are exhausted. Surface it and offer another attempt: the
                 // cause is usually a CBCentralManager that had not been deallocated
                 // yet, which a second try normally clears. An already-active picker
-                // is transient and excluded so a double tap does not raise this.
+                // is reported too — the runner refuses a double tap without calling
+                // the picker at all, so it means the session still holds a picker
+                // from an earlier attempt, and only relaunching clears that. The
+                // dialog says so; a migration that succeeds needs no restart, and
+                // the maintainer confirmed the app works straight afterwards.
                 logging.w { "Migration failed after retries: ${outcome.message}" }
                 _migrationError.value = true
-                _migrationNeedsRestart.value = true
             }
             outcome is PickerOutcome.Completed
         } finally {
             // Release the guard before recreating the central. Its power-on
             // callback reconnects saved cameras, including newly migrated ones.
             _migrationInProgress.value = false
+            centralCreationBlocked = false
             connections.resumeConnections()
         }
     }
@@ -211,11 +204,30 @@ internal class IosAccessoryCoordinator(
      * This is the replacement for the old in-app scan list.
      */
     suspend fun presentAccessoryPicker(): Boolean = pickerRunner.run {
-        val outcome = accessorySession.showDiscoveryPicker()
-        logging.i { "Discovery picker finished: $outcome" }
-        // Resume use of the newly authorized camera after discovery.
-        connections.resumeConnections()
-        outcome is PickerOutcome.Completed
+        // An unavailable session cannot present anything; retain existing connections.
+        if (!accessorySession.awaitActivated()) {
+            logging.e { "AccessorySetupKit did not activate; leaving connections running" }
+            return@run false
+        }
+        centralCreationBlocked = true
+        try {
+            val outcome = showPickerWithRetries("Discovery") {
+                accessorySession.showDiscoveryPicker()
+            }
+            if (outcome is PickerOutcome.Failed) {
+                // The pairing screen only stops its spinner, so this log is the
+                // one trace of a picker the user never got to see.
+                logging.e { "Discovery picker failed: ${outcome.message} (${outcome.code})" }
+            } else {
+                logging.i { "Discovery picker finished: $outcome" }
+            }
+            outcome is PickerOutcome.Completed
+        } finally {
+            // Accessory-added and migration-complete callbacks cannot recreate the
+            // central until the picker releases ownership, even if the UI went away.
+            centralCreationBlocked = false
+            connections.resumeConnections()
+        }
     }
 
     /** Debug only: forget that migration was done so the flow can be re-tested. */
@@ -223,31 +235,38 @@ internal class IosAccessoryCoordinator(
         logging.i { "Resetting AccessorySetupKit migration state" }
         store.migrationDone = false
         migrationAutoAttempted = false
-        _migrationNeedsRestart.value = false
         controllerScope.launch { evaluateMigration() }
     }
 
     /**
-     * Show the migration picker, retrying while it is refused as restricted.
+     * Ask for the picker first and only tear the central down if the system
+     * actually refuses it.
      *
-     * That refusal means a CBCentralManager was still alive. Releasing one is
-     * not instantaneous under Kotlin/Native, so each retry tears down again and
-     * waits, rather than giving up on a race.
+     * `ASErrorCodePickerRestricted` is the authoritative answer to "does this
+     * central block the picker", and it costs one immediate error to get. An
+     * install without the legacy global Bluetooth grant is never refused, so it
+     * keeps its cameras connected right through setup; one that is refused loses
+     * nothing but the failed attempt. Releasing a CBCentralManager is not
+     * instantaneous under Kotlin/Native, so the first release is followed by the
+     * full deallocation grace, later retries by the shorter backoff.
      */
-    private suspend fun showMigrationPickerWithRetries(
-        candidates: List<PendingMigration>,
+    private suspend fun showPickerWithRetries(
+        operation: String,
+        showPicker: suspend () -> PickerOutcome,
     ): PickerOutcome {
-        var outcome = accessorySession.showMigrationPicker(candidates)
+        var outcome = showPicker()
         repeat(PICKER_RESTRICTED_ATTEMPTS - 1) { attempt ->
             val restricted = outcome as? PickerOutcome.Failed
             if (restricted?.code != ASErrorCodePickerRestricted) return outcome
+            // Released again on every retry: a callback may have brought one up.
+            val wait =
+                if (connections.releaseCentral()) CENTRAL_RELEASE_GRACE_MS else PICKER_RETRY_DELAY_MS
             logging.w {
-                "Migration picker restricted (attempt ${attempt + 1}/$PICKER_RESTRICTED_ATTEMPTS); " +
-                        "waiting ${PICKER_RETRY_DELAY_MS} ms before retry"
+                "$operation picker restricted (attempt ${attempt + 1}/$PICKER_RESTRICTED_ATTEMPTS); " +
+                        "waiting $wait ms before retry"
             }
-            connections.releaseCentral()
-            delay(PICKER_RETRY_DELAY_MS)
-            outcome = accessorySession.showMigrationPicker(candidates)
+            delay(wait)
+            outcome = showPicker()
         }
         return outcome
     }
@@ -283,7 +302,6 @@ internal class IosAccessoryCoordinator(
     private fun finishMigration() {
         store.migrationDone = true
         _migrationCandidates.value = emptyList()
-        _migrationNeedsRestart.value = false
         logging.i { "AccessorySetupKit migration settled" }
         // When the central is created here, its own power-on runs the reconnect
         // sweep. Sweeping now would fire retrieve/connect before PoweredOn, where
@@ -298,9 +316,9 @@ internal class IosAccessoryCoordinator(
 
     private companion object {
         /**
-         * How long to wait after releasing the central before showing the migration
-         * picker, so Kotlin/Native's collector can actually deallocate the
-         * CBCentralManager. The picker is refused while one is alive.
+         * How long to wait after releasing the central, so Kotlin/Native's
+         * collector can actually deallocate the CBCentralManager. The picker is
+         * refused while one is alive.
          */
         private const val CENTRAL_RELEASE_GRACE_MS = 10_000L
 

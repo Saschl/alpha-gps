@@ -72,16 +72,23 @@ class IosAccessoryCoordinatorTest {
     fun migrationCompleteRestoresCentralEvenAfterUiCancellationWithoutDismissal() = runTest {
         val f = Fixture(backgroundScope)
         val completion = AccessoryPickerCompletion<PickerOutcome>(PickerOutcome.Completed)
-        f.picker.migrate = { completion.await() }
+        f.picker.migrate = {
+            if (f.picker.migrationCalls == 1) {
+                assertTrue(f.connections.running, "The first attempt keeps the cameras connected")
+                PickerOutcome.Failed("Central still alive", ASErrorCodePickerRestricted)
+            } else {
+                completion.await()
+            }
+        }
         f.coordinator.evaluateMigration()
         val ui = launch { f.coordinator.presentMigrationPicker() }
         runCurrent()
         assertTrue(f.coordinator.migrationInProgress.value)
+        assertEquals(1, f.picker.migrationCalls)
         assertFalse(f.connections.running)
-        assertEquals(0, f.picker.migrationCalls)
         advanceTimeBy(10_000)
         runCurrent()
-        assertEquals(1, f.picker.migrationCalls)
+        assertEquals(2, f.picker.migrationCalls)
 
         ui.cancel()
         runCurrent()
@@ -115,12 +122,12 @@ class IosAccessoryCoordinatorTest {
         }
         f.coordinator.evaluateMigration()
         assertFalse(f.coordinator.presentMigrationPicker())
-        assertEquals((0L..9L).map { 10_000L + it * 5_000L }, attemptTimes)
+        // Asked once for free, then the release grace, then the retry backoff.
+        assertEquals(listOf(0L, 10_000L) + (1L..8L).map { 10_000L + it * 5_000L }, attemptTimes)
         assertTrue(f.connections.running)
         assertEquals(1, f.connections.starts)
         assertFalse(f.coordinator.migrationInProgress.value)
         assertTrue(f.coordinator.migrationError.value)
-        assertTrue(f.coordinator.migrationNeedsRestart.value)
         assertFalse(f.store.migrationDone)
         assertEquals(listOf(CAMERA), f.store.savedDevices)
 
@@ -130,7 +137,6 @@ class IosAccessoryCoordinatorTest {
         }
         assertTrue(f.coordinator.presentMigrationPicker())
         assertFalse(f.coordinator.migrationError.value)
-        assertFalse(f.coordinator.migrationNeedsRestart.value)
         assertTrue(f.store.migrationDone)
     }
 
@@ -148,10 +154,10 @@ class IosAccessoryCoordinatorTest {
             assertEquals(1, f.picker.migrationCalls)
             assertTrue(f.connections.running)
             assertFalse(f.coordinator.migrationInProgress.value)
-            assertEquals(
-                outcome is PickerOutcome.Failed && outcome.code == -1L,
-                f.coordinator.migrationError.value
-            )
+            // An already-active picker is reported like any other failure: the
+            // runner refuses a double tap without calling the picker, so it means
+            // the session still holds a picker and only a relaunch clears that.
+            assertEquals(outcome is PickerOutcome.Failed, f.coordinator.migrationError.value)
             assertEquals(
                 listOf(CAMERA.mac),
                 f.coordinator.migrationCandidates.value.map { it.identifier })
@@ -196,42 +202,224 @@ class IosAccessoryCoordinatorTest {
     }
 
     @Test
-    fun discoveryCanReopenWithAnAuthorizedCameraWithoutInterruptingConnections() = runTest {
+    fun discoveryCanReopenWithoutEverInterruptingTheCameras() = runTest {
         val f = Fixture(backgroundScope)
         f.picker.authorized = setOf(CAMERA.mac)
         f.coordinator.evaluateMigration()
+        f.picker.discover = {
+            assertTrue(f.coordinator.centralCreationBlocked)
+            assertFalse(f.coordinator.migrationInProgress.value)
+            assertTrue(f.connections.running, "A picker the system accepts costs no connections")
+            PickerOutcome.Completed
+        }
 
         repeat(2) {
             assertTrue(f.coordinator.presentAccessoryPicker())
             assertTrue(f.connections.running)
+            assertFalse(f.coordinator.centralCreationBlocked)
             assertEquals(listOf(CAMERA), f.store.savedDevices)
         }
 
         assertEquals(2, f.picker.discoveryCalls)
         assertEquals(0, f.picker.migrationCalls)
         assertEquals(0, f.connections.releaseCalls)
+        assertEquals(0, f.connections.starts)
+        assertEquals(0L, testScheduler.currentTime)
     }
 
     @Test
-    fun discoveryAndMigrationShareOwnershipInBothDirections() = runTest {
+    fun discoveryOwnsCentralThroughGracePeriodCallbacksAndUiCancellation() = runTest {
         val f = Fixture(backgroundScope)
         val completion = AccessoryPickerCompletion<PickerOutcome>(PickerOutcome.Completed)
-        f.picker.discover = { completion.await() }
+        f.picker.discover = {
+            if (f.picker.discoveryCalls == 1) {
+                assertTrue(f.connections.running, "The first attempt keeps the cameras connected")
+                PickerOutcome.Failed("Central still alive", ASErrorCodePickerRestricted)
+            } else {
+                completion.await()
+            }
+        }
         f.coordinator.evaluateMigration()
-        launch { f.coordinator.presentAccessoryPicker() }
+        val ui = launch { f.coordinator.presentAccessoryPicker() }
         runCurrent()
+        assertTrue(f.coordinator.centralCreationBlocked)
         assertFalse(f.coordinator.presentMigrationPicker())
-        assertEquals(0, f.connections.releaseCalls)
-        assertTrue(f.connections.running)
+        assertFalse(f.coordinator.presentAccessoryPicker())
+        assertEquals(1, f.connections.releaseCalls)
+        assertFalse(f.connections.running)
+        assertEquals(1, f.picker.discoveryCalls)
+        advanceTimeBy(10_000)
+        runCurrent()
+        assertEquals(2, f.picker.discoveryCalls)
+
+        ui.cancel()
+        runCurrent()
+        // Model accessory-added and migration-complete callbacks during the picker.
+        f.connections.resumeConnections()
+        f.picker.authorized = setOf(CAMERA.mac)
+        f.coordinator.handleMigrationComplete()
+        runCurrent()
+        assertTrue(f.store.migrationDone)
+        assertTrue(f.coordinator.centralCreationBlocked)
+        assertFalse(f.connections.running)
+        assertFalse(f.coordinator.presentAccessoryPicker())
+
         completion.onDismissed()
         runCurrent()
-        assertEquals(1, f.picker.discoveryCalls)
+        assertFalse(f.coordinator.centralCreationBlocked)
+        assertTrue(f.connections.running)
+        assertEquals(1, f.connections.starts)
+    }
+
+    @Test
+    fun discoveryRetriesRestrictedPickerUntilItSucceeds() = runTest {
+        val f = Fixture(backgroundScope)
+        val attemptTimes = mutableListOf<Long>()
+        f.picker.discover = {
+            assertTrue(f.coordinator.centralCreationBlocked)
+            attemptTimes += testScheduler.currentTime
+            // Only a refusal costs the cameras their connection.
+            assertEquals(attemptTimes.size == 1, f.connections.running)
+            if (attemptTimes.size < 3) {
+                PickerOutcome.Failed(
+                    "Central with global permissions still alive",
+                    ASErrorCodePickerRestricted
+                )
+            } else PickerOutcome.Completed
+        }
+        assertTrue(f.coordinator.presentAccessoryPicker())
+        assertEquals(listOf(0L, 10_000L, 15_000L), attemptTimes)
+        assertEquals(2, f.connections.releaseCalls)
+        assertTrue(f.connections.running)
+        assertFalse(f.coordinator.centralCreationBlocked)
+    }
+
+    @Test
+    fun discoveryExhaustionRestoresConnectionsAndAllowsManualRetry() = runTest {
+        val f = Fixture(backgroundScope)
+        val attemptTimes = mutableListOf<Long>()
+        f.picker.discover = {
+            attemptTimes += testScheduler.currentTime
+            PickerOutcome.Failed("Central still alive", ASErrorCodePickerRestricted)
+        }
+        assertFalse(f.coordinator.presentAccessoryPicker())
+        assertEquals(listOf(0L, 10_000L) + (1L..8L).map { 10_000L + it * 5_000L }, attemptTimes)
+        assertTrue(f.connections.running)
+        assertFalse(f.coordinator.centralCreationBlocked)
+        assertFalse(f.coordinator.migrationError.value)
+        assertEquals(listOf(CAMERA), f.store.savedDevices)
+
+        f.picker.discover = { PickerOutcome.Completed }
+        assertTrue(f.coordinator.presentAccessoryPicker())
+        assertEquals(11, f.picker.discoveryCalls)
+    }
+
+    @Test
+    fun discoveryCancellationAndOtherErrorsRestoreConnectionsWithoutRetrying() = runTest {
+        for (outcome in listOf(
+            PickerOutcome.Cancelled,
+            PickerOutcome.Failed("Already active", ASErrorCodePickerAlreadyActive),
+            PickerOutcome.Failed("Other error", -1),
+        )) {
+            val f = Fixture(backgroundScope)
+            f.picker.discover = { outcome }
+            assertFalse(f.coordinator.presentAccessoryPicker())
+            assertEquals(1, f.picker.discoveryCalls)
+            assertTrue(f.connections.running)
+            assertFalse(f.coordinator.centralCreationBlocked)
+            assertEquals(listOf(CAMERA), f.store.savedDevices)
+        }
+    }
+
+    @Test
+    fun discoveryExceptionRestoresCentralAndReleasesOwnership() = runTest {
+        val owner = CoroutineScope(backgroundScope.coroutineContext + SupervisorJob())
+        try {
+            val f = Fixture(owner)
+            f.picker.discover = { error("Native discovery picker threw") }
+            assertFailsWith<IllegalStateException> { f.coordinator.presentAccessoryPicker() }
+            assertTrue(f.connections.running)
+            assertFalse(f.coordinator.centralCreationBlocked)
+            f.picker.discover = { PickerOutcome.Completed }
+            assertTrue(f.coordinator.presentAccessoryPicker())
+        } finally {
+            owner.cancel()
+        }
+    }
+
+    @Test
+    fun discoveryActivationFailureDoesNotReleaseCentral() = runTest {
+        val f = Fixture(backgroundScope)
+        f.picker.activated = false
+        assertFalse(f.coordinator.presentAccessoryPicker())
+        assertEquals(0, f.connections.releaseCalls)
+        assertEquals(0, f.picker.discoveryCalls)
+        assertTrue(f.connections.running)
+        assertFalse(f.coordinator.centralCreationBlocked)
+    }
+
+    @Test
+    fun aRestrictedPickerWithoutACentralSkipsTheReleaseGracePeriod() = runTest {
+        val f = Fixture(backgroundScope)
+        f.connections.running = false
+        f.store.savedDevices = emptyList()
+        val attemptTimes = mutableListOf<Long>()
+        f.picker.discover = {
+            attemptTimes += testScheduler.currentTime
+            if (attemptTimes.size < 2) {
+                PickerOutcome.Failed("Restricted for another reason", ASErrorCodePickerRestricted)
+            } else PickerOutcome.Completed
+        }
+        assertTrue(f.coordinator.presentAccessoryPicker())
+        // Nothing was deallocated, so the retry only pays the short backoff.
+        assertEquals(listOf(0L, 5_000L), attemptTimes)
+        assertTrue(f.connections.running)
+        assertFalse(f.coordinator.centralCreationBlocked)
+    }
+
+    @Test
+    fun migrationAsksTheSystemBeforeGivingUpAnyConnection() = runTest {
+        val f = Fixture(backgroundScope)
+        f.picker.migrate = {
+            assertTrue(f.connections.running, "Nothing is torn down before the system objects")
+            f.picker.authorized = setOf(CAMERA.mac)
+            PickerOutcome.Completed
+        }
+        f.coordinator.evaluateMigration()
+        assertTrue(f.coordinator.presentMigrationPicker())
+        assertEquals(0L, testScheduler.currentTime, "An accepted picker waits for nothing")
+        assertEquals(0, f.connections.releaseCalls)
+        assertEquals(0, f.connections.starts)
+        assertTrue(f.connections.running)
+        assertTrue(f.store.migrationDone)
+    }
+
+    @Test
+    fun aRestrictedPickerReleasesTheCentralAndWaitsOutItsDeallocation() = runTest {
+        val f = Fixture(backgroundScope)
+        val attemptTimes = mutableListOf<Long>()
+        f.picker.discover = {
+            attemptTimes += testScheduler.currentTime
+            if (attemptTimes.size == 1) {
+                assertTrue(f.connections.running)
+                PickerOutcome.Failed("Central still alive", ASErrorCodePickerRestricted)
+            } else {
+                // The refusal is the authoritative answer about the central, so
+                // the retry pays the full deallocation grace before asking again.
+                assertFalse(f.connections.running)
+                PickerOutcome.Completed
+            }
+        }
+        assertTrue(f.coordinator.presentAccessoryPicker())
+        assertEquals(listOf(0L, 10_000L), attemptTimes)
+        assertEquals(1, f.connections.releaseCalls)
+        assertTrue(f.connections.running)
     }
 
     private class Fixture(scope: CoroutineScope) {
         val store = FakeStore()
         val picker = FakePicker()
-        val connections = FakeConnections { coordinator.migrationInProgress.value }
+        val connections = FakeConnections { coordinator.centralCreationBlocked }
         val coordinator: IosAccessoryCoordinator = IosAccessoryCoordinator(
             controllerScope = scope,
             accessorySession = picker,
@@ -274,13 +462,14 @@ class IosAccessoryCoordinatorTest {
         override suspend fun sync() = Unit
     }
 
-    private class FakeConnections(private val migrationInProgress: () -> Boolean) :
+    private class FakeConnections(private val centralCreationBlocked: () -> Boolean) :
         IosAccessoryCoordinator.Connections {
         var running = true
         var starts = 0
         var releaseCalls = 0
         var reconnectSweeps = 0
         override fun releaseCentral(): Boolean {
+            assertTrue(centralCreationBlocked(), "Block callbacks before releasing the central")
             releaseCalls++
             val wasRunning = running
             running = false
@@ -289,7 +478,7 @@ class IosAccessoryCoordinatorTest {
 
         override fun resumeConnections(reconnectExisting: Boolean) {
             // Mirrors the controller's guard, so early callback requests stay blocked.
-            if (migrationInProgress()) return
+            if (centralCreationBlocked()) return
             if (!running) {
                 running = true
                 starts++

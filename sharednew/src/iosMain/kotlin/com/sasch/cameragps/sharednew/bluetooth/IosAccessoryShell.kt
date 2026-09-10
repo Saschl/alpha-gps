@@ -78,6 +78,17 @@ internal class IosAccessoryShell(
     // Discovery owns its handler until dismissal, even after a successful
     // showPicker callback. Capture each waiter so late callbacks cannot finish a retry.
     private var pickerCompletion: AccessoryPickerCompletion<PickerOutcome>? = null
+
+    /**
+     * Accessories the running attempt is migrating, uppercased.
+     *
+     * `migrationComplete` reports ONE accessory, so with several candidates it
+     * arrives while the native flow is still working through the rest. Ending
+     * the attempt on the first one hands the central back mid-flow and leaves
+     * the session's picker active, which fails every later picker request with
+     * `ASErrorCodePickerAlreadyActive`.
+     */
+    private var pendingMigrations: Set<String> = emptySet()
     private var discoveryCustomizer: IosAccessoryDiscoveryCustomizer? = null
 
     // ---------------------------------------------------------------------------
@@ -141,8 +152,9 @@ internal class IosAccessoryShell(
      * AccessorySetupKit.
      *
      * The list must contain ONLY migration items. Maintainer testing observed
-     * no visible system picker for these items;
-     * mixing in a regular display item turns it back into a discovery picker and
+     * no visible system picker for a single accessory, but nothing here relies on
+     * that: a presented picker ends the attempt on dismissal like discovery does.
+     * Mixing in a regular display item turns it back into a discovery picker and
      * migrates nothing unless a brand-new accessory is set up.
      */
     override suspend fun showMigrationPicker(candidates: List<PendingMigration>): PickerOutcome {
@@ -151,7 +163,9 @@ internal class IosAccessoryShell(
 
         val items = IosAccessoryPickerItems.migration(candidates)
         log.i { "Presenting the migration picker for ${items.size} camera(s)" }
-        return presentPicker(items)
+        return presentPicker(
+            items,
+            migrating = candidates.mapTo(mutableSetOf()) { it.identifier.uppercase() })
     }
 
     /**
@@ -202,6 +216,7 @@ internal class IosAccessoryShell(
     private suspend fun presentPicker(
         items: List<Any>,
         waitForDismissalOnSuccess: Boolean = false,
+        migrating: Set<String> = emptySet(),
     ): PickerOutcome {
         val completion = AccessoryPickerCompletion<PickerOutcome>(
             PickerOutcome.Completed,
@@ -209,6 +224,10 @@ internal class IosAccessoryShell(
         )
         check(pickerCompletion == null) { "A picker is already pending" }
         pickerCompletion = completion
+        pendingMigrations = migrating
+        // Diagnostic only, next to the attempt it explains: a refusal here means
+        // this app still holds the legacy global Bluetooth grant.
+        IosBluetoothAuthorization.logCurrent()
         try {
             session.showPickerForDisplayItems(items) { error ->
                 val outcome = when {
@@ -226,9 +245,18 @@ internal class IosAccessoryShell(
                 }
                 completion.onCompletion(outcome)
             }
-            return completion.await()
+            // A migration is the one flow that can end without any terminal
+            // signal, so it gets the silence fallback; discovery always dismisses.
+            return if (migrating.isEmpty()) {
+                completion.await()
+            } else {
+                completion.await(MIGRATION_SETTLE_MS.milliseconds)
+            }
         } finally {
-            if (pickerCompletion === completion) pickerCompletion = null
+            if (pickerCompletion === completion) {
+                pickerCompletion = null
+                pendingMigrations = emptySet()
+            }
         }
     }
 
@@ -246,13 +274,25 @@ internal class IosAccessoryShell(
             ASAccessoryEventTypeMigrationComplete -> {
                 val completion = pickerCompletion
                 refreshAuthorized()
-                log.i { "Migration complete; ${authorized.size} accessory(ies) authorized" }
                 onAccessoriesChanged(this)
                 onMigrationComplete()
-                // Migration is now terminal even if dismissal/the showPicker
-                // closure arrive later. Release ownership so recovery can create
-                // the central and its power-on sweep can reconnect immediately.
-                completion?.onMigrationComplete()
+                val stillPending = pendingMigrations - authorized.keys
+                if (stillPending.isEmpty()) {
+                    log.i { "Migration complete; ${authorized.size} accessory(ies) authorized" }
+                    // Terminal even if dismissal/the showPicker closure arrive
+                    // later, unless a picker is still on screen. Release ownership
+                    // so recovery can create the central and its power-on sweep
+                    // can reconnect immediately.
+                    completion?.onMigrationComplete()
+                } else {
+                    // One accessory of several. Keep the attempt — and the picker
+                    // it owns — alive until the whole batch is through.
+                    log.i {
+                        "Migrated one accessory; ${stillPending.size} of " +
+                                "${pendingMigrations.size} still pending"
+                    }
+                    completion?.onMigrationProgress()
+                }
             }
 
             ASAccessoryEventTypeAccessoryAdded -> {
@@ -314,7 +354,12 @@ internal class IosAccessoryShell(
 
             ASAccessoryEventTypePickerSetupFailed -> log.w { "Accessory setup failed" }
 
-            ASAccessoryEventTypePickerDidPresent -> log.i { "Picker presented" }
+            ASAccessoryEventTypePickerDidPresent -> {
+                log.i { "Picker presented" }
+                // A visible picker only ends with pickerDidDismiss, migration
+                // included: finishing sooner leaves the session's picker active.
+                pickerCompletion?.onPresented()
+            }
 
             else -> log.d { "Unhandled AccessorySetupKit event $type" }
         }
@@ -332,5 +377,13 @@ internal class IosAccessoryShell(
 
     private companion object {
         const val ACTIVATION_TIMEOUT_MS = 5_000L
+
+        /**
+         * How long a migration attempt may hear nothing at all before it counts
+         * as finished. A skipped or failed accessory reports no event, and
+         * neither dismissal nor the completion closure is guaranteed, so without
+         * this the attempt would hold the central and the busy dialog forever.
+         */
+        const val MIGRATION_SETTLE_MS = 10_000L
     }
 }

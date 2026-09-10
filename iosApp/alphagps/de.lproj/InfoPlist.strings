@@ -1,0 +1,5 @@
+/* Location permission for background geotagging, including while the phone is locked. */
+"NSLocationAlwaysAndWhenInUseUsageDescription" = "Diese App sendet deine GPS-Koordinaten an die verbundene Kamera, damit deine Fotos automatisch mit Standortdaten versehen werden – auch wenn dein iPhone gesperrt ist. Wähle „Immer“, um dies auch im Hintergrund zu ermöglichen.";
+
+/* Location permission for sending GPS coordinates to the connected camera. */
+"NSLocationWhenInUseUsageDescription" = "Diese App benötigt fortlaufenden Zugriff auf deinen Standort, um GPS-Koordinaten an die verbundene Kamera zu senden und deine Fotos automatisch mit Standortdaten zu versehen.";

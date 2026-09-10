@@ -3,7 +3,6 @@ package com.sasch.cameragps.sharednew
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -13,7 +12,9 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -32,7 +33,6 @@ import cameragps.sharednew.generated.resources.app_settings
 import cameragps.sharednew.generated.resources.further_help
 import cameragps.sharednew.generated.resources.ios_accessory_migration_action
 import cameragps.sharednew.generated.resources.ios_accessory_migration_message
-import cameragps.sharednew.generated.resources.ios_accessory_migration_restart
 import cameragps.sharednew.generated.resources.ios_accessory_migration_title
 import cameragps.sharednew.generated.resources.ios_add_camera
 import cameragps.sharednew.generated.resources.ios_no_cameras_message
@@ -55,7 +55,7 @@ import org.jetbrains.compose.resources.stringResource
 
 /**
  * iOS list host: owns the scanning/disabled empty states and the
- * troubleshooting overlay; the device list itself is the shared
+ * troubleshooting footer and dialog; the device list itself is the shared
  * [SharedDeviceList].
  */
 @Composable
@@ -64,10 +64,8 @@ internal fun DeviceListContent(
     items: Map<String, DeviceListItem>,
     isAppEnabled: Boolean,
     hapticsEnabled: Boolean,
-    /** Saved cameras that still need confirming in the iOS setup sheet. */
+    /** Saved cameras that still have to be handed over to iOS. */
     migrationCandidates: List<PendingMigration>,
-    /** True when the remaining cameras can only be confirmed after a restart. */
-    migrationNeedsRestart: Boolean,
     onMigrate: () -> Unit,
     onAddCamera: () -> Unit,
     onOpenSettings: () -> Unit,
@@ -128,10 +126,7 @@ internal fun DeviceListContent(
             // empty: doing that hid the prompt from exactly the users who had
             // cameras to confirm, leaving rows that could never connect.
             migrationCandidates.isNotEmpty() && devices.isEmpty() -> {
-                MigrationCard(
-                    needsRestart = migrationNeedsRestart,
-                    onMigrate = onMigrate,
-                )
+                MigrationCard(onMigrate = onMigrate)
             }
 
             devices.isEmpty() -> {
@@ -158,33 +153,40 @@ internal fun DeviceListContent(
                     // still waiting.
                     if (migrationCandidates.isNotEmpty()) {
                         MigrationCard(
-                            needsRestart = migrationNeedsRestart,
                             onMigrate = onMigrate,
                             modifier = Modifier.padding(top = 16.dp),
                         )
                     }
-                    SharedDeviceList(
-                        devices = devices,
-                        items = items,
-                        hapticsEnabled = hapticsEnabled,
-                        // Bottom padding keeps the last card above the overlay button
-                        contentPadding = PaddingValues(top = 16.dp, bottom = 84.dp),
-                        onConnect = onConnect,
-                        onTriggerRemoteShutter = onTriggerRemoteShutter,
-                        onDelete = onDelete,
-                        onOpenDetails = onOpenDetails,
-                    )
+                    // Reserve the footer's measured height, including larger text,
+                    // before giving the scrolling list the remaining space.
+                    Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                        SharedDeviceList(
+                            devices = devices,
+                            items = items,
+                            hapticsEnabled = hapticsEnabled,
+                            onConnect = onConnect,
+                            onTriggerRemoteShutter = onTriggerRemoteShutter,
+                            onDelete = onDelete,
+                            onOpenDetails = onOpenDetails,
+                        )
+                    }
+                    Surface(modifier = Modifier.fillMaxWidth()) {
+                        Column {
+                            HorizontalDivider()
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                TextButton(onClick = { showTroubleshootingDialog = true }) {
+                                    Text(stringResource(Res.string.ios_troubleshooting_need_help))
+                                }
+                            }
+                        }
+                    }
                 }
             }
-        }
-
-        TextButton(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            onClick = { showTroubleshootingDialog = true },
-        ) {
-            Text(stringResource(Res.string.ios_troubleshooting_need_help))
         }
     }
 }
@@ -199,7 +201,6 @@ internal fun DeviceListContent(
  */
 @Composable
 private fun MigrationCard(
-    needsRestart: Boolean,
     onMigrate: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -219,11 +220,7 @@ private fun MigrationCard(
                 fontWeight = FontWeight.SemiBold,
             )
             Text(
-                text = if (needsRestart) {
-                    stringResource(Res.string.ios_accessory_migration_restart)
-                } else {
-                    stringResource(Res.string.ios_accessory_migration_message)
-                },
+                text = stringResource(Res.string.ios_accessory_migration_message),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

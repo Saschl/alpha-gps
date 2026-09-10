@@ -38,6 +38,62 @@ internal val mockDevices = listOf(
         device = null,
         isPaired = true,
     ),
+    AssociatedDeviceCompat(
+        id = 5,
+        address = "AA:BB:CC:DD:EE:05",
+        name = "ILCE-7RM5",
+        device = null,
+        isPaired = true,
+    ),
+    AssociatedDeviceCompat(
+        id = 6,
+        address = "AA:BB:CC:DD:EE:06",
+        name = "ILCE-7CM2",
+        device = null,
+        isPaired = true,
+    ),
+    AssociatedDeviceCompat(
+        id = 7,
+        address = "AA:BB:CC:DD:EE:07",
+        name = "ILCE-7SM3",
+        device = null,
+        isPaired = true,
+    ),
+    AssociatedDeviceCompat(
+        id = 8,
+        address = "AA:BB:CC:DD:EE:08",
+        name = "ILCE-1",
+        device = null,
+        isPaired = true,
+    ),
+    AssociatedDeviceCompat(
+        id = 9,
+        address = "AA:BB:CC:DD:EE:09",
+        name = "ZV-E1",
+        device = null,
+        isPaired = true,
+    ),
+    AssociatedDeviceCompat(
+        id = 10,
+        address = "AA:BB:CC:DD:EE:0A",
+        name = "ILCE-7M3",
+        device = null,
+        isPaired = true,
+    ),
+    AssociatedDeviceCompat(
+        id = 11,
+        address = "AA:BB:CC:DD:EE:0B",
+        name = "ILCE-6400",
+        device = null,
+        isPaired = true,
+    ),
+    AssociatedDeviceCompat(
+        id = 12,
+        address = "AA:BB:CC:DD:EE:0C",
+        name = "DSC-RX100M7",
+        device = null,
+        isPaired = true,
+    ),
 )
 
 /**
@@ -55,4 +111,3 @@ internal val mockDeviceListItems = mapOf(
         isShutterActive = true,
     ),
 )
-

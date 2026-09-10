@@ -21,20 +21,19 @@
     <string name="ios_accessory_migration_title">Kameras einmalig bestätigen</string>
     <string name="ios_accessory_migration_message">iOS verwaltet die Kamerakopplung jetzt über ein eigenes Fenster. Bestätige deine gespeicherten Kameras einmal, dann wird alles übernommen, inklusive sämtlicher Einstellungen. Es geht nichts verloren und du musst die Kameras nicht neu koppeln.</string>
     <string name="ios_accessory_migration_action">Kameras bestätigen</string>
-    <string name="ios_accessory_migration_restart">Schließe Alpha GPS und öffne die App erneut, um die übrigen Kameras zu bestätigen. iOS erlaubt das nur direkt nach dem Start.</string>
 
     <string name="ios_no_cameras_title">Noch keine Kameras</string>
     <string name="ios_no_cameras_message">Versetze deine Kamera in den Kopplungsmodus und füge sie dann hinzu. iOS zeigt dir eine eigene Liste der Sony-Kameras in der Nähe.</string>
     <string name="ios_add_camera">Kamera hinzufügen</string>
 
     <string name="ios_accessory_migration_dialog_title">Kameras bestätigen</string>
-    <string name="ios_accessory_migration_dialog_message">iOS verwaltet die Kamerakopplung jetzt selbst. Deshalb muss Alpha GPS dich einmal bitten, deine bisherigen Kameras zu bestätigen.\n\nMit "Weiter" öffnet sich ein iOS-Fenster mit deinen Kameras. Bestätige es, dann wird alles übernommen, inklusive sämtlicher Einstellungen. Es geht nichts verloren und du musst die Kameras nicht neu koppeln.\n\nBis dahin kann die App sich nicht mit deinen Kameras verbinden.</string>
+    <string name="ios_accessory_migration_dialog_message">iOS verwaltet die Kamerakopplung jetzt selbst. Deshalb muss Alpha GPS deine gespeicherten Kameras einmal an iOS übergeben.\n\nTippe auf "Weiter" — den Rest erledigt iOS von allein, meist in wenigen Sekunden und ohne Rückfrage. Alles wird übernommen, inklusive sämtlicher Einstellungen. Es geht nichts verloren und du musst die Kameras nicht neu koppeln.\n\nDeine Kameras funktionieren in der Zwischenzeit weiter, du kannst das also auch später erledigen.</string>
     <string name="ios_accessory_migration_dialog_confirm">Weiter</string>
     <string name="ios_accessory_migration_dialog_later">Später</string>
 
 
     <string name="ios_accessory_migration_error_title">Kameras konnten nicht bestätigt werden</string>
-    <string name="ios_accessory_migration_error_message">iOS hat das Bestätigungsfenster nicht geöffnet. Beim zweiten Versuch klappt es meistens.\n\nWenn es weiterhin fehlschlägt, schließe Alpha GPS im App-Umschalter vollständig, öffne es erneut und versuche es dann noch einmal.</string>
+    <string name="ios_accessory_migration_error_message">iOS konnte deine Kameras nicht übernehmen. Beim zweiten Versuch klappt es meistens.\n\nWenn es weiterhin fehlschlägt, schließe Alpha GPS im App-Umschalter vollständig, öffne es erneut und versuche es dann noch einmal.</string>
     <string name="ios_accessory_migration_error_retry">Erneut versuchen</string>
 
 

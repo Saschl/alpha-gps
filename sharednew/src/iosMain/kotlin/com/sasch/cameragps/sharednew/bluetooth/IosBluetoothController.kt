@@ -1,7 +1,5 @@
 package com.sasch.cameragps.sharednew.bluetooth
 
-import com.sasch.cameragps.sharednew.bluetooth.accessory.AccessoryCameraName
-
 import com.diamondedge.logging.LogLevel
 import com.diamondedge.logging.logging
 import com.sasch.cameragps.sharednew.IosAppPreferences
@@ -10,8 +8,10 @@ import com.sasch.cameragps.sharednew.IosTransmissionNotifications
 import com.sasch.cameragps.sharednew.bluetooth.IosBluetoothController.centralShell
 import com.sasch.cameragps.sharednew.bluetooth.IosBluetoothController.clearPairingFailedDevice
 import com.sasch.cameragps.sharednew.bluetooth.IosBluetoothController.ensureInitialized
+import com.sasch.cameragps.sharednew.bluetooth.IosBluetoothController.persistAccessoryNames
 import com.sasch.cameragps.sharednew.bluetooth.IosBluetoothController.reconnectToPersistedPeripherals
 import com.sasch.cameragps.sharednew.bluetooth.IosBluetoothController.startCentralIfNeeded
+import com.sasch.cameragps.sharednew.bluetooth.accessory.AccessoryCameraName
 import com.sasch.cameragps.sharednew.bluetooth.accessory.PendingMigration
 import com.sasch.cameragps.sharednew.bluetooth.session.CameraSession
 import com.sasch.cameragps.sharednew.bluetooth.session.CameraSessionOrchestrator
@@ -95,8 +95,8 @@ object IosBluetoothController : BluetoothController {
         // inside didFinishLaunchingWithOptions, so anything conditional or
         // asynchronous here kills background reconnect.
         //
-        // AccessorySetupKit refuses to migrate while a central exists, so the
-        // migration flow tears it down only after the user confirms in the app.
+        // A globally authorized central can block AccessorySetupKit, so both picker
+        // flows release it after the user requests setup in the app.
         accessorySession.activate()
         startCentralIfNeeded()
         transmissionNotifications.start()
@@ -219,7 +219,6 @@ object IosBluetoothController : BluetoothController {
     )
 
     val migrationCandidates: StateFlow<List<PendingMigration>> get() = accessories.migrationCandidates
-    val migrationNeedsRestart: StateFlow<Boolean> get() = accessories.migrationNeedsRestart
     val migrationError: StateFlow<Boolean> get() = accessories.migrationError
     val migrationInProgress: StateFlow<Boolean> get() = accessories.migrationInProgress
 
@@ -233,7 +232,7 @@ object IosBluetoothController : BluetoothController {
      * The CBCentralManager, created on demand by [startCentralIfNeeded].
      *
      * Created synchronously by ensureInitialized for normal/background launches,
-     * released only during foreground migration. Existing unmigrated cameras can
+     * released during foreground migration or discovery. Existing unmigrated cameras can
      * still connect. Construction may synchronously fire `willRestoreState`.
      */
     private var centralShell: IosCentralShell? = null
@@ -262,7 +261,7 @@ object IosBluetoothController : BluetoothController {
     /**
      * The central, or null while it has not been created yet. Reading this never
      * creates it — only [startCentralIfNeeded] does, so no incidental call can
-     * bring the central up underneath the migration flow.
+     * bring the central up underneath either picker flow.
      */
     private val shell: IosCentralShell? get() = centralShell
 
@@ -275,12 +274,12 @@ object IosBluetoothController : BluetoothController {
 
     /**
      * Normal launches create the central synchronously for state restoration and
-     * continuity of existing connections. Only an explicit migration attempt
+     * continuity of existing connections. Only an explicit picker operation
      * holds creation off; callbacks must not recreate it underneath the picker.
      * Never gate launch creation on the asynchronously loaded authorized set.
      */
     private fun startCentralIfNeeded() {
-        if (centralShell != null || migrationInProgress.value) return
+        if (centralShell != null || accessories.centralCreationBlocked) return
         logging.i { "Creating the CBCentralManager" }
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
         centralScope = scope
@@ -302,7 +301,7 @@ object IosBluetoothController : BluetoothController {
         // Dropping the Kotlin reference does not release the Objective-C object
         // straight away: Kotlin/Native hands that to its garbage collector. The
         // picker checks for a live CBCentralManager, so nudge the collector.
-        // The coordinator keeps creation blocked until migration ends.
+        // The coordinator keeps creation blocked until the picker operation ends.
         GC.collect()
     }
 
@@ -652,8 +651,8 @@ object IosBluetoothController : BluetoothController {
      */
     private fun startCentralForAccessoryUse() {
         if (centralShell != null) return
-        // Safe to start even with cameras left to migrate: the migration picker
-        // releases the central again when it runs.
+        // Safe with cameras left to migrate, but startCentralIfNeeded still
+        // blocks creation while either picker owns the central-release guard.
         startCentralIfNeeded()
     }
 

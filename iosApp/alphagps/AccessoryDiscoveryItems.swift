@@ -1,20 +1,34 @@
+import AccessorySetupKit
 import Foundation
 
 /// Discovery happens before authorization, so a Bluetooth UUID is not required.
 /// Keep unnamed/UUID-less discoveries distinct by object identity, never by the
 /// advertised model name (two nearby cameras can advertise the same name).
-final class AccessoryDiscoveryItems<Accessory: AnyObject, Item> {
+///
+/// Concrete rather than generic on purpose. As a generic class with an
+/// `AnyObject`-constrained parameter, swift-frontend 6.3.3 crashed in the
+/// EarlyPerfInliner pass on this type's synthesized deinit — release builds
+/// only, since that pass does not run at -Onone. There is exactly one
+/// instantiation, so the generics bought nothing but the compiler bug.
+@available(iOS 26.1, *)
+final class AccessoryDiscoveryItems {
     private struct Entry {
-        var accessory: Accessory
+        var accessory: ASDiscoveredAccessory
         var bluetoothIdentifier: UUID?
-        var item: Item
+        var item: ASDiscoveredDisplayItem
     }
 
     private var entries: [Entry] = []
 
-    var items: [Item] { entries.map(\.item) }
+    var items: [ASDiscoveredDisplayItem] {
+        entries.map(\.item)
+    }
 
-    func upsert(accessory: Accessory, bluetoothIdentifier: UUID?, item: Item) {
+    func upsert(
+        accessory: ASDiscoveredAccessory,
+        bluetoothIdentifier: UUID?,
+        item: ASDiscoveredDisplayItem
+    ) {
         let index = entries.firstIndex { entry in
             entry.accessory === accessory ||
                 (bluetoothIdentifier != nil && entry.bluetoothIdentifier == bluetoothIdentifier)

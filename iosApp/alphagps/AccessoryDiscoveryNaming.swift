@@ -19,11 +19,14 @@ enum AccessoryDiscoveryNaming {
 @available(iOS 26.1, *)
 private final class DiscoveryPickerNames: NSObject, IosAccessoryDiscoveryCustomizer {
     private let session: ASAccessorySession
-    private let discoveries = AccessoryDiscoveryItems<ASDiscoveredAccessory, ASDiscoveredDisplayItem>()
+    private let discoveries = AccessoryDiscoveryItems()
     private var active = false
     private var acceptingDiscoveries = true
     private var updating = false
     private var needsUpdate = false
+    private var initialBatchReady = false
+    private var initialBatchWorkItem: DispatchWorkItem?
+    private var discoveryEventCount = 0
 
     init(session: ASAccessorySession) {
         self.session = session
@@ -43,7 +46,10 @@ private final class DiscoveryPickerNames: NSObject, IosAccessoryDiscoveryCustomi
         guard active else { return }
         switch event.eventType {
         case .accessoryDiscovered:
-            guard acceptingDiscoveries else { return }
+            guard acceptingDiscoveries else {
+                NSLog("Accessory picker ignoring discovery after setup started")
+                return
+            }
             guard let accessory = event.accessory as? ASDiscoveredAccessory else {
                 NSLog("Accessory picker discovery event did not contain ASDiscoveredAccessory")
                 return
@@ -60,7 +66,9 @@ private final class DiscoveryPickerNames: NSObject, IosAccessoryDiscoveryCustomi
             )
             item.setupOptions.insert(.rename)
             discoveries.upsert(accessory: accessory, bluetoothIdentifier: accessory.bluetoothIdentifier, item: item)
-            NSLog("Accessory picker received discovery (Bluetooth identifier available: %@)",
+            discoveryEventCount += 1
+            NSLog("Accessory picker received discovery #%ld (%ld distinct item(s), initial collection: %@, Bluetooth identifier available: %@)",
+                  discoveryEventCount, discoveries.items.count, initialBatchReady ? "no" : "yes",
                   accessory.bluetoothIdentifier == nil ? "no" : "yes")
             needsUpdate = true
             updatePicker()
@@ -69,6 +77,8 @@ private final class DiscoveryPickerNames: NSObject, IosAccessoryDiscoveryCustomi
             // while the user is editing it in the system rename step.
             acceptingDiscoveries = false
             needsUpdate = false
+            cancelInitialBatch()
+            NSLog("Accessory picker setup started; discovery updates stopped")
         case .pickerDidDismiss, .invalidated:
             stop()
         default:
@@ -80,6 +90,26 @@ private final class DiscoveryPickerNames: NSObject, IosAccessoryDiscoveryCustomi
     /// remain selectable even if a new advertisement arrives during an update.
     private func updatePicker() {
         guard active, acceptingDiscoveries, needsUpdate, !updating else { return }
+        // Experiment: collect for a fixed window after the first discovery before
+        // presenting any results. Later advertisements must not restart the timer.
+        guard initialBatchReady else {
+            if initialBatchWorkItem == nil {
+                NSLog("Accessory picker collecting discoveries for 3 seconds before first update")
+                let workItem = DispatchWorkItem { [weak self] in
+                    guard let self, self.active, self.acceptingDiscoveries else {
+                        return
+                    }
+                    self.initialBatchWorkItem = nil
+                    self.initialBatchReady = true
+                    NSLog("Accessory picker initial collection finished: %ld discovery event(s), %ld distinct item(s)",
+                          self.discoveryEventCount, self.discoveries.items.count)
+                    self.updatePicker()
+                }
+                initialBatchWorkItem = workItem
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3, execute: workItem)
+            }
+            return
+        }
         needsUpdate = false
         updating = true
         NSLog("Accessory picker submitting %ld discovered item(s)", discoveries.items.count)
@@ -99,9 +129,15 @@ private final class DiscoveryPickerNames: NSObject, IosAccessoryDiscoveryCustomi
         guard active else { return }
         active = false
         needsUpdate = false
+        cancelInitialBatch()
         NSLog("Accessory picker naming stopped after %ld discovered item(s)", discoveries.items.count)
         discoveries.removeAll()
         // Migration must keep its original, migration-only picker behavior.
         session.pickerDisplaySettings = nil
+    }
+
+    private func cancelInitialBatch() {
+        initialBatchWorkItem?.cancel()
+        initialBatchWorkItem = nil
     }
 }

@@ -8,7 +8,6 @@ import cameragps.sharednew.generated.resources.baseline_view_list_24
 import cameragps.sharednew.generated.resources.header_device_list
 import cameragps.sharednew.generated.resources.info_24px
 import cameragps.sharednew.generated.resources.settings_24px
-import com.sasch.cameragps.sharednew.bluetooth.BluetoothDeviceInfo
 import com.sasch.cameragps.sharednew.ui.device.SharedDevicesScreen
 import com.sasch.cameragps.sharednew.ui.devicelist.DeviceListItem
 import com.sasch.cameragps.sharednew.ui.pairing.SharedPairingPreparationScreen
@@ -54,15 +53,11 @@ fun StoreScreenshotViewController(scenario: String): UIViewController {
                     onChangeLogLevel = {},
                 )
             } else {
-                val names = when (scenario) {
-                    "remote" -> listOf("ILCE-7M4")
-                    "multiple" -> listOf("ILCE-7M4", "ILCE-6700", "ZV-E10M2")
-                    else -> listOf("ILCE-7M4", "ILCE-6700")
-                }
-                val devices = names.mapIndexed { index, name ->
-                    BluetoothDeviceInfo(
-                        identifier = name,
-                        name = name,
+                // Share the long fixture with SCREENSHOT_MODE so both entry points
+                // exercise scrolling; remote keeps its single-camera composition.
+                val sampleDevices = if (scenario == "remote") mockDevices.take(1) else mockDevices
+                val devices = sampleDevices.mapIndexed { index, device ->
+                    device.copy(
                         isSaved = true,
                         isConnected = scenario != "reconnect" || index == 0,
                     )
@@ -93,7 +88,6 @@ fun StoreScreenshotViewController(scenario: String): UIViewController {
                         isAppEnabled = true,
                         hapticsEnabled = false,
                         migrationCandidates = emptyList(),
-                        migrationNeedsRestart = false,
                         onMigrate = {},
                         onAddCamera = {},
                         onOpenSettings = {},
