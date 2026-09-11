@@ -18,6 +18,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -71,6 +72,7 @@ import com.sasch.cameragps.sharednew.crash.CrashReportPolicy
 import com.sasch.cameragps.sharednew.crash.IosCrashReporting
 import com.sasch.cameragps.sharednew.database.getDatabaseBuilder
 import com.sasch.cameragps.sharednew.database.logging.LogRepository
+import com.sasch.cameragps.sharednew.language.appLanguagePreference
 import com.sasch.cameragps.sharednew.logging.IosLogFormatter
 import com.sasch.cameragps.sharednew.logging.IosLogging
 import com.sasch.cameragps.sharednew.review.IosReviewPromptEffect
@@ -107,6 +109,7 @@ internal enum class IosScreen {
 
 @Composable
 internal fun CameraGpsIosApp(requestReview: (UIViewController) -> Boolean) {
+    val selectedLanguage by appLanguagePreference.selected.collectAsState()
     val bluetoothController = IosBluetoothController
     val realDevices by bluetoothController.devices.collectAsState()
     val devices = if (SCREENSHOT_MODE) mockDevices else realDevices
@@ -181,6 +184,7 @@ internal fun CameraGpsIosApp(requestReview: (UIViewController) -> Boolean) {
     LaunchedEffect(lifecycleState) {
         when (lifecycleState) {
             Lifecycle.State.RESUMED -> {
+                appLanguagePreference.refresh()
                 alwaysLocationHintDismissed = false
                 if (!bluetoothController.hasPreciseAccuracyAuthorization()) {
                     showRequestPreciseAccuracyPermissionDialog = true
@@ -339,199 +343,205 @@ internal fun CameraGpsIosApp(requestReview: (UIViewController) -> Boolean) {
         requestReview = requestReview,
     )
 
-    when (currentScreen) {
-        IosScreen.Welcome -> {
-            SharedWelcomeScreen(
-                title = stringResource(Res.string.welcome_title),
-                subtitle = stringResource(Res.string.welcome_subtitle),
-                getStartedText = stringResource(Res.string.welcome_get_started_button),
-                settingsNote = stringResource(Res.string.welcome_settings_note),
-                firstStepFeatures = firstStepFeatures(),
-                secondStepFeatures = emptyList(),
-                onGetStarted = {
-                    IosAppPreferences.setShowWelcomeOnLaunch(false)
-                    currentScreen = IosScreen.Devices
-                },
-                iconContent = {
-                    Text(
-                        text = "📷",
-                        style = MaterialTheme.typography.headlineSmall,
-                    )
-                },
-            )
-        }
-
-        IosScreen.Devices -> {
-            SharedDevicesScreen(
-                title = stringResource(Res.string.header_device_list),
-                topBarActions = {
-                    IconButton(onClick = { currentScreen = IosScreen.Help }) {
-                        Icon(
-                            painterResource(Res.drawable.info_24px),
-                            contentDescription = stringResource(Res.string.settings)
-                        )
-                    }
-                    IconButton(onClick = { currentScreen = IosScreen.Logs }) {
-                        Icon(
-                            painterResource(Res.drawable.baseline_view_list_24),
-                            contentDescription = stringResource(Res.string.view_logs)
-                        )
-                    }
-                    IconButton(onClick = { currentScreen = IosScreen.Settings }) {
-                        Icon(
-                            painterResource(Res.drawable.settings_24px),
-                            contentDescription = stringResource(Res.string.settings)
-                        )
-                    }
-                },
-            ) {
-                DeviceListContent(
-                    devices = devices,
-                    items = listItems,
-                    isAppEnabled = isAppEnabled,
-                    hapticsEnabled = hapticsEnabled,
-                    migrationCandidates = migrationCandidates,
-                    onMigrate = { showMigrationExplainer = true },
-                    onAddCamera = { currentScreen = IosScreen.PairingPreparation },
-                    onOpenSettings = { currentScreen = IosScreen.Settings },
-                    onOpenHelp = {
-                        troubleshootingReturnScreen = IosScreen.Devices
-                        currentScreen = IosScreen.Troubleshooting
+    // Compose resources read the system language on iOS. Changing AppleLanguages
+    // and changing this key together refreshes the resource tree immediately;
+    // Bluetooth and navigation state remain outside the keyed subtree.
+    key(selectedLanguage?.tag ?: "system") {
+        when (currentScreen) {
+            IosScreen.Welcome -> {
+                SharedWelcomeScreen(
+                    title = stringResource(Res.string.welcome_title),
+                    subtitle = stringResource(Res.string.welcome_subtitle),
+                    getStartedText = stringResource(Res.string.welcome_get_started_button),
+                    settingsNote = stringResource(Res.string.welcome_settings_note),
+                    firstStepFeatures = firstStepFeatures(),
+                    secondStepFeatures = emptyList(),
+                    onGetStarted = {
+                        IosAppPreferences.setShowWelcomeOnLaunch(false)
+                        currentScreen = IosScreen.Devices
                     },
-                    onConnect = { device ->
+                    iconContent = {
+                        Text(
+                            text = "📷",
+                            style = MaterialTheme.typography.headlineSmall,
+                        )
+                    },
+                )
+            }
+
+            IosScreen.Devices -> {
+                SharedDevicesScreen(
+                    title = stringResource(Res.string.header_device_list),
+                    topBarActions = {
+                        IconButton(onClick = { currentScreen = IosScreen.Help }) {
+                            Icon(
+                                painterResource(Res.drawable.info_24px),
+                                contentDescription = stringResource(Res.string.settings)
+                            )
+                        }
+                        IconButton(onClick = { currentScreen = IosScreen.Logs }) {
+                            Icon(
+                                painterResource(Res.drawable.baseline_view_list_24),
+                                contentDescription = stringResource(Res.string.view_logs)
+                            )
+                        }
+                        IconButton(onClick = { currentScreen = IosScreen.Settings }) {
+                            Icon(
+                                painterResource(Res.drawable.settings_24px),
+                                contentDescription = stringResource(Res.string.settings)
+                            )
+                        }
+                    },
+                ) {
+                    DeviceListContent(
+                        devices = devices,
+                        items = listItems,
+                        isAppEnabled = isAppEnabled,
+                        hapticsEnabled = hapticsEnabled,
+                        migrationCandidates = migrationCandidates,
+                        onMigrate = { showMigrationExplainer = true },
+                        onAddCamera = { currentScreen = IosScreen.PairingPreparation },
+                        onOpenSettings = { currentScreen = IosScreen.Settings },
+                        onOpenHelp = {
+                            troubleshootingReturnScreen = IosScreen.Devices
+                            currentScreen = IosScreen.Troubleshooting
+                        },
+                        onConnect = { device ->
+                            scope.launch {
+                                if (!device.isConnected) {
+                                    bluetoothController.connect(device.identifier)
+                                }
+                            }
+                        },
+                        // FIXME migration on ios makes device non deletable as migration keeps running i guess
+                        onTriggerRemoteShutter = { device ->
+                            scope.launch {
+                                bluetoothController.triggerShutterSequence(device.identifier)
+                            }
+                        },
+                        onDelete = { device ->
+                            scope.launch {
+                                bluetoothController.forgetDevice(device.identifier)
+                            }
+                        },
+                        onOpenDetails = { device ->
+                            selectedDeviceIdentifier = device.identifier
+                            currentScreen = IosScreen.DeviceDetails
+                        },
+                    )
+                }
+            }
+
+            IosScreen.PairingPreparation -> {
+                SharedPairingPreparationScreen(
+                    isSearching = isCameraPickerActive,
+                    onSearch = {
                         scope.launch {
-                            if (!device.isConnected) {
-                                bluetoothController.connect(device.identifier)
+                            if (pairingPreparation.search { bluetoothController.presentAccessoryPicker() }) {
+                                currentScreen = IosScreen.Devices
                             }
                         }
                     },
-                    // FIXME migration on ios makes device non deletable as migration keeps running i guess
-                    onTriggerRemoteShutter = { device ->
-                        scope.launch {
-                            bluetoothController.triggerShutterSequence(device.identifier)
-                        }
-                    },
-                    onDelete = { device ->
-                        scope.launch {
-                            bluetoothController.forgetDevice(device.identifier)
-                        }
-                    },
-                    onOpenDetails = { device ->
-                        selectedDeviceIdentifier = device.identifier
-                        currentScreen = IosScreen.DeviceDetails
+                    onBack = { currentScreen = IosScreen.Devices },
+                    onHelp = {
+                        troubleshootingReturnScreen = IosScreen.PairingPreparation
+                        currentScreen = IosScreen.Troubleshooting
                     },
                 )
             }
-        }
 
-        IosScreen.PairingPreparation -> {
-            SharedPairingPreparationScreen(
-                isSearching = isCameraPickerActive,
-                onSearch = {
-                    scope.launch {
-                        if (pairingPreparation.search { bluetoothController.presentAccessoryPicker() }) {
-                            currentScreen = IosScreen.Devices
-                        }
+            IosScreen.DeviceDetails -> {
+                val selectedDevice =
+                    devices.firstOrNull { it.identifier == selectedDeviceIdentifier }
+                if (selectedDevice == null) {
+                    LaunchedEffect(Unit) {
+                        currentScreen = IosScreen.Devices
                     }
-                },
-                onBack = { currentScreen = IosScreen.Devices },
-                onHelp = {
-                    troubleshootingReturnScreen = IosScreen.PairingPreparation
-                    currentScreen = IosScreen.Troubleshooting
-                },
-            )
-        }
-
-        IosScreen.DeviceDetails -> {
-            val selectedDevice = devices.firstOrNull { it.identifier == selectedDeviceIdentifier }
-            if (selectedDevice == null) {
-                LaunchedEffect(Unit) {
-                    currentScreen = IosScreen.Devices
+                } else {
+                    IosDeviceDetailScreen(
+                        device = selectedDevice,
+                        onBackClick = { currentScreen = IosScreen.Devices },
+                    )
                 }
-            } else {
-                IosDeviceDetailScreen(
-                    device = selectedDevice,
+            }
+
+            IosScreen.Settings -> {
+                IosSettingsScreen(
+                    isAppEnabled = isAppEnabled,
+                    transmissionNotificationsEnabled = transmissionNotificationsEnabled,
+                    transmissionNotificationsPermissionDenied = transmissionNotificationsPermissionDenied,
+                    onTransmissionNotificationsEnabledChange = bluetoothController::setTransmissionNotificationsEnabled,
+                    onOpenNotificationSettings = { openAppSettings() },
+                    autoScanEnabled = autoScanEnabled,
+                    scrollToTipJarOnOpen = scrollToTipJarOnSettingsOpen,
                     onBackClick = { currentScreen = IosScreen.Devices },
+                    onOpenHelp = { currentScreen = IosScreen.Help },
+                    onAppEnabledChange = { enabled ->
+                        isAppEnabled = enabled
+                        IosAppPreferences.setAppEnabled(enabled)
+                        scope.launch {
+                            bluetoothController.applyAppEnabledState(enabled)
+                        }
+                    },
+                    onAutoScanEnabledChange = { enabled ->
+                        autoScanEnabled = enabled
+                        IosAppPreferences.setAutoScanEnabled(enabled)
+                    },
+                    hapticsEnabled = hapticsEnabled,
+                    onHapticsEnabledChange = { enabled ->
+                        hapticsEnabled = enabled
+                        IosAppPreferences.setHapticsEnabled(enabled)
+                    },
+                    sentryEnabled = sentryEnabled,
+                    onSentryEnabledChange = { enabled ->
+                        sentryEnabled = enabled
+                        IosAppPreferences.setSentryEnabled(enabled)
+                        // Answering here counts as answering the consent question,
+                        // so the dialog does not turn up afterwards and overwrite
+                        // the choice that was just made.
+                        IosAppPreferences.setSentryConsentDialogDismissed(true)
+                        // Enabling takes effect immediately; disabling cannot (the
+                        // SDK has no clean mid-process shutdown), hence the restart
+                        // hint the shared card shows.
+                        if (enabled) IosCrashReporting.start()
+                    },
+                    onShowWelcomeAgain = {
+                        IosAppPreferences.setShowWelcomeOnLaunch(true)
+                        currentScreen = IosScreen.Welcome
+                    },
+                    onChangeLogLevel = { level ->
+                        IosLogging.install(logRepository, level)
+                    },
+                    onTipJarScrollConsumed = {
+                        scrollToTipJarOnSettingsOpen = false
+                    }
                 )
             }
-        }
 
-        IosScreen.Settings -> {
-            IosSettingsScreen(
-                isAppEnabled = isAppEnabled,
-                transmissionNotificationsEnabled = transmissionNotificationsEnabled,
-                transmissionNotificationsPermissionDenied = transmissionNotificationsPermissionDenied,
-                onTransmissionNotificationsEnabledChange = bluetoothController::setTransmissionNotificationsEnabled,
-                onOpenNotificationSettings = { openAppSettings() },
-                autoScanEnabled = autoScanEnabled,
-                scrollToTipJarOnOpen = scrollToTipJarOnSettingsOpen,
-                onBackClick = { currentScreen = IosScreen.Devices },
-                onOpenHelp = { currentScreen = IosScreen.Help },
-                onAppEnabledChange = { enabled ->
-                    isAppEnabled = enabled
-                    IosAppPreferences.setAppEnabled(enabled)
-                    scope.launch {
-                        bluetoothController.applyAppEnabledState(enabled)
-                    }
-                },
-                onAutoScanEnabledChange = { enabled ->
-                    autoScanEnabled = enabled
-                    IosAppPreferences.setAutoScanEnabled(enabled)
-                },
-                hapticsEnabled = hapticsEnabled,
-                onHapticsEnabledChange = { enabled ->
-                    hapticsEnabled = enabled
-                    IosAppPreferences.setHapticsEnabled(enabled)
-                },
-                sentryEnabled = sentryEnabled,
-                onSentryEnabledChange = { enabled ->
-                    sentryEnabled = enabled
-                    IosAppPreferences.setSentryEnabled(enabled)
-                    // Answering here counts as answering the consent question,
-                    // so the dialog does not turn up afterwards and overwrite
-                    // the choice that was just made.
-                    IosAppPreferences.setSentryConsentDialogDismissed(true)
-                    // Enabling takes effect immediately; disabling cannot (the
-                    // SDK has no clean mid-process shutdown), hence the restart
-                    // hint the shared card shows.
-                    if (enabled) IosCrashReporting.start()
-                },
-                onShowWelcomeAgain = {
-                    IosAppPreferences.setShowWelcomeOnLaunch(true)
-                    currentScreen = IosScreen.Welcome
-                },
-                onChangeLogLevel = { level ->
-                    IosLogging.install(logRepository, level)
-                },
-                onTipJarScrollConsumed = {
-                    scrollToTipJarOnSettingsOpen = false
-                }
-            )
-        }
+            IosScreen.Help -> {
+                IosHelpScreen(
+                    onBackClick = { currentScreen = IosScreen.Devices },
+                    onOpenTroubleshooting = {
+                        troubleshootingReturnScreen = IosScreen.Help
+                        currentScreen = IosScreen.Troubleshooting
+                    },
+                )
+            }
 
-        IosScreen.Help -> {
-            IosHelpScreen(
-                onBackClick = { currentScreen = IosScreen.Devices },
-                onOpenTroubleshooting = {
-                    troubleshootingReturnScreen = IosScreen.Help
-                    currentScreen = IosScreen.Troubleshooting
-                },
-            )
-        }
+            IosScreen.Troubleshooting -> {
+                IosTroubleshootingScreen(
+                    onBackClick = { currentScreen = troubleshootingReturnScreen }
+                )
+            }
 
-        IosScreen.Troubleshooting -> {
-            IosTroubleshootingScreen(
-                onBackClick = { currentScreen = troubleshootingReturnScreen }
-            )
-        }
-
-        IosScreen.Logs -> {
-            val logFormatter = remember(logRepository) { IosLogFormatter(logRepository) }
-            SharedLogViewerScreen(
-                logFormatter = logFormatter,
-                logRepository = logRepository,
-                onBackClick = { currentScreen = IosScreen.Devices }
-            )
+            IosScreen.Logs -> {
+                val logFormatter = remember(logRepository) { IosLogFormatter(logRepository) }
+                SharedLogViewerScreen(
+                    logFormatter = logFormatter,
+                    logRepository = logRepository,
+                    onBackClick = { currentScreen = IosScreen.Devices }
+                )
+            }
         }
     }
 

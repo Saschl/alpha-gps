@@ -155,6 +155,7 @@ internal fun DeviceListContent(
                     onTriggerRemoteShutter = onTriggerRemoteShutter,
                     onDelete = onDelete,
                     onOpenDetails = onOpenDetails,
+                    onOpenTroubleshooting = onOpenHelp,
                 )
             }
         }

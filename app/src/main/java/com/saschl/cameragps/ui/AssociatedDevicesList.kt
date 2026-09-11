@@ -32,6 +32,7 @@ fun AssociatedDevicesList(
     associatedDevices: List<AssociatedDeviceCompat>,
     onConnect: (AssociatedDeviceCompat) -> Unit,
     onDisassociate: (AssociatedDeviceCompat) -> Unit,
+    onOpenTroubleshooting: () -> Unit,
 ) {
     val context = LocalContext.current
     val viewModel: DeviceListViewModel = viewModel {
@@ -86,5 +87,6 @@ fun AssociatedDevicesList(
         },
         onDelete = { info -> resolve(info)?.let(onDisassociate) },
         onOpenDetails = { info -> resolve(info)?.let(onConnect) },
+        onOpenTroubleshooting = onOpenTroubleshooting,
     )
 }

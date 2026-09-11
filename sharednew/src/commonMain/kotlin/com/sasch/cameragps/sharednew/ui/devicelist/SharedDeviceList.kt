@@ -56,6 +56,7 @@ import cameragps.sharednew.generated.resources.delete_device_confirmation
 import cameragps.sharednew.generated.resources.enable_pairing_mode_continue
 import cameragps.sharednew.generated.resources.enable_pairing_mode_message
 import cameragps.sharednew.generated.resources.enable_pairing_mode_title
+import cameragps.sharednew.generated.resources.guide_open_button
 import cameragps.sharednew.generated.resources.keyboard_arrow_right_24px
 import cameragps.sharednew.generated.resources.location_linking_disabled_by_camera
 import cameragps.sharednew.generated.resources.nearby_cameras
@@ -94,6 +95,7 @@ fun SharedDeviceList(
     onTriggerRemoteShutter: (BluetoothDeviceInfo) -> Unit,
     onDelete: (BluetoothDeviceInfo) -> Unit,
     onOpenDetails: (BluetoothDeviceInfo) -> Unit,
+    onOpenTroubleshooting: () -> Unit,
 ) {
     var deviceToDelete by remember { mutableStateOf<BluetoothDeviceInfo?>(null) }
     var deviceToPair by remember { mutableStateOf<BluetoothDeviceInfo?>(null) }
@@ -178,6 +180,7 @@ fun SharedDeviceList(
                     onTriggerRemoteShutter = { onTriggerRemoteShutter(device) },
                     onDeleteRequest = { deviceToDelete = device },
                     onOpenDetails = { onOpenDetails(device) },
+                    onOpenTroubleshooting = onOpenTroubleshooting,
                 )
             }
         }
@@ -204,6 +207,7 @@ fun SharedDeviceList(
                     onConnect = { deviceToPair = device },
                     onTriggerRemoteShutter = { onTriggerRemoteShutter(device) },
                     onOpenDetails = { onOpenDetails(device) },
+                    onOpenTroubleshooting = onOpenTroubleshooting,
                 )
             }
         }
@@ -273,6 +277,7 @@ private fun SwipeToDeleteDeviceCard(
     onTriggerRemoteShutter: () -> Unit,
     onDeleteRequest: () -> Unit,
     onOpenDetails: () -> Unit,
+    onOpenTroubleshooting: () -> Unit,
 ) {
 
     val dismissState = rememberSwipeToDismissBoxState()
@@ -323,6 +328,7 @@ private fun SwipeToDeleteDeviceCard(
             onConnect = onConnect,
             onTriggerRemoteShutter = onTriggerRemoteShutter,
             onOpenDetails = onOpenDetails,
+            onOpenTroubleshooting = onOpenTroubleshooting,
         )
     }
 }
@@ -337,6 +343,7 @@ private fun DeviceCard(
     onConnect: () -> Unit,
     onTriggerRemoteShutter: () -> Unit,
     onOpenDetails: () -> Unit,
+    onOpenTroubleshooting: () -> Unit,
 ) {
     val isTransmissionActive = item?.isTransmissionActive == true
     val isRemoteFeatureActive = item?.isRemoteFeatureActive == true
@@ -417,6 +424,12 @@ private fun DeviceCard(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
                 )
+                TextButton(
+                    onClick = onOpenTroubleshooting,
+                    contentPadding = PaddingValues(horizontal = 0.dp),
+                ) {
+                    Text(stringResource(Res.string.guide_open_button))
+                }
             }
             if (showKeepAliveHint && item?.isAlwaysOnEnabled == false) {
                 Text(

@@ -38,6 +38,7 @@ import cameragps.sharednew.generated.resources.location_provider_hint
 import cameragps.sharednew.generated.resources.location_provider_title
 import cameragps.sharednew.generated.resources.sentry_settings
 import cameragps.sharednew.generated.resources.settings
+import com.sasch.cameragps.sharednew.ui.settings.SharedLanguageSettingsCard
 import com.sasch.cameragps.sharednew.ui.settings.SharedSettingsScreen
 import com.saschl.cameragps.R
 import com.saschl.cameragps.service.location.LOCATION_PROVIDER_SELECTABLE
@@ -172,7 +173,7 @@ private fun SettingsOverviewScreen(
                 )
             }
             item {
-                LanguageSettingsCard()
+                SharedLanguageSettingsCard()
             }
             if (CrashReporting.AVAILABLE) {
                 item {

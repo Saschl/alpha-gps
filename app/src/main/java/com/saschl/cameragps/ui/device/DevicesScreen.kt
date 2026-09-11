@@ -188,6 +188,7 @@ fun DevicesScreen(
                 associatedDevices = associatedDevices,
                 onConnect = onConnect,
                 onDisassociate = onDisassociate,
+                onOpenTroubleshooting = onTroubleshootingClick,
             )
         }
 

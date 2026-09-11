@@ -61,6 +61,7 @@ import cameragps.sharednew.generated.resources.tip_jar_thank_you
 import cameragps.sharednew.generated.resources.tip_jar_unavailable
 import com.diamondedge.logging.LogLevel
 import com.sasch.cameragps.sharednew.bluetooth.IosBluetoothController
+import com.sasch.cameragps.sharednew.ui.settings.SharedLanguageSettingsCard
 import com.sasch.cameragps.sharednew.ui.settings.SharedSentrySettingsCard
 import com.sasch.cameragps.sharednew.ui.settings.SharedSettingsCard
 import com.sasch.cameragps.sharednew.ui.settings.SharedSettingsScreen
@@ -160,6 +161,10 @@ internal fun IosSettingsScreen(
                 }
             }
 
+            item(key = "language") {
+                SharedLanguageSettingsCard()
+            }
+
             item {
                 IosLogLevelPlaceholderCard(
                     selectedLevel = selectedLogLevel,
@@ -194,9 +199,9 @@ internal fun IosSettingsScreen(
     }
 }
 
-// App controls, log settings, crash reporting, tip jar — keep in sync with the
+// App controls, language, log settings, crash reporting, tip jar — keep in sync with the
 // item order above; the donation prompt scrolls straight to the tip jar.
-private const val TIP_JAR_ITEM_INDEX = 3
+private const val TIP_JAR_ITEM_INDEX = 4
 
 @Composable
 private fun IosDebugCard() {

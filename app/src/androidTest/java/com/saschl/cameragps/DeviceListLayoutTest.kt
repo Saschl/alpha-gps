@@ -2,6 +2,7 @@ package com.saschl.cameragps
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasScrollToIndexAction
@@ -13,6 +14,8 @@ import androidx.compose.ui.unit.Density
 import cameragps.sharednew.generated.resources.Res
 import cameragps.sharednew.generated.resources.add_camera
 import cameragps.sharednew.generated.resources.device_list_need_help
+import cameragps.sharednew.generated.resources.guide_open_button
+import cameragps.sharednew.generated.resources.location_linking_disabled_by_camera
 import cameragps.sharednew.generated.resources.trigger_shutter
 import com.sasch.cameragps.sharednew.bluetooth.BluetoothDeviceInfo
 import com.sasch.cameragps.sharednew.ui.devicelist.AddCameraButton
@@ -84,6 +87,7 @@ class DeviceListLayoutTest {
                             onTriggerRemoteShutter = {},
                             onDelete = {},
                             onOpenDetails = {},
+                            onOpenTroubleshooting = {},
                         )
                     }
                 }
@@ -125,6 +129,7 @@ class DeviceListLayoutTest {
                         onTriggerRemoteShutter = { shutter = it },
                         onDelete = {},
                         onOpenDetails = { details = it },
+                        onOpenTroubleshooting = {},
                     )
                 }
             }
@@ -140,5 +145,55 @@ class DeviceListLayoutTest {
             assertEquals(device, details)
             assertEquals(0, connections)
         }
+    }
+
+    @Test
+    fun cameraLocationWarningOffersHelpWithoutOpeningDetailsAndClearsWhenResolved() {
+        val device = BluetoothDeviceInfo("CAMERA", "My Sony", isConnected = true, isSaved = true)
+        val locationDisabled = mutableStateOf(true)
+        var helpRequests = 0
+        var detailsRequests = 0
+        lateinit var helpLabel: String
+        lateinit var warning: String
+        compose.setContent {
+            MaterialTheme {
+                helpLabel = stringResource(Res.string.guide_open_button)
+                warning = stringResource(Res.string.location_linking_disabled_by_camera)
+                DeviceListLayout(onNeedHelp = {}) {
+                    SharedDeviceList(
+                        devices = listOf(device),
+                        items = mapOf(
+                            device.identifier to DeviceListItem(
+                                identifier = device.identifier,
+                                customName = null,
+                                isAlwaysOnEnabled = true,
+                                isTransmissionActive = false,
+                                isRemoteFeatureActive = false,
+                                isShutterActive = false,
+                                locationDisabledByCamera = locationDisabled.value,
+                            )
+                        ),
+                        hapticsEnabled = false,
+                        onConnect = {},
+                        onTriggerRemoteShutter = {},
+                        onDelete = {},
+                        onOpenDetails = { detailsRequests++ },
+                        onOpenTroubleshooting = { helpRequests++ },
+                    )
+                }
+            }
+        }
+
+        compose.onNodeWithText(warning).assertIsDisplayed()
+        compose.onNodeWithText(helpLabel).assertIsDisplayed().performClick()
+        compose.runOnIdle {
+            assertEquals(1, helpRequests)
+            assertEquals(0, detailsRequests)
+            locationDisabled.value = false
+        }
+        compose.onNodeWithText(warning).assertDoesNotExist()
+        compose.onNodeWithText(helpLabel).assertDoesNotExist()
+        compose.onNodeWithText(device.name).performClick()
+        compose.runOnIdle { assertEquals(1, detailsRequests) }
     }
 }
