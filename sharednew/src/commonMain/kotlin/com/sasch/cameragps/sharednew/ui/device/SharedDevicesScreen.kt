@@ -19,10 +19,12 @@ import androidx.compose.ui.text.font.FontWeight
 fun SharedDevicesScreen(
     title: String,
     topBarActions: @Composable () -> Unit,
+    snackbarHost: @Composable () -> Unit = {},
     content: @Composable (PaddingValues) -> Unit,
 ) {
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
+        snackbarHost = snackbarHost,
         topBar = {
             CenterAlignedTopAppBar(
                 title = {
@@ -51,4 +53,3 @@ fun SharedDevicesScreen(
         }
     }
 }
-

@@ -11,6 +11,8 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -48,6 +50,7 @@ import cameragps.sharednew.generated.resources.ios_accessory_migration_dialog_ti
 import cameragps.sharednew.generated.resources.ios_accessory_migration_error_message
 import cameragps.sharednew.generated.resources.ios_accessory_migration_error_retry
 import cameragps.sharednew.generated.resources.ios_accessory_migration_error_title
+import cameragps.sharednew.generated.resources.ios_accessory_migration_success
 import cameragps.sharednew.generated.resources.ios_troubleshooting_got_it
 import cameragps.sharednew.generated.resources.open_location_settings
 import cameragps.sharednew.generated.resources.open_settings_for_always_location
@@ -108,7 +111,10 @@ internal enum class IosScreen {
 }
 
 @Composable
-internal fun CameraGpsIosApp(requestReview: (UIViewController) -> Boolean) {
+internal fun CameraGpsIosApp(
+    reviewTestMode: Boolean = false,
+    requestReview: (UIViewController) -> Boolean
+) {
     val selectedLanguage by appLanguagePreference.selected.collectAsState()
     val bluetoothController = IosBluetoothController
     val realDevices by bluetoothController.devices.collectAsState()
@@ -119,6 +125,8 @@ internal fun CameraGpsIosApp(requestReview: (UIViewController) -> Boolean) {
     val realListItems by listViewModel.items.collectAsState()
     val listItems = if (SCREENSHOT_MODE) mockDeviceListItems else realListItems
     val scope = rememberCoroutineScope()
+    val migrationSnackbarHostState = remember { SnackbarHostState() }
+    val migrationSuccessMessage = stringResource(Res.string.ios_accessory_migration_success)
     val pairingPreparation = remember { PairingPreparationState() }
     val isCameraPickerActive by pairingPreparation.isSearching.collectAsState()
     val lifecycleState by LocalLifecycleOwner.current.lifecycle.currentStateFlow.collectAsState()
@@ -249,7 +257,9 @@ internal fun CameraGpsIosApp(requestReview: (UIViewController) -> Boolean) {
                 if (!migrationInProgress) {
                     TextButton(onClick = {
                         scope.launch {
-                            bluetoothController.presentMigrationPicker()
+                            if (bluetoothController.presentMigrationPicker()) {
+                                migrationSnackbarHostState.showSnackbar(migrationSuccessMessage)
+                            }
                         }
                     }) {
                         Text(stringResource(Res.string.ios_accessory_migration_error_retry))
@@ -281,8 +291,11 @@ internal fun CameraGpsIosApp(requestReview: (UIViewController) -> Boolean) {
                 if (!migrationInProgress) {
                     TextButton(onClick = {
                         scope.launch {
-                            bluetoothController.presentMigrationPicker()
+                            val migrated = bluetoothController.presentMigrationPicker()
                             showMigrationExplainer = false
+                            if (migrated) {
+                                migrationSnackbarHostState.showSnackbar(migrationSuccessMessage)
+                            }
                         }
                     }) {
                         Text(stringResource(Res.string.ios_accessory_migration_dialog_confirm))
@@ -328,6 +341,7 @@ internal fun CameraGpsIosApp(requestReview: (UIViewController) -> Boolean) {
     }
 
     IosReviewPromptEffect(
+        reviewTestMode = reviewTestMode,
         isForeground = !SCREENSHOT_MODE && isAppInForeground,
         hasSavedCamera = devices.any { it.isSaved },
         canPresent = currentScreen == IosScreen.Devices &&
@@ -372,6 +386,7 @@ internal fun CameraGpsIosApp(requestReview: (UIViewController) -> Boolean) {
             IosScreen.Devices -> {
                 SharedDevicesScreen(
                     title = stringResource(Res.string.header_device_list),
+                    snackbarHost = { SnackbarHost(migrationSnackbarHostState) },
                     topBarActions = {
                         IconButton(onClick = { currentScreen = IosScreen.Help }) {
                             Icon(
