@@ -20,6 +20,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import kotlin.time.Duration.Companion.seconds
 
 @OptIn(ExperimentalCoroutinesApi::class, ExperimentalForeignApi::class)
 class IosAccessoryCoordinatorTest {
@@ -141,6 +142,61 @@ class IosAccessoryCoordinatorTest {
     }
 
     @Test
+    fun manualRetryKeepsErrorDialogBusyThroughRestrictedBackoffUntilOutcome() = runTest {
+        for (outcome in listOf(
+            PickerOutcome.Completed,
+            PickerOutcome.Cancelled,
+            PickerOutcome.Failed("Other failure", -1),
+        )) {
+            val f = Fixture(backgroundScope)
+            f.picker.migrate = {
+                PickerOutcome.Failed("Central still alive", ASErrorCodePickerRestricted)
+            }
+            f.coordinator.evaluateMigration()
+            assertFalse(f.coordinator.presentMigrationPicker())
+            assertTrue(f.coordinator.migrationError.value)
+
+            var retryAttempts = 0
+            f.picker.migrate = {
+                retryAttempts++
+                if (retryAttempts < 3) {
+                    PickerOutcome.Failed("Central still alive", ASErrorCodePickerRestricted)
+                } else {
+                    if (outcome is PickerOutcome.Completed) {
+                        f.picker.authorized = setOf(CAMERA.mac)
+                    }
+                    outcome
+                }
+            }
+            val retry = launch {
+                assertEquals(
+                    outcome is PickerOutcome.Completed,
+                    f.coordinator.presentMigrationPicker()
+                )
+            }
+            runCurrent()
+            assertEquals(1, retryAttempts)
+            assertTrue(f.coordinator.migrationError.value, "Keep the retry dialog visible")
+            assertTrue(f.coordinator.migrationInProgress.value, "Show progress in the retry dialog")
+
+            advanceTimeBy(10_000)
+            runCurrent()
+            assertEquals(2, retryAttempts)
+            assertTrue(f.coordinator.migrationError.value)
+            assertTrue(f.coordinator.migrationInProgress.value)
+            assertFalse(f.connections.running)
+
+            advanceTimeBy(5_000)
+            runCurrent()
+            assertTrue(retry.isCompleted)
+            assertEquals(3, retryAttempts)
+            assertFalse(f.coordinator.migrationInProgress.value)
+            assertEquals(outcome is PickerOutcome.Failed, f.coordinator.migrationError.value)
+            assertTrue(f.connections.running)
+        }
+    }
+
+    @Test
     fun cancellationAndNonRestrictedFailuresDoNotRetryOrDeleteCandidates() = runTest {
         for (outcome in listOf(
             PickerOutcome.Cancelled,
@@ -184,6 +240,66 @@ class IosAccessoryCoordinatorTest {
     }
 
     @Test
+    fun initialMigrationShowsErrorWhenRestrictedRetryEndsWithoutAuthorizingCameras() = runTest {
+        for (dismissed in listOf(false, true)) {
+            val f = Fixture(backgroundScope)
+            val completion = AccessoryPickerCompletion<PickerOutcome>(PickerOutcome.Completed)
+            f.picker.migrate = {
+                if (f.picker.migrationCalls == 1) {
+                    PickerOutcome.Failed("Central still alive", ASErrorCodePickerRestricted)
+                } else {
+                    completion.await(10.seconds)
+                }
+            }
+            f.coordinator.evaluateMigration()
+            assertTrue(f.coordinator.consumeAutoMigrationPrompt())
+            val migration = launch { assertFalse(f.coordinator.presentMigrationPicker()) }
+            runCurrent()
+            assertTrue(f.coordinator.migrationInProgress.value)
+            assertFalse(f.coordinator.migrationError.value)
+            assertEquals(1, f.picker.migrationCalls)
+
+            advanceTimeBy(10_000)
+            runCurrent()
+            assertEquals(2, f.picker.migrationCalls)
+            assertFalse(f.connections.running)
+            if (dismissed) {
+                completion.onPresented()
+                completion.onDismissed()
+            } else {
+                advanceTimeBy(9_999)
+                runCurrent()
+                assertTrue(f.coordinator.migrationInProgress.value)
+                advanceTimeBy(1)
+            }
+            runCurrent()
+
+            assertTrue(migration.isCompleted)
+            assertFalse(f.coordinator.migrationInProgress.value)
+            assertTrue(
+                f.coordinator.migrationError.value,
+                "An unfinished migration must offer retry"
+            )
+            assertFalse(f.store.migrationDone)
+            assertEquals(
+                listOf(CAMERA.mac),
+                f.coordinator.migrationCandidates.value.map { it.identifier })
+            assertEquals(listOf(CAMERA), f.store.savedDevices)
+            assertTrue(f.connections.running)
+            assertFalse(f.coordinator.centralCreationBlocked)
+            assertEquals(2, f.picker.migrationCalls)
+
+            f.picker.migrate = {
+                f.picker.authorized = setOf(CAMERA.mac)
+                PickerOutcome.Completed
+            }
+            assertTrue(f.coordinator.presentMigrationPicker())
+            assertFalse(f.coordinator.migrationError.value)
+            assertTrue(f.store.migrationDone)
+        }
+    }
+
+    @Test
     fun partialMigrationPreservesPendingDevicesAndTheirSettings() = runTest {
         val f = Fixture(backgroundScope)
         f.store.savedDevices = listOf(CAMERA, SECOND_CAMERA)
@@ -192,7 +308,8 @@ class IosAccessoryCoordinatorTest {
             PickerOutcome.Completed
         }
         f.coordinator.evaluateMigration()
-        assertTrue(f.coordinator.presentMigrationPicker())
+        assertFalse(f.coordinator.presentMigrationPicker())
+        assertTrue(f.coordinator.migrationError.value)
         assertFalse(f.store.migrationDone)
         assertEquals(
             listOf(SECOND_CAMERA.mac),

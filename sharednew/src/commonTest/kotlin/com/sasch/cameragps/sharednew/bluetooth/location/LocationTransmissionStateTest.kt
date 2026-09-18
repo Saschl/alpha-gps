@@ -94,6 +94,11 @@ class LocationTransmissionStateTest {
     }
 
     private class FakePort : BleGattPort {
+        override fun setAutoCorrectionState(
+            identifier: String,
+            setting: com.sasch.cameragps.sharednew.bluetooth.session.CameraAutoCorrectionSetting,
+            state: com.sasch.cameragps.sharednew.bluetooth.session.CameraSettingState,
+        ) = Unit
         var acceptWrites = true
         override fun writeCharacteristic(
             identifier: String,

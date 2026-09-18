@@ -21,7 +21,15 @@ data class CameraSession(
     val hasRetriedConfigRead: Boolean = false,
     /** The camera explicitly disabled location linking; remote control can remain active. */
     val locationDisabledByCamera: Boolean = false,
+    val autoTimeCorrection: CameraSettingState = CameraSettingState(),
+    val autoAreaAdjustment: CameraSettingState = CameraSettingState(),
 ) {
+    fun autoCorrectionSetting(setting: CameraAutoCorrectionSetting): CameraSettingState =
+        when (setting) {
+            CameraAutoCorrectionSetting.Time -> autoTimeCorrection
+            CameraAutoCorrectionSetting.Area -> autoAreaAdjustment
+        }
+
     val isLocationReady: Boolean
         get() = phase == BleSessionPhase.Transmitting && !locationDisabledByCamera
 }

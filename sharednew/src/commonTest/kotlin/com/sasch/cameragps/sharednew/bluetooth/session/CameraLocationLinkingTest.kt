@@ -228,6 +228,161 @@ class CameraLocationLinkingTest {
         })
     }
 
+    @Test
+    fun readsCameraSettingsAfterHandshakeWithoutWritingDefaultsOrRestartingSetup() = runTest {
+        val f = Fixture(backgroundScope)
+        f.transport.hasAutoCorrection = true
+        f.transport.settingValues[Sony.AUTO_TIME_CORRECTION_UUID] = byteArrayOf(1)
+        f.connect("A")
+        runCurrent()
+        assertEquals(true, f.session("A").autoTimeCorrection.enabled)
+        assertEquals(false, f.session("A").autoAreaAdjustment.enabled)
+        assertEquals(BleSessionPhase.Transmitting, f.session("A").phase)
+        assertEquals(1, f.transport.operations.count { (_, op) ->
+            op is BleOperation.Read && op.characteristicUuid == Sony.CHARACTERISTIC_READ_UUID
+        })
+        assertTrue(f.transport.operations.takeLast(2).all { (_, op) ->
+            op is BleOperation.Read && CameraAutoCorrectionSetting.fromUuid(op.characteristicUuid) != null
+        })
+        assertTrue(f.transport.operations.none { (_, op) ->
+            op is BleOperation.Write && CameraAutoCorrectionSetting.fromUuid(op.characteristicUuid) != null
+        })
+    }
+
+    @Test
+    fun settingsWaitForAcknowledgementAndRetainConfirmedValueOnFailure() = runTest {
+        val f = Fixture(backgroundScope)
+        f.transport.hasAutoCorrection = true
+        f.connect("A")
+        f.connect("B")
+        runCurrent()
+        f.transport.holdSettingWrites = true
+        f.orchestrator.setAutoCorrectionSetting("a", CameraAutoCorrectionSetting.Time, true)
+        f.orchestrator.setAutoCorrectionSetting("a", CameraAutoCorrectionSetting.Time, true)
+        runCurrent()
+        assertEquals(false, f.session("A").autoTimeCorrection.enabled)
+        assertTrue(f.session("A").autoTimeCorrection.pending)
+        val writes = f.transport.operations.map { it.second }.filterIsInstance<BleOperation.Write>()
+            .filter { it.characteristicUuid == Sony.AUTO_TIME_CORRECTION_UUID }
+        assertEquals(1, writes.size)
+        assertTrue(writes.single().value.contentEquals(byteArrayOf(1)))
+        f.transport.completeWrite("A", Sony.AUTO_TIME_CORRECTION_UUID)
+        runCurrent()
+        assertEquals(true, f.session("A").autoTimeCorrection.enabled)
+        assertEquals(false, f.session("B").autoTimeCorrection.enabled)
+        assertFalse(f.session("A").autoTimeCorrection.pending)
+        f.orchestrator.setAutoCorrectionSetting("A", CameraAutoCorrectionSetting.Time, false)
+        runCurrent()
+        assertTrue(
+            (f.transport.operations.last().second as BleOperation.Write).value.contentEquals(
+                byteArrayOf(0)
+            )
+        )
+        f.transport.emit(
+            BleTransportEvent.CharacteristicWritten(
+                "A", Sony.AUTO_TIME_CORRECTION_UUID, BleOperationStatus.AuthError,
+            )
+        )
+        runCurrent()
+        assertEquals(true, f.session("A").autoTimeCorrection.enabled)
+        assertTrue(f.session("A").autoTimeCorrection.failed)
+        assertEquals(BleSessionPhase.Transmitting, f.session("A").phase)
+    }
+
+    @Test
+    fun unsupportedAndMalformedSettingsStayUnknownAndCanBeRefreshed() = runTest {
+        val f = Fixture(backgroundScope)
+        f.connect("A")
+        runCurrent()
+        assertEquals(false, f.session("A").autoTimeCorrection.supported)
+        val count = f.transport.operations.size
+        f.orchestrator.setAutoCorrectionSetting("A", CameraAutoCorrectionSetting.Time, true)
+        runCurrent()
+        assertEquals(count, f.transport.operations.size)
+        f.transport.hasAutoCorrection = true
+        for (bytes in listOf(byteArrayOf(), byteArrayOf(2), byteArrayOf(1, 0))) {
+            f.transport.settingValues[Sony.AUTO_TIME_CORRECTION_UUID] = bytes
+            f.orchestrator.refreshAutoCorrectionSettings("A")
+            runCurrent()
+            assertEquals(null, f.session("A").autoTimeCorrection.enabled)
+            assertTrue(f.session("A").autoTimeCorrection.failed)
+        }
+        f.transport.settingValues[Sony.AUTO_TIME_CORRECTION_UUID] = byteArrayOf(1)
+        f.orchestrator.refreshAutoCorrectionSettings("A")
+        runCurrent()
+        assertEquals(true, f.session("A").autoTimeCorrection.enabled)
+        assertFalse(f.session("A").autoTimeCorrection.failed)
+    }
+
+    @Test
+    fun timeoutClearsBusyAndDisconnectPreventsOldWritesUpdatingReconnectedCamera() = runTest {
+        val f = Fixture(backgroundScope)
+        f.transport.hasAutoCorrection = true
+        f.connect("A")
+        runCurrent()
+        f.transport.holdSettingWrites = true
+        f.orchestrator.setAutoCorrectionSetting("A", CameraAutoCorrectionSetting.Area, true)
+        runCurrent()
+        advanceTimeBy(15_001)
+        runCurrent()
+        assertTrue(f.session("A").autoAreaAdjustment.failed)
+        assertFalse(f.session("A").autoAreaAdjustment.pending)
+        f.orchestrator.setAutoCorrectionSetting("A", CameraAutoCorrectionSetting.Area, true)
+        runCurrent()
+        f.transport.connected.remove("A")
+        f.transport.emit(BleTransportEvent.Disconnected("A", null))
+        runCurrent()
+        assertTrue(f.orchestrator.sessions.value.isEmpty())
+        f.connect("A")
+        runCurrent()
+        f.transport.completeWrite("A", Sony.AUTO_AREA_ADJUSTMENT_UUID)
+        runCurrent()
+        assertEquals(false, f.session("A").autoAreaAdjustment.enabled)
+        assertFalse(f.session("A").autoAreaAdjustment.pending)
+    }
+
+    @Test
+    fun cameraSettingsRemainEditableWithLocationLinkingDisabled() = runTest {
+        val f = Fixture(backgroundScope)
+        f.transport.hasAutoCorrection = true
+        f.connect("A")
+        runCurrent()
+        f.notify("A", Sony.CHARACTERISTIC_LOCATION_ENABLED_IN_CAMERA, byteArrayOf(3, 1, 2, 0))
+        runCurrent()
+        f.orchestrator.setAutoCorrectionSetting("A", CameraAutoCorrectionSetting.Area, true)
+        runCurrent()
+        assertEquals(true, f.session("A").autoAreaAdjustment.enabled)
+        assertTrue(f.session("A").locationDisabledByCamera)
+        assertFalse(f.source.active)
+    }
+
+    @Test
+    fun failedReadsAndWritesThatCannotStartLeaveTheHandshakeReadyAndAllowRetry() = runTest {
+        val f = Fixture(backgroundScope)
+        f.transport.hasAutoCorrection = true
+        f.transport.failSettingReads = true
+        f.connect("A")
+        runCurrent()
+        assertEquals(BleSessionPhase.Transmitting, f.session("A").phase)
+        assertTrue(f.session("A").autoTimeCorrection.failed)
+        assertEquals(null, f.session("A").autoTimeCorrection.enabled)
+        f.transport.failSettingReads = false
+        f.orchestrator.refreshAutoCorrectionSettings("A")
+        runCurrent()
+        assertEquals(false, f.session("A").autoTimeCorrection.enabled)
+        f.transport.rejectSettingWrites = true
+        f.orchestrator.setAutoCorrectionSetting("A", CameraAutoCorrectionSetting.Time, true)
+        runCurrent()
+        assertFalse(f.session("A").autoTimeCorrection.pending)
+        assertTrue(f.session("A").autoTimeCorrection.failed)
+        assertEquals(false, f.session("A").autoTimeCorrection.enabled)
+        f.transport.rejectSettingWrites = false
+        f.orchestrator.setAutoCorrectionSetting("A", CameraAutoCorrectionSetting.Time, true)
+        runCurrent()
+        assertEquals(true, f.session("A").autoTimeCorrection.enabled)
+        assertFalse(f.session("A").autoTimeCorrection.failed)
+    }
+
     private class Fixture(scope: CoroutineScope) {
         val source = FakeSource()
         val transport = FakeTransport()
@@ -276,6 +431,11 @@ class CameraLocationLinkingTest {
         val connected = mutableSetOf<String>()
         val operations = mutableListOf<Pair<String, BleOperation>>()
         var hasLocationStatus = true
+        var hasAutoCorrection = false
+        var holdSettingWrites = false
+        var rejectSettingWrites = false
+        var failSettingReads = false
+        val settingValues = mutableMapOf<String, ByteArray>()
         var holdReads = false
         var holdLocationWrites = false
         fun emit(event: BleTransportEvent) {
@@ -288,7 +448,8 @@ class CameraLocationLinkingTest {
 
         override fun isConnected(identifier: String) = identifier in connected
         override fun hasCharacteristic(identifier: String, characteristicUuid: String) =
-            characteristicUuid != Sony.CHARACTERISTIC_LOCATION_ENABLED_IN_CAMERA || hasLocationStatus
+            if (CameraAutoCorrectionSetting.fromUuid(characteristicUuid) != null) hasAutoCorrection
+            else characteristicUuid != Sony.CHARACTERISTIC_LOCATION_ENABLED_IN_CAMERA || hasLocationStatus
 
         override fun initiateDiscoverServices(identifier: String): Boolean {
             operations += identifier to BleOperation.DiscoverServices
@@ -298,7 +459,15 @@ class CameraLocationLinkingTest {
 
         override fun initiateRead(identifier: String, characteristicUuid: String): Boolean {
             operations += identifier to BleOperation.Read(characteristicUuid)
-            if (!holdReads) completeRead(identifier)
+            if (CameraAutoCorrectionSetting.fromUuid(characteristicUuid) != null) {
+                emit(
+                    BleTransportEvent.CharacteristicRead(
+                        identifier, characteristicUuid,
+                        settingValues[characteristicUuid] ?: byteArrayOf(0),
+                        if (failSettingReads) BleOperationStatus.Failure else BleOperationStatus.Success
+                    )
+                )
+            } else if (!holdReads) completeRead(identifier)
             return true
         }
 
@@ -317,6 +486,8 @@ class CameraLocationLinkingTest {
             value: ByteArray
         ): Boolean {
             operations += identifier to BleOperation.Write(characteristicUuid, value)
+            if (rejectSettingWrites && CameraAutoCorrectionSetting.fromUuid(characteristicUuid) != null) return false
+            if (holdSettingWrites && CameraAutoCorrectionSetting.fromUuid(characteristicUuid) != null) return true
             if (!holdLocationWrites || characteristicUuid != Sony.CHARACTERISTIC_UUID) completeWrite(
                 identifier,
                 characteristicUuid

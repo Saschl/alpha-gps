@@ -83,6 +83,7 @@ internal fun IosDeviceDetailScreen(
         DeviceDetailViewModel(
             dataSource = deviceDetailDataSource,
             serviceActions = IosDeviceDetailServiceActions(),
+            cameraSettings = IosBluetoothController.autoCorrectionControls,
         )
     }
 
@@ -116,5 +117,4 @@ internal fun IosDeviceDetailScreen(
         )
     }
 }
-
 

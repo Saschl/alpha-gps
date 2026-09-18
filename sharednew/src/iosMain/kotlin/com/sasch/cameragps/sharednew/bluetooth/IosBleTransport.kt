@@ -440,6 +440,8 @@ internal class IosBleTransport(
             SonyBluetoothConstants.CHARACTERISTIC_ENABLE_LOCK_GPS_COMMAND,
             SonyBluetoothConstants.CHARACTERISTIC_LOCATION_ENABLED_IN_CAMERA,
             SonyBluetoothConstants.TIME_SYNC_CHARACTERISTIC_UUID,
+            SonyBluetoothConstants.AUTO_TIME_CORRECTION_UUID,
+            SonyBluetoothConstants.AUTO_AREA_ADJUSTMENT_UUID,
             SonyBluetoothConstants.REMOTE_CHARACTERISTIC_UUID,
             SonyBluetoothConstants.REMOTE_STATUS_UUID,
         ).map { it to CBUUID.UUIDWithString(it) }

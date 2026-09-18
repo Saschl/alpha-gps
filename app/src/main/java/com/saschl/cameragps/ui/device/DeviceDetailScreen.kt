@@ -43,6 +43,7 @@ import com.sasch.cameragps.sharednew.database.getDatabaseBuilder
 import com.sasch.cameragps.sharednew.ui.device.DeviceDetailContent
 import com.sasch.cameragps.sharednew.ui.device.DeviceDetailDataSource
 import com.sasch.cameragps.sharednew.ui.device.DeviceDetailViewModel
+import com.saschl.cameragps.AppServices
 import com.saschl.cameragps.R
 import com.saschl.cameragps.service.AssociatedDeviceCompat
 import com.saschl.cameragps.service.LocationSenderService
@@ -114,6 +115,7 @@ fun DeviceDetailScreen(
         DeviceDetailViewModel(
             dataSource = createAndroidDataSource(dao),
             serviceActions = AndroidDeviceDetailServiceActions(context.applicationContext),
+            cameraSettings = AppServices.from(context).orchestrator,
         )
     }
 

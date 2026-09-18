@@ -13,6 +13,7 @@ import com.sasch.cameragps.sharednew.bluetooth.IosBluetoothController.reconnectT
 import com.sasch.cameragps.sharednew.bluetooth.IosBluetoothController.startCentralIfNeeded
 import com.sasch.cameragps.sharednew.bluetooth.accessory.AccessoryCameraName
 import com.sasch.cameragps.sharednew.bluetooth.accessory.PendingMigration
+import com.sasch.cameragps.sharednew.bluetooth.session.CameraAutoCorrectionControls
 import com.sasch.cameragps.sharednew.bluetooth.session.CameraSession
 import com.sasch.cameragps.sharednew.bluetooth.session.CameraSessionOrchestrator
 import com.sasch.cameragps.sharednew.bluetooth.session.OrchestratorEvent
@@ -116,6 +117,9 @@ object IosBluetoothController : BluetoothController {
 
     /** Per-device session state for the UI — read [CameraSession] fields directly. */
     val sessions: StateFlow<Map<String, CameraSession>> get() = orchestrator.sessions
+
+    internal val autoCorrectionControls: CameraAutoCorrectionControls
+        get() = orchestrator
 
     /** Global transmission gate (location updates running). */
     val transmissionActive: StateFlow<Boolean> get() = orchestrator.locationManager.isActive
@@ -294,7 +298,9 @@ object IosBluetoothController : BluetoothController {
         // Cancel first: a suspended reconnect coroutine captures the manager and
         // would keep it alive no matter what happens to the reference below.
         centralScope?.cancel()
-        centralShell?.stopScan()
+        // Clear the delegate and native manager reference even if an in-flight
+        // coroutine still retains the shell while its cancellation completes.
+        centralShell?.teardown()
         centralScope = null
         centralShell = null
         _bluetoothPoweredOn.value = false

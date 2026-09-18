@@ -16,7 +16,12 @@ struct ContentView: UIViewControllerRepresentable {
             return StoreScreenshotViewControllerKt.StoreScreenshotViewController(scenario: scenario)
         }
         #endif
-        return MainViewControllerKt.MainViewController(requestReview: { controller in
+        #if DEBUG
+        let reviewTestMode = ProcessInfo.processInfo.environment["ALPHA_GPS_REVIEW_TEST"] == "1"
+        #else
+        let reviewTestMode = false
+        #endif
+        return MainViewControllerKt.MainViewController(reviewTestMode: reviewTestMode, requestReview: { controller in
             guard UIApplication.shared.applicationState == .active,
                   let window = controller.viewIfLoaded?.window,
                   window.isKeyWindow,

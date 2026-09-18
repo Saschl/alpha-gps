@@ -23,7 +23,6 @@ internal class IosReviewPromptStore(
             firstEligibleAtSeconds = defaults.doubleForKey(FIRST_ELIGIBLE).toLong(),
             lastRequestedAtSeconds = if (defaults.objectForKey(LAST_REQUESTED) == null) null
                 else defaults.doubleForKey(LAST_REQUESTED).toLong(),
-            requestCount = defaults.integerForKey(REQUEST_COUNT).toInt(),
         )
     }
 
@@ -31,18 +30,17 @@ internal class IosReviewPromptStore(
         defaults.setDouble(state.firstEligibleAtSeconds.toDouble(), forKey = FIRST_ELIGIBLE)
         state.lastRequestedAtSeconds?.let { defaults.setDouble(it.toDouble(), forKey = LAST_REQUESTED) }
             ?: defaults.removeObjectForKey(LAST_REQUESTED)
-        defaults.setInteger(state.requestCount.toLong(), forKey = REQUEST_COUNT)
     }
 
     private companion object {
         const val FIRST_ELIGIBLE = "ios.review.firstEligibleAt"
         const val LAST_REQUESTED = "ios.review.lastRequestedAt"
-        const val REQUEST_COUNT = "ios.review.requestCount"
     }
 }
 
 @Composable
 internal fun IosReviewPromptEffect(
+    reviewTestMode: Boolean,
     isForeground: Boolean,
     hasSavedCamera: Boolean,
     canPresent: Boolean,
@@ -51,16 +49,17 @@ internal fun IosReviewPromptEffect(
 ) {
     val viewController = LocalUIViewController.current
     val currentRequestReview by rememberUpdatedState(requestReview)
-    val controller = remember(viewController) {
+    val controller = remember(viewController, reviewTestMode) {
         ReviewPromptController(
             store = IosReviewPromptStore(),
             nowSeconds = { NSDate().timeIntervalSince1970().toLong() },
+            testMode = reviewTestMode,
             requestReview = { currentRequestReview(viewController) },
         )
     }
     var hadCompetingPrompt by remember { mutableStateOf(false) }
 
-    LaunchedEffect(isForeground, hasSavedCamera, canPresent, hasCompetingPrompt) {
+    LaunchedEffect(isForeground, hasSavedCamera, canPresent, hasCompetingPrompt, reviewTestMode) {
         if (!isForeground) {
             hadCompetingPrompt = false
             return@LaunchedEffect
@@ -68,10 +67,14 @@ internal fun IosReviewPromptEffect(
         if (hasCompetingPrompt) hadCompetingPrompt = true
         // Start the setup grace period even when another dialog takes priority.
         controller.requestIfDue(isForeground = true, hasSavedCamera = hasSavedCamera, canPresent = false)
-        if (!canPresent || hadCompetingPrompt || !hasSavedCamera) return@LaunchedEffect
+        if (!canPresent || hadCompetingPrompt || (!hasSavedCamera && !reviewTestMode)) return@LaunchedEffect
         // Let the device list settle. Navigation, backgrounding, and new dialogs
         // cancel this effect; don't stack a review immediately after another ask.
         delay(2_000)
-        controller.requestIfDue(isForeground = true, hasSavedCamera = true, canPresent = true)
+        controller.requestIfDue(
+            isForeground = true,
+            hasSavedCamera = hasSavedCamera,
+            canPresent = true
+        )
     }
 }

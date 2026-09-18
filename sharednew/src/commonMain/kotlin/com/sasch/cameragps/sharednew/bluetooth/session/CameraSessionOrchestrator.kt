@@ -3,7 +3,6 @@ package com.sasch.cameragps.sharednew.bluetooth.session
 import com.diamondedge.logging.logging
 import com.sasch.cameragps.sharednew.bluetooth.BleSessionPhase
 import com.sasch.cameragps.sharednew.bluetooth.SonyBluetoothConstants
-import com.sasch.cameragps.sharednew.bluetooth.coordinator.BleGattPort
 import com.sasch.cameragps.sharednew.bluetooth.coordinator.BleSessionCoordinator
 import com.sasch.cameragps.sharednew.bluetooth.coordinator.BleSessionEvent
 import com.sasch.cameragps.sharednew.bluetooth.coordinator.RemoteCommand
@@ -55,7 +54,7 @@ class CameraSessionOrchestrator(
     private val shouldRemainConnected: suspend (String) -> Boolean = { true },
     /** iOS: app-level transmission toggle for the location manager. */
     isTransmissionAllowed: () -> Boolean = { true },
-) {
+) : CameraAutoCorrectionControls {
     private val log = logging()
 
     val registry = CameraSessionRegistry()
@@ -70,7 +69,8 @@ class CameraSessionOrchestrator(
                 ) ||
                 registry.get(id)?.isLocationReady == true
     })
-    private val port: BleGattPort = QueuedBleGattPort(queue, transport, registry)
+    private val port = QueuedBleGattPort(queue, transport, registry)
+    private val autoCorrection = CameraAutoCorrectionController(port, registry, scope)
     private val remoteControl = RemoteControlCoordinator(port, scope)
     private val sessionCoordinator = BleSessionCoordinator(port, remoteControl)
 
@@ -96,7 +96,17 @@ class CameraSessionOrchestrator(
     )
     val events: SharedFlow<OrchestratorEvent> = _events
 
-    val sessions: StateFlow<Map<String, CameraSession>> get() = registry.sessions
+    override val sessions: StateFlow<Map<String, CameraSession>> get() = registry.sessions
+
+    override fun refreshAutoCorrectionSettings(identifier: String) =
+        autoCorrection.refresh(identifier)
+
+    override fun setAutoCorrectionSetting(
+        identifier: String,
+        setting: CameraAutoCorrectionSetting,
+        enabled: Boolean
+    ) =
+        autoCorrection.set(identifier, setting, enabled)
 
     private var started = false
 
@@ -170,6 +180,7 @@ class CameraSessionOrchestrator(
     /** Drop all session state for a device (disconnect/forget). */
     fun clearDevice(identifier: String) {
         val id = identifier.uppercase()
+        autoCorrection.clear(id)
         queue.cancelOperations(id, "session cleared")
         sessionCoordinator.clearSession(id)
         registry.remove(id)
@@ -178,6 +189,7 @@ class CameraSessionOrchestrator(
 
     /** Tear everything down (service destroy / force shutdown). */
     fun shutdownAll() {
+        autoCorrection.clearAll()
         sessionCoordinator.clearAllSessions()
         queue.shutdown("shutdown")
         locationManager.shutdown()
@@ -199,6 +211,8 @@ class CameraSessionOrchestrator(
             }
 
             is BleTransportEvent.CharacteristicWritten -> {
+                // These operations consume their own queue result, including failures.
+                if (CameraAutoCorrectionSetting.fromUuid(event.characteristicUuid) != null) return
                 // DD30 is shared by lock acquisition and release. A release
                 // completion must not advance/restart the GPS-enable handshake.
                 val isLocationLockRelease = completedOperation is BleOperation.Write &&
@@ -208,7 +222,11 @@ class CameraSessionOrchestrator(
                 if (!isLocationLockRelease) handleWritten(event)
             }
 
-            is BleTransportEvent.CharacteristicRead -> handleRead(event)
+            is BleTransportEvent.CharacteristicRead -> {
+                if (CameraAutoCorrectionSetting.fromUuid(event.characteristicUuid) == null) handleRead(
+                    event
+                )
+            }
 
             is BleTransportEvent.SubscriptionChanged -> handleSubscriptionChanged(event)
 
@@ -249,6 +267,7 @@ class CameraSessionOrchestrator(
 
     private fun handleConnected(identifier: String) {
         val id = identifier.uppercase()
+        autoCorrection.clear(id)
         log.i { "Device $id connected" }
         registry.upsert(id) {
             it.copy(
@@ -256,6 +275,8 @@ class CameraSessionOrchestrator(
                 pairingRetryCount = 0,
                 hasRetriedConfigRead = false,
                 locationDisabledByCamera = false,
+                autoTimeCorrection = CameraSettingState(),
+                autoAreaAdjustment = CameraSettingState(),
             )
         }
         _events.tryEmit(OrchestratorEvent.DeviceConnected(id))
@@ -400,6 +421,7 @@ class CameraSessionOrchestrator(
         log.i { "Handshake complete for $id" }
         registry.updateIfPresent(id) { it.copy(phase = BleSessionPhase.Transmitting) }
         locationManager.onDeviceReady(id)
+        autoCorrection.refresh(id)
 
         val remoteEnabled = runCatching { deviceDao.isRemoteControlEnabled(id) }
             .getOrDefault(false)

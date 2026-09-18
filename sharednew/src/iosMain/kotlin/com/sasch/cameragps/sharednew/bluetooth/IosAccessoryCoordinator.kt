@@ -169,13 +169,22 @@ internal class IosAccessoryCoordinator(
         centralCreationBlocked = true
         _migrationInProgress.value = true
         try {
-            _migrationError.value = false
-
+            // A manual retry uses the existing error dialog for its busy state.
+            // Keep it visible through the restricted-picker waits; update the
+            // error only once this attempt has an outcome.
             val outcome = showPickerWithRetries("Migration") {
                 accessorySession.showMigrationPicker(candidates)
             }
             logging.i { "Migration picker finished: $outcome" }
             recomputeMigrationCandidates()
+            // Dismissal and the silence fallback finish the picker attempt,
+            // but do not prove that iOS authorized every camera. Offer retry
+            // when migration stopped short instead of silently closing the UI.
+            val incomplete =
+                outcome is PickerOutcome.Completed && _migrationCandidates.value.isNotEmpty()
+            if (incomplete) {
+                logging.w { "Migration ended with ${_migrationCandidates.value.size} camera(s) still awaiting authorization" }
+            }
 
             if (outcome is PickerOutcome.Failed) {
                 // Retries are exhausted. Surface it and offer another attempt: the
@@ -187,9 +196,9 @@ internal class IosAccessoryCoordinator(
                 // dialog says so; a migration that succeeds needs no restart, and
                 // the maintainer confirmed the app works straight afterwards.
                 logging.w { "Migration failed after retries: ${outcome.message}" }
-                _migrationError.value = true
             }
-            outcome is PickerOutcome.Completed
+            _migrationError.value = outcome is PickerOutcome.Failed || incomplete
+            outcome is PickerOutcome.Completed && !incomplete
         } finally {
             // Release the guard before recreating the central. Its power-on
             // callback reconnects saved cameras, including newly migrated ones.

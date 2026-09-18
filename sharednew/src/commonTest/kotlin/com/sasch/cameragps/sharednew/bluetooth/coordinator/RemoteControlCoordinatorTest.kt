@@ -135,6 +135,11 @@ class RemoteControlCoordinatorTest {
  * Minimal fake for testing the shared coordinator without real BLE.
  */
 private class FakeBleGattPort : BleGattPort {
+    override fun setAutoCorrectionState(
+        identifier: String,
+        setting: com.sasch.cameragps.sharednew.bluetooth.session.CameraAutoCorrectionSetting,
+        state: com.sasch.cameragps.sharednew.bluetooth.session.CameraSettingState,
+    ) = Unit
     val connectedDevices = mutableSetOf<String>()
     val devicesWithRemoteControl = mutableSetOf<String>()
     val remoteActiveDevices = mutableSetOf<String>()

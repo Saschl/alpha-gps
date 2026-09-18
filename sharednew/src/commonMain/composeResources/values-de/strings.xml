@@ -306,4 +306,13 @@
     <string name="remote_feature_inactive">Verbunden. Fernauslöser deaktiviert in der Kamera oder in der App</string>
     <string name="haptic_feedback">Haptisches Feedback</string>
     <string name="haptic_feedback_description">Lässt das Smartphone vibrieren, wenn der Fernauslöser aktiviert wird</string>
+    <string name="auto_time_correction">Automatische Zeitkorrektur</string>
+    <string name="auto_time_correction_hint">Die Kamera korrigiert Datum und Uhrzeit automatisch anhand der Informationen deines Smartphones. Dies ändert die Einstellung auf der verbundenen Kamera.</string>
+    <string name="auto_area_adjustment">Automatische Gebietsanpassung</string>
+    <string name="auto_area_adjustment_hint">Die Kamera passt Gebiet und Zeitzone automatisch anhand der Informationen deines Smartphones an. Dies ändert die Einstellung auf der verbundenen Kamera.</string>
+    <string name="camera_setting_connect">Verbinde die Kamera, um diese Einstellung anzuzeigen oder zu ändern.</string>
+    <string name="camera_setting_pending">Warten auf die Kamera…</string>
+    <string name="camera_setting_unsupported">Diese Kamera unterstützt das Ändern dieser Einstellung über die App nicht.</string>
+    <string name="camera_setting_failed">Die Kameraeinstellung konnte nicht bestätigt werden. Aktualisiere die Anzeige, um den aktuellen Wert zu prüfen.</string>
+    <string name="camera_setting_retry">Kameraeinstellungen aktualisieren</string>
 </resources>

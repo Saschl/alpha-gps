@@ -1,5 +1,8 @@
 package com.sasch.cameragps.sharednew.bluetooth.coordinator
 
+import com.sasch.cameragps.sharednew.bluetooth.session.CameraAutoCorrectionSetting
+import com.sasch.cameragps.sharednew.bluetooth.session.CameraSettingState
+
 /**
  * Platform abstraction over BLE GATT I/O operations.
  *
@@ -55,6 +58,12 @@ interface BleGattPort {
     /** Camera-side location-linking state, independent of remote control and BLE connection. */
     fun setLocationDisabledByCamera(identifier: String, disabled: Boolean)
     fun isLocationDisabledByCamera(identifier: String): Boolean
+
+    fun setAutoCorrectionState(
+        identifier: String,
+        setting: CameraAutoCorrectionSetting,
+        state: CameraSettingState,
+    )
 
     /**
      * Read the value of [characteristicUuid] on device [identifier].

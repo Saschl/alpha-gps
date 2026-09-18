@@ -2,6 +2,8 @@ package com.sasch.cameragps.sharednew.ui.device
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.sasch.cameragps.sharednew.bluetooth.session.CameraAutoCorrectionControls
+import com.sasch.cameragps.sharednew.bluetooth.session.CameraAutoCorrectionSetting
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -10,7 +12,19 @@ import kotlin.time.Duration.Companion.seconds
 class DeviceDetailViewModel(
     dataSource: DeviceDetailDataSource,
     private val serviceActions: DeviceDetailServiceActions,
+    private val cameraSettings: CameraAutoCorrectionControls,
 ) : ViewModel() {
+
+    val sessions = cameraSettings.sessions
+
+    fun refreshCameraSettings(device: String) = cameraSettings.refreshAutoCorrectionSettings(device)
+
+    fun setAutoCorrectionSetting(
+        device: String,
+        setting: CameraAutoCorrectionSetting,
+        enabled: Boolean
+    ) =
+        cameraSettings.setAutoCorrectionSetting(device, setting, enabled)
 
     private val stateStore = DeviceDetailStateStore(dataSource)
     val uiState: StateFlow<DeviceDetailToggleState> = stateStore.uiState
@@ -73,4 +87,3 @@ class DeviceDetailViewModel(
         stateStore.setButtonEnabled(true)
     }
 }
-

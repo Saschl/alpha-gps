@@ -18,6 +18,22 @@ internal class QueuedBleGattPort(
     private val registry: CameraSessionRegistry,
 ) : BleGattPort {
 
+    suspend fun execute(identifier: String, operation: BleOperation) =
+        queue.execute(identifier.uppercase(), operation)
+
+    override fun setAutoCorrectionState(
+        identifier: String,
+        setting: CameraAutoCorrectionSetting,
+        state: CameraSettingState,
+    ) {
+        registry.updateIfPresent(identifier) {
+            when (setting) {
+                CameraAutoCorrectionSetting.Time -> it.copy(autoTimeCorrection = state)
+                CameraAutoCorrectionSetting.Area -> it.copy(autoAreaAdjustment = state)
+            }
+        }
+    }
+
     override fun writeCharacteristic(
         identifier: String,
         characteristicUuid: String,

@@ -27,8 +27,19 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import cameragps.sharednew.generated.resources.Res
 import cameragps.sharednew.generated.resources.always_on_description
+import cameragps.sharednew.generated.resources.auto_area_adjustment
+import cameragps.sharednew.generated.resources.auto_area_adjustment_hint
+import cameragps.sharednew.generated.resources.auto_time_correction
+import cameragps.sharednew.generated.resources.auto_time_correction_hint
+import cameragps.sharednew.generated.resources.camera_setting_connect
+import cameragps.sharednew.generated.resources.camera_setting_failed
+import cameragps.sharednew.generated.resources.camera_setting_pending
+import cameragps.sharednew.generated.resources.camera_setting_retry
+import cameragps.sharednew.generated.resources.camera_setting_unsupported
 import cameragps.sharednew.generated.resources.cancel_button
 import cameragps.sharednew.generated.resources.dialog_ok
 import cameragps.sharednew.generated.resources.enableConstantly
@@ -46,6 +57,9 @@ import cameragps.sharednew.generated.resources.rename_camera_label
 import cameragps.sharednew.generated.resources.rename_camera_save
 import cameragps.sharednew.generated.resources.rename_camera_title
 import cameragps.sharednew.generated.resources.setting_info
+import com.sasch.cameragps.sharednew.bluetooth.BleSessionPhase
+import com.sasch.cameragps.sharednew.bluetooth.session.CameraAutoCorrectionSetting
+import com.sasch.cameragps.sharednew.bluetooth.session.CameraSettingState
 import com.sasch.cameragps.sharednew.util.KotlinPlatform
 import com.sasch.cameragps.sharednew.util.currentPlatform
 import org.jetbrains.compose.resources.painterResource
@@ -68,6 +82,13 @@ fun DeviceDetailContent(
     renameEnabled: Boolean = true,
 ) {
     val state = viewModel.uiState.collectAsState().value
+    val sessions by viewModel.sessions.collectAsState()
+    val session = sessions[deviceId.uppercase()]
+    val cameraReady = session?.phase == BleSessionPhase.Transmitting
+
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        viewModel.refreshCameraSettings(deviceId)
+    }
 
     // Reload on a name change too: an iOS system rename lands asynchronously,
     // through the accessory snapshot rather than through this screen.
@@ -144,6 +165,59 @@ fun DeviceDetailContent(
                 },
                 infoText = stringResource(Res.string.handshake_delay_description),
             )
+        }
+
+        for (setting in CameraAutoCorrectionSetting.entries) {
+            item(key = setting.name) {
+                val isTime = setting == CameraAutoCorrectionSetting.Time
+                CameraSettingRow(
+                    title = stringResource(if (isTime) Res.string.auto_time_correction else Res.string.auto_area_adjustment),
+                    infoText = stringResource(if (isTime) Res.string.auto_time_correction_hint else Res.string.auto_area_adjustment_hint),
+                    state = session?.autoCorrectionSetting(setting) ?: CameraSettingState(),
+                    cameraReady = cameraReady,
+                    onCheckedChange = { viewModel.setAutoCorrectionSetting(deviceId, setting, it) },
+                    onRetry = { viewModel.refreshCameraSettings(deviceId) },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CameraSettingRow(
+    title: String,
+    infoText: String,
+    state: CameraSettingState,
+    cameraReady: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    onRetry: () -> Unit,
+) {
+    Column {
+        DeviceToggleRow(
+            title = title,
+            checked = state.enabled == true,
+            enabled = cameraReady && state.supported == true && state.enabled != null && !state.pending,
+            onCheckedChange = onCheckedChange,
+            infoText = infoText,
+        )
+        val status = when {
+            !cameraReady -> Res.string.camera_setting_connect
+            state.pending -> Res.string.camera_setting_pending
+            state.supported == false -> Res.string.camera_setting_unsupported
+            state.failed -> Res.string.camera_setting_failed
+            state.enabled == null -> Res.string.camera_setting_pending
+            else -> null
+        }
+        if (status != null) {
+            Text(
+                stringResource(status),
+                style = MaterialTheme.typography.bodySmall,
+                color = if (state.failed && cameraReady) MaterialTheme.colorScheme.error
+                else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        if (cameraReady && state.failed && !state.pending) {
+            TextButton(onClick = onRetry) { Text(stringResource(Res.string.camera_setting_retry)) }
         }
     }
 }
@@ -348,6 +422,5 @@ private fun DeviceToggleRow(
         )
     }
 }
-
 
 

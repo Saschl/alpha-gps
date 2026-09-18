@@ -161,6 +161,11 @@ internal fun IosSettingsScreen(
                 }
             }
 
+            item {
+                IosTipJarCard()
+            }
+
+
             item(key = "language") {
                 SharedLanguageSettingsCard()
             }
@@ -184,10 +189,6 @@ internal fun IosSettingsScreen(
                     enabled = sentryEnabled,
                     onEnabledChange = onSentryEnabledChange,
                 )
-            }
-
-            item {
-                IosTipJarCard()
             }
 
             if (debugTapCounter >= 5) {

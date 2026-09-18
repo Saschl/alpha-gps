@@ -12,9 +12,12 @@ import platform.UIKit.UIViewController
  * Apple displayed the prompt or the user left a review.
  */
 @Suppress("FunctionName", "unused")
-fun MainViewController(requestReview: (UIViewController) -> Boolean): UIViewController =
+fun MainViewController(
+    reviewTestMode: Boolean = false,
+    requestReview: (UIViewController) -> Boolean,
+): UIViewController =
     ComposeUIViewController {
         CameraGpsTheme {
-            CameraGpsIosApp(requestReview = requestReview)
+            CameraGpsIosApp(reviewTestMode = reviewTestMode, requestReview = requestReview)
         }
 }

@@ -17,13 +17,73 @@ class ReviewPromptControllerTest {
         override fun write(state: ReviewPromptState) { this.state = state }
     }
 
-    private fun newController() = ReviewPromptController(store, { now }) {
+    private fun newController(testMode: Boolean = false) =
+        ReviewPromptController(store, { now }, testMode) {
         nativeRequests++
         nativeWindowAvailable
     }
 
     private val controller = newController()
     private fun request() = controller.requestIfDue(isForeground = true, hasSavedCamera = true, canPresent = true)
+
+    @Test
+    fun testModeRequestsWithoutACameraOrGracePeriodAndLeavesFreshStorageEmpty() {
+        val testController = newController(testMode = true)
+        assertTrue(
+            testController.requestIfDue(
+                isForeground = true,
+                hasSavedCamera = false,
+                canPresent = true
+            )
+        )
+        assertEquals(1, nativeRequests)
+        assertNull(store.read())
+        assertFalse(
+            testController.requestIfDue(
+                isForeground = true,
+                hasSavedCamera = false,
+                canPresent = true
+            )
+        )
+        assertEquals(1, nativeRequests)
+    }
+
+    @Test
+    fun testModeBypassesHistoryWithoutChangingItAndCanRepeatAfterRelaunch() {
+        val history = ReviewPromptState(now, now)
+        store.write(history)
+        repeat(2) {
+            assertTrue(newController(testMode = true).requestIfDue(true, false, true))
+            assertEquals(history, store.read())
+        }
+        assertEquals(2, nativeRequests)
+        assertFalse(request())
+    }
+
+    @Test
+    fun testModeStillDefersForBackgroundBusyUiAndMissingWindow() {
+        val testController = newController(testMode = true)
+        assertFalse(
+            testController.requestIfDue(
+                isForeground = false,
+                hasSavedCamera = false,
+                canPresent = true
+            )
+        )
+        assertFalse(
+            testController.requestIfDue(
+                isForeground = true,
+                hasSavedCamera = false,
+                canPresent = false
+            )
+        )
+        assertEquals(0, nativeRequests)
+        nativeWindowAvailable = false
+        assertFalse(testController.requestIfDue(true, false, true))
+        nativeWindowAvailable = true
+        assertTrue(testController.requestIfDue(true, false, true))
+        assertNull(store.read())
+    }
 
     @Test
     fun backgroundLaunchAndMissingCameraDoNotStartTheGracePeriod() {
@@ -41,7 +101,6 @@ class ReviewPromptControllerTest {
         now++
         assertTrue(request())
         assertEquals(1, nativeRequests)
-        assertEquals(1, store.read()?.requestCount)
         assertEquals(now, store.read()?.lastRequestedAtSeconds)
     }
 
@@ -52,7 +111,7 @@ class ReviewPromptControllerTest {
         now += day
         assertFalse(controller.requestIfDue(isForeground = true, hasSavedCamera = true, canPresent = false))
         assertEquals(0, nativeRequests)
-        assertEquals(0, store.read()?.requestCount)
+        assertNull(store.read()?.lastRequestedAtSeconds)
         assertTrue(request())
     }
 
@@ -81,17 +140,37 @@ class ReviewPromptControllerTest {
     }
 
     @Test
-    fun thirdRequestIsTheLastEvenAfterARelaunch() {
+    fun requestsContinueBeyondThreeWhileRelaunchesStillRespectTheCooldown() {
         request()
         now += day
-        repeat(3) {
-            assertTrue(request())
-            now += 30 * day
+        repeat(5) {
+            assertTrue(
+                newController().requestIfDue(
+                    isForeground = true,
+                    hasSavedCamera = true,
+                    canPresent = true
+                )
+            )
+            assertEquals(now, store.read()?.lastRequestedAtSeconds)
+            now += 30 * day - 1
+            assertFalse(
+                newController().requestIfDue(
+                    isForeground = true,
+                    hasSavedCamera = true,
+                    canPresent = true
+                )
+            )
+            now++
         }
         now += 365 * day
-        assertFalse(newController().requestIfDue(isForeground = true, hasSavedCamera = true, canPresent = true))
-        assertEquals(3, nativeRequests)
-        assertEquals(3, store.read()?.requestCount)
+        assertTrue(
+            newController().requestIfDue(
+                isForeground = true,
+                hasSavedCamera = true,
+                canPresent = true
+            )
+        )
+        assertEquals(6, nativeRequests)
     }
 
     @Test
@@ -104,7 +183,7 @@ class ReviewPromptControllerTest {
         assertEquals(before, store.read())
         nativeWindowAvailable = true
         assertTrue(request())
-        assertEquals(1, store.read()?.requestCount)
+        assertEquals(now, store.read()?.lastRequestedAtSeconds)
     }
 
     @Test

@@ -166,6 +166,11 @@ internal class IosAccessoryShell(
         return presentPicker(
             items,
             migrating = candidates.mapTo(mutableSetOf()) { it.identifier.uppercase() })
+            .also {
+                // Check the session's current snapshot even when migration ended
+                // through dismissal or silence without accessory callbacks.
+                refreshAuthorized()
+            }
     }
 
     /**

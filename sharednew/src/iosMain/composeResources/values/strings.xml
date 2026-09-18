@@ -36,6 +36,7 @@
 
 
     <string name="ios_accessory_migration_busy">Confirming your cameras…</string>
+    <string name="ios_accessory_migration_success">All cameras confirmed successfully.</string>
 
     <string name="ios_transmission_notifications_setting">Transmission notification</string>
     <string name="ios_transmission_notifications_description">Show a silent notification while location is being sent to your cameras.</string>
