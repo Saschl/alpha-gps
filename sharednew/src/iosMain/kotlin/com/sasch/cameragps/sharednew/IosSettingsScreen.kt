@@ -81,7 +81,6 @@ private enum class IosLogLevel {
 @Composable
 internal fun IosSettingsScreen(
     isAppEnabled: Boolean,
-    autoScanEnabled: Boolean,
     hapticsEnabled: Boolean,
     transmissionNotificationsEnabled: Boolean,
     transmissionNotificationsPermissionDenied: Boolean,
@@ -89,13 +88,10 @@ internal fun IosSettingsScreen(
     onOpenNotificationSettings: () -> Unit,
     scrollToTipJarOnOpen: Boolean = false,
     onBackClick: () -> Unit,
-    onOpenHelp: () -> Unit,
     onAppEnabledChange: (Boolean) -> Unit,
-    onAutoScanEnabledChange: (Boolean) -> Unit,
     onHapticsEnabledChange: (Boolean) -> Unit,
     sentryEnabled: Boolean,
     onSentryEnabledChange: (Boolean) -> Unit,
-    onShowWelcomeAgain: () -> Unit,
     onChangeLogLevel: (LogLevel) -> Unit,
     onTipJarScrollConsumed: () -> Unit = {},
 ) {
@@ -165,7 +161,6 @@ internal fun IosSettingsScreen(
                 IosTipJarCard()
             }
 
-
             item(key = "language") {
                 SharedLanguageSettingsCard()
             }
@@ -202,7 +197,7 @@ internal fun IosSettingsScreen(
 
 // App controls, language, log settings, crash reporting, tip jar — keep in sync with the
 // item order above; the donation prompt scrolls straight to the tip jar.
-private const val TIP_JAR_ITEM_INDEX = 4
+private const val TIP_JAR_ITEM_INDEX = 2
 
 @Composable
 private fun IosDebugCard() {

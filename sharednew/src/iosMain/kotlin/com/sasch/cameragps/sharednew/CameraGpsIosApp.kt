@@ -137,7 +137,6 @@ internal fun CameraGpsIosApp(
         )
     }
     var isAppEnabled by remember { mutableStateOf(IosAppPreferences.isAppEnabled()) }
-    var autoScanEnabled by remember { mutableStateOf(IosAppPreferences.isAutoScanEnabled()) }
     var hapticsEnabled by remember { mutableStateOf(IosAppPreferences.isHapticsEnabled()) }
     var sentryEnabled by remember { mutableStateOf(IosAppPreferences.isSentryEnabled()) }
     var isAppInForeground by remember {
@@ -428,7 +427,6 @@ internal fun CameraGpsIosApp(
                                 }
                             }
                         },
-                        // FIXME migration on ios makes device non deletable as migration keeps running i guess
                         onTriggerRemoteShutter = { device ->
                             scope.launch {
                                 bluetoothController.triggerShutterSequence(device.identifier)
@@ -487,20 +485,14 @@ internal fun CameraGpsIosApp(
                     transmissionNotificationsPermissionDenied = transmissionNotificationsPermissionDenied,
                     onTransmissionNotificationsEnabledChange = bluetoothController::setTransmissionNotificationsEnabled,
                     onOpenNotificationSettings = { openAppSettings() },
-                    autoScanEnabled = autoScanEnabled,
                     scrollToTipJarOnOpen = scrollToTipJarOnSettingsOpen,
                     onBackClick = { currentScreen = IosScreen.Devices },
-                    onOpenHelp = { currentScreen = IosScreen.Help },
                     onAppEnabledChange = { enabled ->
                         isAppEnabled = enabled
                         IosAppPreferences.setAppEnabled(enabled)
                         scope.launch {
                             bluetoothController.applyAppEnabledState(enabled)
                         }
-                    },
-                    onAutoScanEnabledChange = { enabled ->
-                        autoScanEnabled = enabled
-                        IosAppPreferences.setAutoScanEnabled(enabled)
                     },
                     hapticsEnabled = hapticsEnabled,
                     onHapticsEnabledChange = { enabled ->
@@ -519,10 +511,6 @@ internal fun CameraGpsIosApp(
                         // SDK has no clean mid-process shutdown), hence the restart
                         // hint the shared card shows.
                         if (enabled) IosCrashReporting.start()
-                    },
-                    onShowWelcomeAgain = {
-                        IosAppPreferences.setShowWelcomeOnLaunch(true)
-                        currentScreen = IosScreen.Welcome
                     },
                     onChangeLogLevel = { level ->
                         IosLogging.install(logRepository, level)

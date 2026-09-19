@@ -2,11 +2,13 @@ package com.sasch.cameragps.sharednew.bluetooth.accessory
 
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.minutes
 
 /** One native picker attempt; callbacks and dismissal can arrive in either order. */
 internal class AccessoryPickerCompletion<T>(
@@ -74,32 +76,42 @@ internal class AccessoryPickerCompletion<T>(
     suspend fun await(): T = result.await()
 
     /**
-     * Await the attempt, treating [settleTimeout] of complete silence as the end
-     * of it while no picker is on screen.
+     * Await the attempt.
      *
-     * A migration can stop short — a skipped or failed accessory reports
-     * nothing, and neither dismissal nor the completion closure is guaranteed —
-     * and without this fallback the attempt, the central it holds and the busy
-     * dialog over it would all wait for a signal that never comes. A presented
-     * picker is exempt: it waits on the person, not on a timer.
+     * [settleTimeout] of silence ends it while nothing is on screen: a migration
+     * whose accessory was skipped reports nothing at all. A presented picker
+     * ignores that — it waits on the person — but still ends at [visibleTimeout],
+     * because the attempt holds the guard that blocks central creation and a lost
+     * `pickerDidDismiss` would mean no cameras until the app restarts.
      */
-    suspend fun await(settleTimeout: Duration): T = coroutineScope {
-        val settle = launch {
+    suspend fun await(
+        settleTimeout: Duration,
+        visibleTimeout: Duration = VISIBLE_PICKER_TIMEOUT,
+    ): T = coroutineScope {
+        val watchdog = launch {
             var seen = progress.value
-            while (true) {
+            while (!presented) {
                 val next = withTimeoutOrNull(settleTimeout) { progress.first { it > seen } }
                 if (next == null) {
-                    if (presented) return@launch
-                    break
+                    // Nothing on screen and nothing happening: the attempt is over.
+                    result.complete(completed)
+                    return@launch
                 }
                 seen = next
             }
+            delay(visibleTimeout)
             result.complete(completed)
         }
         try {
             result.await()
         } finally {
-            settle.cancel()
+            watchdog.cancel()
         }
+    }
+
+    internal companion object {
+        /** Long enough that someone walking over to switch the camera into
+         *  pairing mode never hits it. */
+        internal val VISIBLE_PICKER_TIMEOUT: Duration = 5.minutes
     }
 }

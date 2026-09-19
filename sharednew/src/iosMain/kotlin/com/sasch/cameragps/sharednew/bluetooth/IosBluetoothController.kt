@@ -12,6 +12,7 @@ import com.sasch.cameragps.sharednew.bluetooth.IosBluetoothController.persistAcc
 import com.sasch.cameragps.sharednew.bluetooth.IosBluetoothController.reconnectToPersistedPeripherals
 import com.sasch.cameragps.sharednew.bluetooth.IosBluetoothController.startCentralIfNeeded
 import com.sasch.cameragps.sharednew.bluetooth.accessory.AccessoryCameraName
+import com.sasch.cameragps.sharednew.bluetooth.accessory.AutoReconnectPolicy
 import com.sasch.cameragps.sharednew.bluetooth.accessory.PendingMigration
 import com.sasch.cameragps.sharednew.bluetooth.session.CameraAutoCorrectionControls
 import com.sasch.cameragps.sharednew.bluetooth.session.CameraSession
@@ -634,18 +635,19 @@ object IosBluetoothController : BluetoothController {
     // Policy
     // ---------------------------------------------------------------------------
 
-    private suspend fun shouldAutoReconnect(id: String): Boolean {
-        // A camera that rejected pairing is disconnected on purpose; reconnecting
-        // would restart the pairing gate and loop the camera's pairing prompt.
-        // Cleared when the user dismisses the dialog or a handshake succeeds.
-        if (id.equals(pairingFailedIdentifier, ignoreCase = true)) return false
-        // A de-authorized accessory can never connect again; retrying would be a
-        // reconnect storm against a device CoreBluetooth is not allowed to see.
-        if (!accessorySession.isAuthorized(id)) return false
-        return appEnabled &&
-                repository.isAutoReconnectEnabled(id) &&
-                repository.isDeviceEnabled(id)
-    }
+    /**
+     * See [AutoReconnectPolicy]. Inputs are gathered eagerly rather than
+     * short-circuited to keep the decision in one tested place; `isDeviceEnabled`
+     * is a cache hit on a path that runs once per disconnect.
+     */
+    private suspend fun shouldAutoReconnect(id: String): Boolean =
+        AutoReconnectPolicy.shouldReconnect(
+            pairingRejected = id.equals(pairingFailedIdentifier, ignoreCase = true),
+            authorization = accessorySession.authorizationOf(id),
+            appEnabled = appEnabled,
+            autoReconnectEnabled = repository.isAutoReconnectEnabled(id),
+            deviceEnabled = repository.isDeviceEnabled(id),
+        )
 
     // ---------------------------------------------------------------------------
     // AccessorySetupKit

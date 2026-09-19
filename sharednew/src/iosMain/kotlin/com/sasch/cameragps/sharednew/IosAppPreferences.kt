@@ -63,10 +63,6 @@ internal object IosAppPreferences {
         defaults.boolForKey(keyAutoScanEnabled)
     } ?: true
 
-    fun setAutoScanEnabled(enabled: Boolean) {
-        defaults.setBool(enabled, forKey = keyAutoScanEnabled)
-    }
-
     fun isHapticsEnabled(): Boolean = defaults.objectForKey(keyHapticsEnabled)?.let {
         defaults.boolForKey(keyHapticsEnabled)
     } ?: true

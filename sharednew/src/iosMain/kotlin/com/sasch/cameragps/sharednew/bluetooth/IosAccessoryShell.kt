@@ -1,6 +1,7 @@
 package com.sasch.cameragps.sharednew.bluetooth
 
 import com.diamondedge.logging.logging
+import com.sasch.cameragps.sharednew.bluetooth.accessory.AccessoryAuthorization
 import com.sasch.cameragps.sharednew.bluetooth.accessory.AccessoryPickerCompletion
 import com.sasch.cameragps.sharednew.bluetooth.accessory.PendingMigration
 import kotlinx.cinterop.ExperimentalForeignApi
@@ -69,6 +70,15 @@ internal class IosAccessoryShell(
     private val authorized = mutableMapOf<String, ASAccessory>()
 
     /**
+     * Accessories the system reported as removed, uppercased. This — not
+     * "absent from [authorized]" — is what auto-reconnect refuses on, because
+     * [authorized] is also empty before `activated` and for every unmigrated
+     * camera. [refreshAuthorized] drops entries again, so unpairing a camera in
+     * Settings and re-adding it through the picker heals itself.
+     */
+    private val deauthorized = mutableSetOf<String>()
+
+    /**
      * The accessory chosen in the picker. AccessorySetupKit delivers
      * `accessoryAdded` BEFORE `pickerDidDismiss`, and acting on it while the
      * picker is still on screen would run the Sony handshake underneath it.
@@ -120,6 +130,19 @@ internal class IosAccessoryShell(
 
     fun isAuthorized(identifier: String): Boolean =
         authorized.containsKey(identifier.uppercase())
+
+    /**
+     * The only mapping onto [AccessoryAuthorization]. The reconnect path reads
+     * this, not [isAuthorized], so absence never reads as a refusal.
+     */
+    fun authorizationOf(identifier: String): AccessoryAuthorization {
+        val normalized = identifier.uppercase()
+        return when {
+            authorized.containsKey(normalized) -> AccessoryAuthorization.Authorized
+            deauthorized.contains(normalized) -> AccessoryAuthorization.Removed
+            else -> AccessoryAuthorization.Unknown
+        }
+    }
 
     fun displayName(identifier: String): String? =
         authorized[identifier.uppercase()]?.displayName
@@ -250,13 +273,11 @@ internal class IosAccessoryShell(
                 }
                 completion.onCompletion(outcome)
             }
-            // A migration is the one flow that can end without any terminal
-            // signal, so it gets the silence fallback; discovery always dismisses.
-            return if (migrating.isEmpty()) {
-                completion.await()
-            } else {
-                completion.await(MIGRATION_SETTLE_MS.milliseconds)
-            }
+            // Both flows need a silence fallback: either one holds the guard
+            // that blocks central creation, so a picker that never presents and
+            // never calls back means no cameras until the app restarts.
+            val settle = if (migrating.isEmpty()) DISCOVERY_SETTLE_MS else MIGRATION_SETTLE_MS
+            return completion.await(settle.milliseconds)
         } finally {
             if (pickerCompletion === completion) {
                 pickerCompletion = null
@@ -332,6 +353,9 @@ internal class IosAccessoryShell(
 
             ASAccessoryEventTypeAccessoryRemoved -> {
                 val id = event.accessory?.identifierString()
+                // Before the refresh, which drops it again if the session still
+                // lists the accessory: the live snapshot wins.
+                if (id != null) deauthorized += id
                 refreshAuthorized()
                 onAccessoriesChanged(this)
                 if (id != null) {
@@ -375,6 +399,8 @@ internal class IosAccessoryShell(
         session.accessories.filterIsInstance<ASAccessory>().forEach { accessory ->
             accessory.identifierString()?.let { authorized[it] = accessory }
         }
+        // Listed again means usable again: a re-added camera must not stay refused.
+        deauthorized.removeAll(authorized.keys)
     }
 
     private fun ASAccessory.identifierString(): String? =
@@ -390,5 +416,11 @@ internal class IosAccessoryShell(
          * this the attempt would hold the central and the busy dialog forever.
          */
         const val MIGRATION_SETTLE_MS = 10_000L
+
+        /**
+         * Silence budget before `pickerDidPresent`. A restricted picker never
+         * reaches it — that arrives as an error and ends the attempt at once.
+         */
+        const val DISCOVERY_SETTLE_MS = 30_000L
     }
 }

@@ -9,6 +9,7 @@ import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -179,8 +180,72 @@ class AccessoryPickerCompletionTest {
         assertFalse(result.await())
     }
 
+    // --- Bounding the attempt so it cannot hold the central for ever ---------
+
+    @Test
+    fun discoveryPickerThatNeverPresentsOrCallsBackReleasesOwnership() = runTest {
+        // A picker that silently does nothing used to mean no cameras at all
+        // until the process restarted.
+        val runner = AccessoryPickerRunner(backgroundScope)
+        val attempt = AccessoryPickerCompletion(true, waitForDismissalOnSuccess = true)
+        var ownershipHeld = true
+        val ui = launch {
+            runner.run {
+                try {
+                    attempt.await(SETTLE)
+                } finally {
+                    ownershipHeld = false
+                }
+            }
+        }
+        runCurrent()
+        advanceTimeBy(SETTLE_MS - 1)
+        runCurrent()
+        assertTrue(ownershipHeld)
+        assertFalse(ui.isCompleted)
+
+        advanceTimeBy(2)
+        runCurrent()
+        assertFalse(ownershipHeld)
+        assertTrue(ui.isCompleted)
+        assertTrue(runner.run { true })
+    }
+
+    @Test
+    fun presentedPickerThatNeverReportsDismissalStillHandsTheCentralBack() = runTest {
+        val attempt = AccessoryPickerCompletion(true, waitForDismissalOnSuccess = true)
+        val result = async { attempt.await(SETTLE, VISIBLE) }
+        runCurrent()
+        attempt.onPresented()
+
+        // Still waiting on the person long after the settle window: a visible
+        // picker is not silence.
+        advanceTimeBy(VISIBLE_MS - 1)
+        runCurrent()
+        assertFalse(result.isCompleted)
+
+        advanceTimeBy(2)
+        runCurrent()
+        assertTrue(result.await())
+    }
+
+    @Test
+    fun visiblePickerCapAppliesWithoutBeingAskedFor() = runTest {
+        // The cap is all that stands between a lost pickerDidDismiss and a
+        // process with no central, so pin that it applies unasked.
+        val attempt = AccessoryPickerCompletion(true)
+        val result = async { attempt.await(SETTLE) }
+        runCurrent()
+        attempt.onPresented()
+        advanceTimeBy(AccessoryPickerCompletion.VISIBLE_PICKER_TIMEOUT.inWholeMilliseconds + 1)
+        runCurrent()
+        assertTrue(result.await())
+    }
+
     private companion object {
         private const val SETTLE_MS = 10_000L
         private val SETTLE = 10.seconds
+        private const val VISIBLE_MS = 120_000L
+        private val VISIBLE = 2.minutes
     }
 }
