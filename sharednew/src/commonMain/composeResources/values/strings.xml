@@ -202,6 +202,9 @@
     <string name="guide_accuracy_step_precise_path_android">Settings → Apps → Alpha GPS → Permissions → Location → Use precise location</string>
     <string name="guide_accuracy_step_precise_path_ios">Settings → Privacy &amp; Security → Location Services → Alpha GPS → Precise Location → On</string>
     <string name="guide_accuracy_step_battery">Exclude the app from battery optimization so transmission keeps running in the background: Settings → Apps → Alpha GPS → Battery → Unrestricted.</string>
+    <string name="guide_startup_title">Camera starts slowly or its screen stays black</string>
+    <string name="guide_startup_description">On some cameras, allowing smartphone connections while the camera is off can delay startup when Alpha GPS is enabled.</string>
+    <string name="guide_startup_step_disable">In the camera's Network menu, set 'Cnct. while Power OFF' or 'Cnct. during Power OFF' to Off. The name and menu location vary by model. This disables smartphone access while the camera is off; keep Bluetooth enabled for GPS and remote control when the camera is on.</string>
     <!-- Contextual pairing-failure troubleshooting (shown when the camera rejects pairing) -->
     <string name="pairing_failed_device_message">The camera '%1$s' refused the pairing.</string>
     <string name="pairing_failed_hint_intro">This often happens when the camera is not in pairing mode or is still paired with another device:</string>

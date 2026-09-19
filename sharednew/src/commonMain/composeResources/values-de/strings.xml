@@ -282,6 +282,9 @@
     <string name="guide_remote_step_camera_path">MENU → Netzwerk → Bluetooth-Fernbed. → Aus</string>
     <string name="guide_remote_step_app">Tippe in Alpha GPS auf dem Hauptbildschirm auf die Kamera und deaktiviere 'Fernbedienung aktivieren'.</string>
     <string name="guide_link_remote_a6400">Sony-Hilfe: Bluetooth-Fernbedienung (α6400)</string>
+    <string name="guide_startup_title">Kamera startet langsam oder der Bildschirm bleibt schwarz</string>
+    <string name="guide_startup_description">Bei manchen Kameras können Smartphone-Verbindungen im ausgeschalteten Zustand den Start verzögern, wenn Alpha GPS aktiviert ist.</string>
+    <string name="guide_startup_step_disable">Schalte im Netzwerkmenü der Kamera die Verbindung mit dem Smartphone bei ausgeschalteter Kamera aus (im englischen Menü 'Cnct. while Power OFF' oder 'Cnct. during Power OFF'). Name und Menüposition hängen vom Modell ab. Der Smartphone-Zugriff bei ausgeschalteter Kamera ist dann deaktiviert. Lass Bluetooth für GPS und Fernsteuerung bei eingeschalteter Kamera aktiviert.</string>
     <string name="guide_accuracy_title">Standort ist ungenau oder veraltet</string>
     <string name="guide_accuracy_description">Werden Fotos mit einer deutlich abweichenden Position versehen, darf die App meist nicht den genauen Standort verwenden.</string>
     <string name="guide_accuracy_step_precise">Erlaube Alpha GPS den genauen Standort:</string>
