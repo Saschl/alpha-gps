@@ -422,5 +422,3 @@ private fun DeviceToggleRow(
         )
     }
 }
-
-

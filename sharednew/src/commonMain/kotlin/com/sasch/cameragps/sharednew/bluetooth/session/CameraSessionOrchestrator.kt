@@ -59,19 +59,24 @@ class CameraSessionOrchestrator(
 
     val registry = CameraSessionRegistry()
 
-    private val queue = BleOperationQueue(transport, scope, shouldExecute = { id, operation ->
+    private val queue: BleOperationQueue =
+        BleOperationQueue(transport, scope, shouldExecute = { id, operation ->
         // A packet already in flight cannot be recalled, but parked packets must
         // not reach a camera after it disables linking (or while setup resumes).
-        operation !is BleOperation.Write ||
-                !operation.characteristicUuid.equals(
+            when {
+                operation !is BleOperation.Write -> true
+                operation.characteristicUuid.equals(
                     SonyBluetoothConstants.CHARACTERISTIC_UUID,
                     true
-                ) ||
+                ) ->
                 registry.get(id)?.isLocationReady == true
+
+                else -> true
+            }
     })
     private val port = QueuedBleGattPort(queue, transport, registry)
     private val autoCorrection = CameraAutoCorrectionController(port, registry, scope)
-    private val remoteControl = RemoteControlCoordinator(port, scope)
+    private val remoteControl: RemoteControlCoordinator = RemoteControlCoordinator(port, scope)
     private val sessionCoordinator = BleSessionCoordinator(port, remoteControl)
 
     val locationManager = LocationTransmissionManager(
@@ -174,10 +179,10 @@ class CameraSessionOrchestrator(
             remoteControl.startRemoteStatusMonitoring(id)
         } else {
             remoteControl.cancelProbe(id)
+            port.setRemoteFeatureActive(id, false)
         }
     }
 
-    /** Drop all session state for a device (disconnect/forget). */
     fun clearDevice(identifier: String) {
         val id = identifier.uppercase()
         autoCorrection.clear(id)
@@ -187,7 +192,6 @@ class CameraSessionOrchestrator(
         locationManager.updateTracking()
     }
 
-    /** Tear everything down (service destroy / force shutdown). */
     fun shutdownAll() {
         autoCorrection.clearAll()
         sessionCoordinator.clearAllSessions()
@@ -195,8 +199,6 @@ class CameraSessionOrchestrator(
         locationManager.shutdown()
         registry.clear()
     }
-
-    fun connectedDeviceCount(): Int = registry.activeCount()
 
     // ---- Transport event routing ----
 
@@ -223,7 +225,11 @@ class CameraSessionOrchestrator(
             }
 
             is BleTransportEvent.CharacteristicRead -> {
-                if (CameraAutoCorrectionSetting.fromUuid(event.characteristicUuid) == null) handleRead(
+                if (event.characteristicUuid.equals(
+                        SonyBluetoothConstants.CHARACTERISTIC_READ_UUID,
+                        true
+                    )
+                ) handleRead(
                     event
                 )
             }

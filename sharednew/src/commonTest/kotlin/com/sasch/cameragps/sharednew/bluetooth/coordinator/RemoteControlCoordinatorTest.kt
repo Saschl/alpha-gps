@@ -1,10 +1,15 @@
 package com.sasch.cameragps.sharednew.bluetooth.coordinator
 
+import com.diamondedge.logging.FixedLogLevel
+import com.diamondedge.logging.KmLogging
+import com.diamondedge.logging.PlatformLogger
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runTest
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -12,6 +17,16 @@ import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class RemoteControlCoordinatorTest {
+
+    @BeforeTest
+    fun disablePlatformLogging() {
+        KmLogging.setLoggers()
+    }
+
+    @AfterTest
+    fun restorePlatformLogging() {
+        KmLogging.setLoggers(PlatformLogger(FixedLogLevel(true)))
+    }
 
     // ---- Pure function tests ----
 

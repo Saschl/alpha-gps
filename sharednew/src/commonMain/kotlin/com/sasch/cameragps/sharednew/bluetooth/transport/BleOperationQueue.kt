@@ -86,6 +86,10 @@ class BleOperationQueue(
                     log.w { "${queued.operation.describe()} on $identifier timed out" }
                     queued.result.complete(BleOperationResult.Timeout)
                 } finally {
+                    val operation = queued.operation
+                    if (operation is BleOperation.Read) {
+                        transport.finishRead(identifier, operation.characteristicUuid)
+                    }
                     pending = null
                 }
             }

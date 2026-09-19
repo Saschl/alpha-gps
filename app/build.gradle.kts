@@ -135,6 +135,7 @@ dependencies {
     debugImplementation(libs.androidx.ui.test.manifest)
 
     implementation(libs.timber)
+    implementation(libs.logging)
     //implementation(libs.androidx.swiperefreshlayout)
     implementation(libs.androidx.core.splashscreen)
     implementation(libs.accompanist.permissions)

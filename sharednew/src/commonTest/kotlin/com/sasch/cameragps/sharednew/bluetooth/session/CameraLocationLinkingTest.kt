@@ -383,11 +383,92 @@ class CameraLocationLinkingTest {
         assertFalse(f.session("A").autoTimeCorrection.failed)
     }
 
+    @Test
+    fun cc09AvailabilityDoesNotControlBluetoothRemoteOrSuppressProbes() = runTest {
+        val f = Fixture(backgroundScope)
+        f.dao.remoteEnabled = true
+        f.transport.hasCameraStatus = true
+        f.connect("A")
+        runCurrent()
+        assertFalse(f.session("A").remoteFeatureActive)
+        assertTrue(f.transport.operations.none { (_, op) ->
+            op == BleOperation.Subscribe(Sony.CAMERA_STATUS_UUID, true) ||
+                    op == BleOperation.Read(Sony.CAMERA_STATUS_UUID)
+        })
+        f.notify("A", Sony.CAMERA_STATUS_UUID, byteArrayOf(3, 0, 3, 1))
+        runCurrent()
+        assertFalse(f.session("A").remoteFeatureActive)
+        advanceTimeBy(501)
+        runCurrent()
+        assertTrue(f.transport.remoteWrites().isNotEmpty())
+        assertTrue(f.session("A").remoteFeatureActive)
+        f.notify("A", Sony.CAMERA_STATUS_UUID, byteArrayOf(3, 0, 3, 0))
+        runCurrent()
+        assertTrue(f.session("A").remoteFeatureActive)
+        assertTrue(f.session("A").isLocationReady)
+    }
+
+    @Test
+    fun remoteWriteFailureResumesProbesAndRecoversWithoutCc09Notifications() = runTest {
+        val f = Fixture(backgroundScope)
+        f.dao.remoteEnabled = true
+        f.transport.hasCameraStatus = true
+        f.connect("A")
+        runCurrent()
+        advanceTimeBy(501)
+        runCurrent()
+        assertTrue(f.session("A").remoteFeatureActive)
+        f.transport.failRemoteWrites = true
+        assertTrue(f.orchestrator.triggerRemoteShutter("A"))
+        runCurrent()
+        assertFalse(f.session("A").remoteFeatureActive)
+        f.transport.operations.clear()
+        advanceTimeBy(3_501)
+        runCurrent()
+        assertTrue(f.transport.remoteWrites().size >= 2)
+        assertFalse(f.session("A").remoteFeatureActive)
+        f.transport.failRemoteWrites = false
+        advanceTimeBy(3_000)
+        runCurrent()
+        assertTrue(f.session("A").remoteFeatureActive)
+        f.transport.operations.clear()
+        advanceTimeBy(6_000)
+        runCurrent()
+        assertTrue(f.transport.remoteWrites().isEmpty())
+    }
+
+    @Test
+    fun ff02RefusalResumesProbesEvenWhenCc09ReportsAvailable() = runTest {
+        val f = Fixture(backgroundScope)
+        f.dao.remoteEnabled = true
+        f.transport.hasCameraStatus = true
+        f.connect("A")
+        runCurrent()
+        advanceTimeBy(501)
+        runCurrent()
+        assertTrue(f.session("A").remoteFeatureActive)
+        f.transport.failRemoteWrites = true
+        f.notify("A", Sony.REMOTE_STATUS_UUID, byteArrayOf(2, 0xC3.toByte(), 0))
+        f.notify("A", Sony.CAMERA_STATUS_UUID, byteArrayOf(3, 0, 3, 1))
+        runCurrent()
+        assertFalse(f.session("A").remoteFeatureActive)
+        f.transport.operations.clear()
+        advanceTimeBy(501)
+        runCurrent()
+        assertTrue(f.transport.remoteWrites().isNotEmpty())
+        f.orchestrator.setRemoteMonitoring("A", false)
+        f.transport.operations.clear()
+        advanceTimeBy(6_000)
+        runCurrent()
+        assertTrue(f.transport.remoteWrites().isEmpty())
+    }
+
     private class Fixture(scope: CoroutineScope) {
         val source = FakeSource()
         val transport = FakeTransport()
+        val dao = FakeDao()
         val orchestrator =
-            CameraSessionOrchestrator(transport, source, FakeDao(), scope).also { it.start() }
+            CameraSessionOrchestrator(transport, source, dao, scope).also { it.start() }
 
         fun connect(id: String) {
             transport.connected.add(id)
@@ -431,6 +512,8 @@ class CameraLocationLinkingTest {
         val connected = mutableSetOf<String>()
         val operations = mutableListOf<Pair<String, BleOperation>>()
         var hasLocationStatus = true
+        var hasCameraStatus = false
+        var failRemoteWrites = false
         var hasAutoCorrection = false
         var holdSettingWrites = false
         var rejectSettingWrites = false
@@ -446,9 +529,14 @@ class CameraLocationLinkingTest {
             op is BleOperation.Write && op.characteristicUuid == Sony.CHARACTERISTIC_UUID
         }
 
+        fun remoteWrites() = operations.filter { (_, op) ->
+            op is BleOperation.Write && op.characteristicUuid == Sony.REMOTE_CHARACTERISTIC_UUID
+        }
+
         override fun isConnected(identifier: String) = identifier in connected
         override fun hasCharacteristic(identifier: String, characteristicUuid: String) =
-            if (CameraAutoCorrectionSetting.fromUuid(characteristicUuid) != null) hasAutoCorrection
+            if (characteristicUuid == Sony.CAMERA_STATUS_UUID) hasCameraStatus
+            else if (CameraAutoCorrectionSetting.fromUuid(characteristicUuid) != null) hasAutoCorrection
             else characteristicUuid != Sony.CHARACTERISTIC_LOCATION_ENABLED_IN_CAMERA || hasLocationStatus
 
         override fun initiateDiscoverServices(identifier: String): Boolean {
@@ -496,7 +584,13 @@ class CameraLocationLinkingTest {
         }
 
         fun completeWrite(id: String, uuid: String) =
-            emit(BleTransportEvent.CharacteristicWritten(id, uuid, BleOperationStatus.Success))
+            emit(
+                BleTransportEvent.CharacteristicWritten(
+                    id, uuid,
+                    if (failRemoteWrites && uuid == Sony.REMOTE_CHARACTERISTIC_UUID)
+                        BleOperationStatus.Failure else BleOperationStatus.Success
+                )
+            )
 
         override fun initiateSubscribe(
             identifier: String,
@@ -517,6 +611,7 @@ class CameraLocationLinkingTest {
     }
 
     private class FakeDao : CameraDeviceDAO {
+        var remoteEnabled = false
         override suspend fun getAllCameraDevices() = emptyList<CameraDevice>()
         override fun observeAllDevices() = flowOf(emptyList<CameraDevice>())
         override suspend fun insertDevice(device: CameraDevice) = Unit
@@ -530,7 +625,7 @@ class CameraLocationLinkingTest {
         override suspend fun findDeviceEnabled(address: String): Boolean? = true
         override suspend fun getAlwaysOnEnabledDeviceCount() = 0
         override suspend fun setRemoteControlEnabled(deviceId: String, enabled: Boolean) = 0
-        override suspend fun isRemoteControlEnabled(address: String) = false
+        override suspend fun isRemoteControlEnabled(address: String) = remoteEnabled
         override suspend fun getHandshakeDelayMs(address: String): Long? = 0
         override suspend fun setHandshakeDelayMs(deviceId: String, delayMs: Long) = Unit
     }
