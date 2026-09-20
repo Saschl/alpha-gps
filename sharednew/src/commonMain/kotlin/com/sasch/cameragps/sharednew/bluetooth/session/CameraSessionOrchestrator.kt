@@ -61,8 +61,8 @@ class CameraSessionOrchestrator(
 
     private val queue: BleOperationQueue =
         BleOperationQueue(transport, scope, shouldExecute = { id, operation ->
-        // A packet already in flight cannot be recalled, but parked packets must
-        // not reach a camera after it disables linking (or while setup resumes).
+            // Parked location packets require a completed handshake. Camera-reported
+            // location status is advisory and does not gate transmission.
             when {
                 operation !is BleOperation.Write -> true
                 operation.characteristicUuid.equals(
@@ -243,32 +243,11 @@ class CameraSessionOrchestrator(
     }
 
     private fun handleCharacteristicChanged(event: BleTransportEvent.CharacteristicChanged) {
-        val wasDisabled = registry.get(event.identifier)?.locationDisabledByCamera == true
-        val handled = sessionCoordinator.onCharacteristicChanged(
+        // The coordinator updates the camera-reported warning in the registry.
+        // Neither status value releases the GPS lock or restarts the handshake.
+        sessionCoordinator.onCharacteristicChanged(
             event.identifier, event.characteristicUuid, event.value,
         )
-        if (!handled || !event.characteristicUuid.equals(
-                SonyBluetoothConstants.CHARACTERISTIC_LOCATION_ENABLED_IN_CAMERA, true,
-            )
-        ) return
-
-        val isDisabled = registry.get(event.identifier)?.locationDisabledByCamera == true
-        if (!wasDisabled && isDisabled && port.hasCharacteristic(
-                event.identifier, SonyBluetoothConstants.CHARACTERISTIC_ENABLE_UNLOCK_GPS_COMMAND,
-            )
-        ) {
-            // unlock when the setting is turned of by the camera
-            port.writeCharacteristic(
-                event.identifier, SonyBluetoothConstants.CHARACTERISTIC_ENABLE_UNLOCK_GPS_COMMAND,
-                SonyBluetoothConstants.LOCATION_LOCK_RELEASE_COMMAND,
-            )
-        } else if (wasDisabled && !isDisabled) {
-            // Availability is permission to try setup again, not proof that the
-            // camera is already accepting GPS. Reuse the normal handshake.
-            registry.updateIfPresent(event.identifier) { it.copy(phase = BleSessionPhase.Connected) }
-            sessionCoordinator.beginHandshake(event.identifier)
-        }
-        locationManager.updateTracking()
     }
 
     private fun handleConnected(identifier: String) {

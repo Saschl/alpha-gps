@@ -55,7 +55,7 @@ interface BleGattPort {
      */
     fun setShutterSequenceActive(identifier: String, active: Boolean)
 
-    /** Camera-side location-linking state, independent of remote control and BLE connection. */
+    /** Advisory camera status for the UI; must not gate GPS setup or transmission. */
     fun setLocationDisabledByCamera(identifier: String, disabled: Boolean)
     fun isLocationDisabledByCamera(identifier: String): Boolean
 

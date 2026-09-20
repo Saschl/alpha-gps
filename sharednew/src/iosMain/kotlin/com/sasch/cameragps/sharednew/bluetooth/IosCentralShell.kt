@@ -33,6 +33,8 @@ import platform.CoreBluetooth.CBManagerStateUnsupported
 import platform.CoreBluetooth.CBPeripheral
 import platform.CoreBluetooth.CBPeripheralStateConnected
 import platform.CoreBluetooth.CBPeripheralStateConnecting
+import platform.CoreBluetooth.CBPeripheralStateDisconnected
+import platform.CoreBluetooth.CBPeripheralStateDisconnecting
 import platform.CoreBluetooth.CBUUID
 import platform.Foundation.NSData
 import platform.Foundation.NSError
@@ -252,6 +254,10 @@ internal class IosCentralShell(
             ) {
                 val id = didFailToConnectPeripheral.identifier.UUIDString
                 log.w { "Failed to connect $id: ${error?.localizedDescription}" }
+                log.d {
+                    "Failed to connect $id: ${error?.localizedDescription} " +
+                            "domain=${error?.domain} code=${error?.code}, foreground=${isAppActive()}"
+                }
                 connectionEvents.tryEmit(ConnectionEvent.ConnectFailed(id))
                 scope.launch {
                     if (central.state == CBManagerStatePoweredOn && shouldAutoReconnect(id)) {
@@ -273,6 +279,10 @@ internal class IosCentralShell(
                 log.i {
                     "Disconnected $id isReconnecting=$isReconnecting " +
                             "error=${error?.localizedDescription}"
+                }
+                log.d {
+                    "Disconnect details for $id: domain=${error?.domain} " +
+                            "code=${error?.code}, foreground=${isAppActive()}"
                 }
                 connected.remove(id)
                 // Emits Disconnected → orchestrator clears the session, cancels queued
@@ -329,6 +339,21 @@ internal class IosCentralShell(
     val isPoweredOn: Boolean get() = central?.state == CBManagerStatePoweredOn
 
     fun isConnected(identifier: String): Boolean = connected.containsKey(identifier)
+
+    /** Snapshot only: never retrieve peripherals or disturb a pending connection for diagnostics. */
+    fun connectionDiagnostics(identifier: String): String {
+        val id = resolveKnownIdentifier(identifier)
+        val peripheral = connected[id] ?: discovered[id]
+        val state = when (peripheral?.state) {
+            CBPeripheralStateDisconnected -> "Disconnected"
+            CBPeripheralStateConnecting -> "Connecting"
+            CBPeripheralStateConnected -> "Connected"
+            CBPeripheralStateDisconnecting -> "Disconnecting"
+            else -> "unknown"
+        }
+        return "central=${central?.let { stateName(it.state) } ?: "absent"}, " +
+                "peripheral=$state, trackedConnected=${id in connected}, foreground=${isAppActive()}"
+    }
 
     fun discoveredPeripheral(identifier: String): CBPeripheral? = discovered[identifier]
 
@@ -414,6 +439,13 @@ internal class IosCentralShell(
                     .onSubscription {
                         // Initiate only once the waiter is subscribed so the
                         // completion event cannot slip past it
+                        log.d {
+                            "Awaited connect for $resolvedIdentifier: ${
+                                connectionDiagnostics(
+                                    resolvedIdentifier
+                                )
+                            }"
+                        }
                         central?.connectPeripheral(
                             peripheral,
                             options = mapOf(CBConnectPeripheralOptionEnableAutoReconnect to true)
@@ -426,6 +458,7 @@ internal class IosCentralShell(
             // connect. On ConnectFailed the attempt is already dead, and cancelling
             // would kill the auto-reconnect didFailToConnect may just have issued.
             if (event == null && isPoweredOn) {
+                log.d { "Cancelling connect for $resolvedIdentifier after timeout or caller cancellation" }
                 central?.cancelPeripheralConnection(peripheral)
             }
         }
@@ -434,6 +467,13 @@ internal class IosCentralShell(
 
     /** Cancel the connection for [resolvedIdentifier] and await the disconnect. */
     suspend fun awaitDisconnect(resolvedIdentifier: String) {
+        log.d {
+            "Disconnect requested for $resolvedIdentifier: ${
+                connectionDiagnostics(
+                    resolvedIdentifier
+                )
+            }"
+        }
         val peripheral = connected[resolvedIdentifier] ?: discovered[resolvedIdentifier] ?: return
         if (!isPoweredOn) {
             connected.remove(resolvedIdentifier)
@@ -460,6 +500,7 @@ internal class IosCentralShell(
      * handling matches the previous requestConnection semantics).
      */
     fun retrieveAndConnect(identifier: String): Boolean {
+        log.d { "Targeted connect for $identifier: ${connectionDiagnostics(identifier)}" }
         // Not powered on: the next power-on reconnects all saved devices anyway
         if (!isPoweredOn) return false
         val resolvedIdentifier = resolveKnownIdentifier(identifier)
@@ -484,6 +525,7 @@ internal class IosCentralShell(
     fun registerAndConnect(peripheral: CBPeripheral) {
         val id = peripheral.identifier.UUIDString
         discovered[id] = peripheral
+        log.d { "Reconnect sweep for $id: ${connectionDiagnostics(id)}" }
         if (!connected.containsKey(id)) {
             central?.connectPeripheral(
                 peripheral,

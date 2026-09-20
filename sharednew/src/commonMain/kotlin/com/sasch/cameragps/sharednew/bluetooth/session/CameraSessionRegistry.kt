@@ -19,7 +19,7 @@ data class CameraSession(
     val pairingRetryCount: Int = 0,
     /** One-shot retry guard for the config read (intermittent GATT 133 on Android). */
     val hasRetriedConfigRead: Boolean = false,
-    /** The camera explicitly disabled location linking; remote control can remain active. */
+    /** Camera-reported status for the UI only; some cameras may report disabled during startup. */
     val locationDisabledByCamera: Boolean = false,
     val autoTimeCorrection: CameraSettingState = CameraSettingState(),
     val autoAreaAdjustment: CameraSettingState = CameraSettingState(),
@@ -31,7 +31,7 @@ data class CameraSession(
         }
 
     val isLocationReady: Boolean
-        get() = phase == BleSessionPhase.Transmitting && !locationDisabledByCamera
+        get() = phase == BleSessionPhase.Transmitting
 }
 
 /**

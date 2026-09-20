@@ -72,6 +72,11 @@ internal class IosLocationSource : LocationSource {
 
         override fun locationManager(manager: CLLocationManager, didFailWithError: NSError) {
             log.e { "Location error" }
+            log.d {
+                "Location error: domain=${didFailWithError.domain} code=${didFailWithError.code} " +
+                        "description=${didFailWithError.localizedDescription}, " +
+                        "authorization=${manager.authorizationStatus()}, started=$started"
+            }
         }
 
         override fun locationManagerDidChangeAuthorization(manager: CLLocationManager) {

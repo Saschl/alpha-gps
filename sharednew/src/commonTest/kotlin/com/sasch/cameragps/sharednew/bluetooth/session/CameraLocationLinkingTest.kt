@@ -74,7 +74,7 @@ class CameraLocationLinkingTest {
     }
 
     @Test
-    fun disableStopsGpsAndCachedSendsButKeepsTheConnectionAndShutter() = runTest {
+    fun disabledStatusKeepsWarningWhileGpsAndShutterContinue() = runTest {
         val f = Fixture(backgroundScope)
         f.connect("A")
         runCurrent()
@@ -91,19 +91,17 @@ class CameraLocationLinkingTest {
         assertTrue(f.session("A").locationDisabledByCamera)
         assertTrue(f.session("A").remoteFeatureActive)
         assertTrue(f.transport.isConnected("A"))
-        assertFalse(f.orchestrator.locationManager.isActive.value)
-        assertFalse(f.orchestrator.locationManager.isTransmitting.value)
-        assertTrue(f.transport.operations.any { (_, op) ->
+        assertTrue(f.orchestrator.locationManager.isActive.value)
+        assertTrue(f.orchestrator.locationManager.isTransmitting.value)
+        assertFalse(f.transport.operations.any { (_, op) ->
             op is BleOperation.Write && op.characteristicUuid == Sony.CHARACTERISTIC_ENABLE_UNLOCK_GPS_COMMAND &&
                     op.value.contentEquals(byteArrayOf(0))
         })
         val sent = f.transport.locationWrites().size
-        // A late handshake completion must not send the cached fix to a disabled camera.
-        f.orchestrator.locationManager.onDeviceReady("A")
         advanceTimeBy(Sony.LOCATION_UPDATE_INTERVAL_MS * 2)
         runCurrent()
-        assertEquals(sent, f.transport.locationWrites().size)
-        assertFalse(f.source.active)
+        assertTrue(f.transport.locationWrites().size > sent)
+        assertTrue(f.source.active)
         assertTrue(f.orchestrator.triggerRemoteShutter("A"))
         runCurrent()
         assertTrue(f.transport.operations.any { (_, op) ->
@@ -113,7 +111,7 @@ class CameraLocationLinkingTest {
     }
 
     @Test
-    fun disablingOneCameraDoesNotStopTheOtherCamera() = runTest {
+    fun disabledStatusDoesNotExcludeEitherCameraFromTransmission() = runTest {
         val f = Fixture(backgroundScope)
         f.connect("A")
         f.connect("B")
@@ -123,62 +121,118 @@ class CameraLocationLinkingTest {
         f.notify("A", Sony.CHARACTERISTIC_LOCATION_ENABLED_IN_CAMERA, byteArrayOf(3, 1, 2, 0))
         runCurrent()
         assertTrue(f.source.active)
-        assertEquals(setOf("B"), f.orchestrator.registry.readyIdentifiers())
+        assertEquals(setOf("A", "B"), f.orchestrator.registry.readyIdentifiers())
         f.transport.operations.clear()
         advanceTimeBy(Sony.LOCATION_UPDATE_INTERVAL_MS)
         runCurrent()
-        assertEquals(listOf("B"), f.transport.locationWrites().map { it.first })
+        assertEquals(setOf("A", "B"), f.transport.locationWrites().map { it.first }.toSet())
     }
 
     @Test
-    fun disableDuringHandshakeSurvivesCompletionAndAReconnectClearsIt() = runTest {
-        val f = Fixture(backgroundScope)
-        f.transport.holdReads = true
-        f.connect("A")
-        runCurrent()
-        f.notify("A", Sony.CHARACTERISTIC_LOCATION_ENABLED_IN_CAMERA, byteArrayOf(3, 1, 2, 0))
-        runCurrent()
-        f.transport.completeRead("A")
-        runCurrent()
-        assertEquals(BleSessionPhase.Transmitting, f.session("A").phase)
-        assertTrue(f.session("A").locationDisabledByCamera)
-        assertFalse(f.source.active)
-        f.transport.connected.remove("A")
-        f.transport.emit(BleTransportEvent.Disconnected("A", null))
-        runCurrent()
-        f.transport.holdReads = false
-        f.connect("A")
-        runCurrent()
-        assertFalse(f.session("A").locationDisabledByCamera)
-        assertTrue(f.session("A").isLocationReady)
-        assertTrue(f.source.active)
+    fun disabledStatusDuringConfigReadOrUnlockDoesNotSkipGpsSetup() = runTest {
+        for (duringRead in listOf(true, false)) {
+            val f = Fixture(backgroundScope)
+            f.transport.holdReads = duringRead
+            f.transport.holdGpsUnlockWrites = !duringRead
+            f.connect("A")
+            runCurrent()
+            f.notify(
+                "A",
+                Sony.CHARACTERISTIC_LOCATION_ENABLED_IN_CAMERA,
+                Sony.LOCATION_TRANSFER_DISABLED
+            )
+            runCurrent()
+            assertTrue(f.session("A").locationDisabledByCamera)
+            assertFalse(f.source.active) // The handshake must still finish first.
+            if (duringRead) {
+                f.transport.completeRead("A")
+            } else {
+                f.transport.holdGpsUnlockWrites = false
+                f.transport.completeWrite("A", Sony.CHARACTERISTIC_ENABLE_UNLOCK_GPS_COMMAND)
+            }
+            runCurrent()
+            assertTrue(f.session("A").isLocationReady)
+            assertTrue(f.session("A").locationDisabledByCamera)
+            assertTrue(f.source.active)
+            val gpsWrites =
+                f.transport.operations.map { it.second }.filterIsInstance<BleOperation.Write>()
+                    .filter {
+                        it.characteristicUuid in setOf(
+                            Sony.CHARACTERISTIC_ENABLE_UNLOCK_GPS_COMMAND,
+                            Sony.CHARACTERISTIC_ENABLE_LOCK_GPS_COMMAND,
+                        )
+                    }
+            assertEquals(
+                listOf(
+                    BleOperation.Write(
+                        Sony.CHARACTERISTIC_ENABLE_UNLOCK_GPS_COMMAND,
+                        Sony.GPS_ENABLE_COMMAND
+                    ),
+                    BleOperation.Write(
+                        Sony.CHARACTERISTIC_ENABLE_LOCK_GPS_COMMAND,
+                        Sony.GPS_ENABLE_COMMAND
+                    ),
+                ), gpsWrites
+            )
+            f.fix()
+            runCurrent()
+            assertEquals(1, f.transport.locationWrites().size)
+            f.transport.connected.remove("A")
+            f.transport.emit(BleTransportEvent.Disconnected("A", null))
+            runCurrent()
+            assertFalse(f.source.active)
+            f.transport.holdReads = false
+            f.connect("A")
+            runCurrent()
+            assertFalse(f.session("A").locationDisabledByCamera)
+            assertTrue(f.session("A").isLocationReady)
+            f.orchestrator.shutdownAll()
+        }
     }
 
     @Test
-    fun availableNotificationResumesOnlyAfterHandshakeAndDuplicatesAreHarmless() = runTest {
+    fun lateAndDuplicateStatusNotificationsOnlyUpdateTheWarning() = runTest {
         val f = Fixture(backgroundScope)
         f.connect("A")
         runCurrent()
         f.fix()
         runCurrent()
-        f.notify("A", Sony.CHARACTERISTIC_LOCATION_ENABLED_IN_CAMERA, byteArrayOf(3, 1, 2, 0))
-        runCurrent()
         f.transport.operations.clear()
-        f.transport.holdReads = true
-        f.notify("A", Sony.CHARACTERISTIC_LOCATION_ENABLED_IN_CAMERA, byteArrayOf(3, 1, 3, 1))
+        for (disabled in listOf(true, true, false, false, true)) {
+            f.notify(
+                "A", Sony.CHARACTERISTIC_LOCATION_ENABLED_IN_CAMERA,
+                if (disabled) Sony.LOCATION_TRANSFER_DISABLED else Sony.LOCATION_TRANSFER_AVAILABLE
+            )
+            runCurrent()
+            assertEquals(disabled, f.session("A").locationDisabledByCamera)
+            assertTrue(f.session("A").isLocationReady)
+            assertTrue(f.source.active)
+            assertTrue(f.orchestrator.locationManager.isTransmitting.value)
+            // No lock release, repeated handshake, or immediate extra GPS packet.
+            assertTrue(f.transport.operations.isEmpty())
+        }
+        advanceTimeBy(Sony.LOCATION_UPDATE_INTERVAL_MS)
         runCurrent()
-        assertFalse(f.session("A").isLocationReady)
+        assertEquals(1, f.transport.locationWrites().size)
+    }
+
+    @Test
+    fun availableStatusDuringSetupDoesNotRestartOrPrematurelyCompleteTheHandshake() = runTest {
+        val f = Fixture(backgroundScope)
+        f.transport.holdReads = true
+        f.connect("A")
+        runCurrent()
+        for (value in listOf(Sony.LOCATION_TRANSFER_DISABLED, Sony.LOCATION_TRANSFER_AVAILABLE)) {
+            f.notify("A", Sony.CHARACTERISTIC_LOCATION_ENABLED_IN_CAMERA, value)
+            runCurrent()
+        }
+        assertFalse(f.session("A").locationDisabledByCamera)
         assertFalse(f.source.active)
-        assertTrue(f.transport.locationWrites().isEmpty())
+        assertFalse(f.session("A").isLocationReady)
         f.transport.completeRead("A")
         runCurrent()
-        assertTrue(f.session("A").isLocationReady)
         assertTrue(f.source.active)
-        assertEquals(1, f.transport.locationWrites().size)
-        val reads = f.transport.operations.count { it.second is BleOperation.Read }
-        f.notify("A", Sony.CHARACTERISTIC_LOCATION_ENABLED_IN_CAMERA, byteArrayOf(3, 1, 3, 1))
-        runCurrent()
-        assertEquals(reads, f.transport.operations.count { it.second is BleOperation.Read })
+        assertEquals(1, f.transport.operations.count { (_, op) -> op is BleOperation.Read })
     }
 
     @Test
@@ -205,7 +259,7 @@ class CameraLocationLinkingTest {
     }
 
     @Test
-    fun dropsParkedLocationPacketsWithoutCancellingParkedRemoteCommands() = runTest {
+    fun disabledStatusDoesNotDropParkedLocationPacketsOrRemoteCommands() = runTest {
         val f = Fixture(backgroundScope)
         f.connect("A")
         runCurrent()
@@ -222,7 +276,9 @@ class CameraLocationLinkingTest {
         runCurrent()
         f.transport.completeWrite("A", Sony.CHARACTERISTIC_UUID)
         runCurrent()
-        assertEquals(1, f.transport.locationWrites().size)
+        assertEquals(2, f.transport.locationWrites().size)
+        f.transport.completeWrite("A", Sony.CHARACTERISTIC_UUID)
+        runCurrent()
         assertTrue(f.transport.operations.any { (_, op) ->
             op is BleOperation.Write && op.characteristicUuid == Sony.REMOTE_CHARACTERISTIC_UUID
         })
@@ -353,7 +409,7 @@ class CameraLocationLinkingTest {
         runCurrent()
         assertEquals(true, f.session("A").autoAreaAdjustment.enabled)
         assertTrue(f.session("A").locationDisabledByCamera)
-        assertFalse(f.source.active)
+        assertTrue(f.source.active)
     }
 
     @Test
@@ -521,6 +577,7 @@ class CameraLocationLinkingTest {
         val settingValues = mutableMapOf<String, ByteArray>()
         var holdReads = false
         var holdLocationWrites = false
+        var holdGpsUnlockWrites = false
         fun emit(event: BleTransportEvent) {
             channel.trySend(event)
         }
@@ -576,6 +633,7 @@ class CameraLocationLinkingTest {
             operations += identifier to BleOperation.Write(characteristicUuid, value)
             if (rejectSettingWrites && CameraAutoCorrectionSetting.fromUuid(characteristicUuid) != null) return false
             if (holdSettingWrites && CameraAutoCorrectionSetting.fromUuid(characteristicUuid) != null) return true
+            if (holdGpsUnlockWrites && characteristicUuid == Sony.CHARACTERISTIC_ENABLE_UNLOCK_GPS_COMMAND) return true
             if (!holdLocationWrites || characteristicUuid != Sony.CHARACTERISTIC_UUID) completeWrite(
                 identifier,
                 characteristicUuid

@@ -36,20 +36,16 @@ fun StoreScreenshotViewController(scenario: String): UIViewController {
             } else if (scenario == "privacy") {
                 IosSettingsScreen(
                     isAppEnabled = true,
-                    autoScanEnabled = false,
                     hapticsEnabled = true,
                     transmissionNotificationsEnabled = true,
                     transmissionNotificationsPermissionDenied = false,
                     onTransmissionNotificationsEnabledChange = {},
                     onOpenNotificationSettings = {},
                     onBackClick = {},
-                    onOpenHelp = {},
                     onAppEnabledChange = {},
-                    onAutoScanEnabledChange = {},
                     onHapticsEnabledChange = {},
                     sentryEnabled = false,
                     onSentryEnabledChange = {},
-                    onShowWelcomeAgain = {},
                     onChangeLogLevel = {},
                 )
             } else {

@@ -55,8 +55,9 @@ class BleSessionCoordinator(
                 SonyBluetoothConstants.CHARACTERISTIC_LOCATION_ENABLED_IN_CAMERA
             )
         ) {
-            // Queue the subscription before setup so a camera-side refusal during
-            // the handshake is observed too. Older cameras may omit DD01.
+            // Observe status for the UI, including during setup. DD01 is advisory:
+            // a startup "disabled" notification must not prevent GPS setup.
+            // Older cameras may omit DD01.
             port.subscribeToNotifications(
                 id,
                 SonyBluetoothConstants.CHARACTERISTIC_LOCATION_ENABLED_IN_CAMERA
@@ -143,12 +144,12 @@ class BleSessionCoordinator(
         ) {
             when {
                 value.contentEquals(SonyBluetoothConstants.LOCATION_TRANSFER_DISABLED) -> {
-                    log.i { "Camera $id disabled location linking" }
+                    log.d { "Camera $id reports location linking disabled (advisory)" }
                     port.setLocationDisabledByCamera(id, true)
                 }
 
                 value.contentEquals(SonyBluetoothConstants.LOCATION_TRANSFER_AVAILABLE) -> {
-                    log.i { "Camera $id reports location transfer available" }
+                    log.d { "Camera $id reports location transfer available" }
                     port.setLocationDisabledByCamera(id, false)
                 }
 
@@ -204,10 +205,6 @@ class BleSessionCoordinator(
     // ---- Private handshake flow ----
 
     private fun enableGps(identifier: String) {
-        if (port.isLocationDisabledByCamera(identifier)) {
-            sendTimeSyncOrComplete(identifier)
-            return
-        }
         if (port.hasCharacteristic(
                 identifier,
                 SonyBluetoothConstants.CHARACTERISTIC_ENABLE_UNLOCK_GPS_COMMAND
@@ -227,10 +224,6 @@ class BleSessionCoordinator(
     }
 
     private fun handleGpsUnlockResponse(identifier: String) {
-        if (port.isLocationDisabledByCamera(identifier)) {
-            sendTimeSyncOrComplete(identifier)
-            return
-        }
         if (port.hasCharacteristic(
                 identifier,
                 SonyBluetoothConstants.CHARACTERISTIC_ENABLE_LOCK_GPS_COMMAND

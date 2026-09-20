@@ -509,6 +509,13 @@ object IosBluetoothController : BluetoothController {
 
     fun applyDeviceEnabledState(identifier: String, enabled: Boolean) {
         val normalized = identifier.uppercase()
+        val session = orchestrator.registry.get(normalized)
+        logging.d {
+            "Device toggle $normalized enabled=$enabled: " +
+                    "${shell?.connectionDiagnostics(normalized) ?: "central=absent"}, " +
+                    "phase=${session?.phase}, locationDisabledByCamera=${session?.locationDisabledByCamera}, " +
+                    "locationActive=${transmissionActive.value}"
+        }
         repository.setDeviceEnabled(normalized, enabled)
 
         if (!enabled) {
@@ -640,14 +647,26 @@ object IosBluetoothController : BluetoothController {
      * short-circuited to keep the decision in one tested place; `isDeviceEnabled`
      * is a cache hit on a path that runs once per disconnect.
      */
-    private suspend fun shouldAutoReconnect(id: String): Boolean =
-        AutoReconnectPolicy.shouldReconnect(
-            pairingRejected = id.equals(pairingFailedIdentifier, ignoreCase = true),
-            authorization = accessorySession.authorizationOf(id),
+    private suspend fun shouldAutoReconnect(id: String): Boolean {
+        val pairingRejected = id.equals(pairingFailedIdentifier, ignoreCase = true)
+        val authorization = accessorySession.authorizationOf(id)
+        val appEnabled = this.appEnabled
+        val autoReconnectEnabled = repository.isAutoReconnectEnabled(id)
+        val deviceEnabled = repository.isDeviceEnabled(id)
+        val reconnect = AutoReconnectPolicy.shouldReconnect(
+            pairingRejected = pairingRejected,
+            authorization = authorization,
             appEnabled = appEnabled,
-            autoReconnectEnabled = repository.isAutoReconnectEnabled(id),
-            deviceEnabled = repository.isDeviceEnabled(id),
+            autoReconnectEnabled = autoReconnectEnabled,
+            deviceEnabled = deviceEnabled,
         )
+        logging.d {
+            "Reconnect decision for $id: allowed=$reconnect, authorization=$authorization, " +
+                    "appEnabled=$appEnabled, autoReconnectEnabled=$autoReconnectEnabled, " +
+                    "deviceEnabled=$deviceEnabled, pairingRejected=$pairingRejected"
+        }
+        return reconnect
+    }
 
     // ---------------------------------------------------------------------------
     // AccessorySetupKit
