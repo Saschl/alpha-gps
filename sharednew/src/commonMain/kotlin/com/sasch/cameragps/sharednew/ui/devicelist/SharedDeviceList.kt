@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
@@ -71,6 +70,7 @@ import cameragps.sharednew.generated.resources.trigger_shutter
 import com.sasch.cameragps.sharednew.bluetooth.BluetoothDeviceInfo
 import com.sasch.cameragps.sharednew.ui.ShutterPulseIcon
 import com.sasch.cameragps.sharednew.ui.TransmissionDot
+import com.sasch.cameragps.sharednew.ui.components.ScrollbarLazyColumn
 import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
@@ -159,7 +159,7 @@ fun SharedDeviceList(
     val savedDevices = devices.filter { it.isSaved }
     val nearbyDevices = devices.filter { !it.isSaved }
 
-    LazyColumn(
+    ScrollbarLazyColumn(
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 16.dp),

@@ -1,12 +1,9 @@
 package com.saschl.cameragps.ui.settings
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
@@ -39,6 +36,7 @@ import cameragps.sharednew.generated.resources.location_provider_title
 import cameragps.sharednew.generated.resources.sentry_settings
 import cameragps.sharednew.generated.resources.settings
 import com.sasch.cameragps.sharednew.ui.settings.SharedLanguageSettingsCard
+import com.sasch.cameragps.sharednew.ui.settings.SharedSettingsColumn
 import com.sasch.cameragps.sharednew.ui.settings.SharedSettingsScreen
 import com.saschl.cameragps.R
 import com.saschl.cameragps.service.location.LOCATION_PROVIDER_SELECTABLE
@@ -136,65 +134,42 @@ private fun SettingsOverviewScreen(
             )
         }
     ) { paddingValues ->
-        LazyColumn(
+        SharedSettingsColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
-                .padding(16.dp),
-            contentPadding = PaddingValues(bottom = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(paddingValues),
         ) {
-            item {
-                AppControlsInlineSection()
-            }
-            item {
-                LogLevelSettingsCard()
-            }
+            AppControlsInlineSection()
+            LogLevelSettingsCard()
             if (LOCATION_PROVIDER_SELECTABLE) {
-                item {
-                    SettingsSectionNavigation(
-                        title = stringResource(Res.string.location_provider_title),
-                        description = stringResource(Res.string.location_provider_hint),
-                        onClick = { onOpenDestination(SettingsDestination.LocationProvider) }
-                    )
-                }
-            }
-            item {
                 SettingsSectionNavigation(
-                    title = stringResource(Res.string.event_sounds_title),
-                    description = stringResource(Res.string.event_sounds_open_section_description),
-                    onClick = { onOpenDestination(SettingsDestination.EventSounds) }
+                    title = stringResource(Res.string.location_provider_title),
+                    description = stringResource(Res.string.location_provider_hint),
+                    onClick = { onOpenDestination(SettingsDestination.LocationProvider) }
                 )
             }
-            item {
-                SettingsSectionNavigation(
-                    title = stringResource(Res.string.battery_optimization_settings_title),
-                    onClick = { onOpenDestination(SettingsDestination.BatteryOptimization) }
-                )
-            }
-            item {
-                SharedLanguageSettingsCard()
-            }
+            SettingsSectionNavigation(
+                title = stringResource(Res.string.event_sounds_title),
+                description = stringResource(Res.string.event_sounds_open_section_description),
+                onClick = { onOpenDestination(SettingsDestination.EventSounds) }
+            )
+            SettingsSectionNavigation(
+                title = stringResource(Res.string.battery_optimization_settings_title),
+                onClick = { onOpenDestination(SettingsDestination.BatteryOptimization) }
+            )
+            SharedLanguageSettingsCard()
             if (CrashReporting.AVAILABLE) {
-                item {
-                    SettingsSectionNavigation(
-                        title = stringResource(Res.string.sentry_settings),
-                        description = stringResource(Res.string.enable_sentry_description),
-                        onClick = { onOpenDestination(SettingsDestination.Sentry) }
-                    )
-                }
+                SettingsSectionNavigation(
+                    title = stringResource(Res.string.sentry_settings),
+                    description = stringResource(Res.string.enable_sentry_description),
+                    onClick = { onOpenDestination(SettingsDestination.Sentry) }
+                )
             }
 
             if (debugPanelCounter >= 5) {
-                item {
-                    ReviewHintDebugPanel()
-                }
-                item {
-                    DebugRestartReceiverCard()
-                }
-                item {
-                    DebugDonationDialogCard()
-                }
+                ReviewHintDebugPanel()
+                DebugRestartReceiverCard()
+                DebugDonationDialogCard()
             }
         }
     }

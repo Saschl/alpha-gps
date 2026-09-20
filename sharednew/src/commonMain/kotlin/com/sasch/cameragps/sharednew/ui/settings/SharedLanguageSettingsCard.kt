@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
@@ -38,6 +37,7 @@ import com.sasch.cameragps.sharednew.language.AppLanguage
 import com.sasch.cameragps.sharednew.language.LanguagePreference
 import com.sasch.cameragps.sharednew.language.SupportedLanguages
 import com.sasch.cameragps.sharednew.language.appLanguagePreference
+import com.sasch.cameragps.sharednew.ui.components.ScrollbarLazyColumn
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 
@@ -91,7 +91,7 @@ internal fun LanguageSettingsCardContent(
             onDismissRequest = { showDialog = false },
             title = { Text(stringResource(Res.string.language_selection)) },
             text = {
-                LazyColumn(modifier = Modifier.selectableGroup()) {
+                ScrollbarLazyColumn(modifier = Modifier.selectableGroup()) {
                     item(key = "system") {
                         LanguageOption(systemLabel, currentLanguage == null) { select(null) }
                     }

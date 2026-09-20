@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -55,6 +54,7 @@ import cameragps.sharednew.generated.resources.rename_camera_title
 import cameragps.sharednew.generated.resources.setting_info
 import com.sasch.cameragps.sharednew.bluetooth.BleSessionPhase
 import com.sasch.cameragps.sharednew.bluetooth.session.CameraSettingState
+import com.sasch.cameragps.sharednew.ui.components.ScrollbarLazyColumn
 import com.sasch.cameragps.sharednew.util.KotlinPlatform
 import com.sasch.cameragps.sharednew.util.currentPlatform
 import org.jetbrains.compose.resources.painterResource
@@ -91,7 +91,7 @@ fun DeviceDetailContent(
         viewModel.load(deviceId, deviceName)
     }
 
-    LazyColumn(
+    ScrollbarLazyColumn(
         modifier = modifier
             .fillMaxSize()
             .padding(16.dp),

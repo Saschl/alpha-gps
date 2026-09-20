@@ -3,7 +3,6 @@ package com.sasch.cameragps.sharednew
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -11,8 +10,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
@@ -32,8 +31,10 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import cameragps.sharednew.generated.resources.Res
@@ -64,8 +65,10 @@ import com.sasch.cameragps.sharednew.bluetooth.IosBluetoothController
 import com.sasch.cameragps.sharednew.ui.settings.SharedLanguageSettingsCard
 import com.sasch.cameragps.sharednew.ui.settings.SharedSentrySettingsCard
 import com.sasch.cameragps.sharednew.ui.settings.SharedSettingsCard
+import com.sasch.cameragps.sharednew.ui.settings.SharedSettingsColumn
 import com.sasch.cameragps.sharednew.ui.settings.SharedSettingsScreen
 import com.sasch.cameragps.sharednew.ui.settings.SharedToggleRow
+import kotlinx.coroutines.flow.first
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import platform.Foundation.NSLog
@@ -97,11 +100,13 @@ internal fun IosSettingsScreen(
 ) {
     var selectedLogLevel by remember { mutableStateOf(LogLevel.valueOf(IosAppPreferences.getLogLevel())) }
     var debugTapCounter by remember { mutableIntStateOf(0) }
-    val listState = rememberLazyListState()
+    val tipJarRequester = remember { BringIntoViewRequester() }
+    var tipJarPlaced by remember { mutableStateOf(false) }
 
     LaunchedEffect(scrollToTipJarOnOpen) {
         if (!scrollToTipJarOnOpen) return@LaunchedEffect
-        listState.animateScrollToItem(index = TIP_JAR_ITEM_INDEX, 1)
+        snapshotFlow { tipJarPlaced }.first { it }
+        tipJarRequester.bringIntoView()
         onTipJarScrollConsumed()
     }
 
@@ -116,88 +121,72 @@ internal fun IosSettingsScreen(
             )
         },
     ) { paddingValues ->
-        LazyColumn(
-            state = listState,
+        SharedSettingsColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            contentPadding = PaddingValues(bottom = 16.dp),
+                .padding(paddingValues),
         ) {
-            item {
-                SharedSettingsCard(title = stringResource(Res.string.app_controls)) {
-                    SharedToggleRow(
-                        title = stringResource(Res.string.enable_app),
-                        description = stringResource(Res.string.enable_app_description),
-                        checked = isAppEnabled,
-                        onCheckedChange = onAppEnabledChange,
+            SharedSettingsCard(title = stringResource(Res.string.app_controls)) {
+                SharedToggleRow(
+                    title = stringResource(Res.string.enable_app),
+                    description = stringResource(Res.string.enable_app_description),
+                    checked = isAppEnabled,
+                    onCheckedChange = onAppEnabledChange,
+                )
+                SharedToggleRow(
+                    title = stringResource(Res.string.ios_transmission_notifications_setting),
+                    description = stringResource(Res.string.ios_transmission_notifications_description),
+                    checked = transmissionNotificationsEnabled,
+                    onCheckedChange = onTransmissionNotificationsEnabledChange,
+                )
+                if (transmissionNotificationsEnabled && transmissionNotificationsPermissionDenied) {
+                    Text(
+                        stringResource(Res.string.ios_transmission_notifications_denied),
+                        style = MaterialTheme.typography.bodyMedium,
                     )
-                    SharedToggleRow(
-                        title = stringResource(Res.string.ios_transmission_notifications_setting),
-                        description = stringResource(Res.string.ios_transmission_notifications_description),
-                        checked = transmissionNotificationsEnabled,
-                        onCheckedChange = onTransmissionNotificationsEnabledChange,
-                    )
-                    if (transmissionNotificationsEnabled && transmissionNotificationsPermissionDenied) {
-                        Text(
-                            stringResource(Res.string.ios_transmission_notifications_denied),
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
-                        TextButton(onClick = onOpenNotificationSettings) {
-                            Text(stringResource(Res.string.ios_transmission_notifications_open_settings))
-                        }
+                    TextButton(onClick = onOpenNotificationSettings) {
+                        Text(stringResource(Res.string.ios_transmission_notifications_open_settings))
                     }
-                    SharedToggleRow(
-                        title = stringResource(Res.string.haptic_feedback),
-                        description = stringResource(Res.string.haptic_feedback_description),
-                        checked = hapticsEnabled,
-                        onCheckedChange = onHapticsEnabledChange,
-                    )
                 }
-            }
-
-            item {
-                IosTipJarCard()
-            }
-
-            item(key = "language") {
-                SharedLanguageSettingsCard()
-            }
-
-            item {
-                IosLogLevelPlaceholderCard(
-                    selectedLevel = selectedLogLevel,
-                    onLevelSelected = {
-                        selectedLogLevel = it
-                        IosAppPreferences.setLogLevel(it.name)
-                        NSLog("selected log level: ${it.name}")
-                        onChangeLogLevel(it)
-                    },
+                SharedToggleRow(
+                    title = stringResource(Res.string.haptic_feedback),
+                    description = stringResource(Res.string.haptic_feedback_description),
+                    checked = hapticsEnabled,
+                    onCheckedChange = onHapticsEnabledChange,
                 )
             }
 
-            item {
-                // Unconditional: unlike Android there is no foss variant on iOS,
-                // so a build without a crash reporter does not exist here.
-                SharedSentrySettingsCard(
-                    enabled = sentryEnabled,
-                    onEnabledChange = onSentryEnabledChange,
-                )
-            }
+            IosTipJarCard(
+                modifier = Modifier
+                    .bringIntoViewRequester(tipJarRequester)
+                    .onGloballyPositioned { tipJarPlaced = true },
+            )
+
+            SharedLanguageSettingsCard()
+
+            IosLogLevelPlaceholderCard(
+                selectedLevel = selectedLogLevel,
+                onLevelSelected = {
+                    selectedLogLevel = it
+                    IosAppPreferences.setLogLevel(it.name)
+                    NSLog("selected log level: ${it.name}")
+                    onChangeLogLevel(it)
+                },
+            )
+
+            // Unconditional: unlike Android there is no foss variant on iOS,
+            // so a build without a crash reporter does not exist here.
+            SharedSentrySettingsCard(
+                enabled = sentryEnabled,
+                onEnabledChange = onSentryEnabledChange,
+            )
 
             if (debugTapCounter >= 5) {
-                item {
-                    IosDebugCard()
-                }
+                IosDebugCard()
             }
         }
     }
 }
-
-// App controls, language, log settings, crash reporting, tip jar — keep in sync with the
-// item order above; the donation prompt scrolls straight to the tip jar.
-private const val TIP_JAR_ITEM_INDEX = 2
 
 @Composable
 private fun IosDebugCard() {
@@ -341,7 +330,7 @@ private fun IosLogLevelPlaceholderCard(
 }
 
 @Composable
-private fun IosTipJarCard() {
+private fun IosTipJarCard(modifier: Modifier = Modifier) {
     val products by IosTipJarController.products.collectAsState()
     val purchaseState by IosTipJarController.purchaseState.collectAsState()
     val isLoadingProducts by IosTipJarController.isLoadingProducts.collectAsState()
@@ -352,7 +341,7 @@ private fun IosTipJarCard() {
         }
     }
 
-    SharedSettingsCard(title = stringResource(Res.string.tip_jar)) {
+    SharedSettingsCard(title = stringResource(Res.string.tip_jar), modifier = modifier) {
         Text(
             text = stringResource(Res.string.tip_jar_description),
             style = MaterialTheme.typography.bodyMedium,

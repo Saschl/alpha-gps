@@ -38,6 +38,7 @@ import cameragps.sharednew.generated.resources.logs_title
 import com.sasch.cameragps.sharednew.database.logging.LogEntry
 import com.sasch.cameragps.sharednew.database.logging.LogRepository
 import com.sasch.cameragps.sharednew.logging.LogFormatter
+import com.sasch.cameragps.sharednew.ui.components.verticalScrollbar
 import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
@@ -61,6 +62,7 @@ fun SharedLogViewerScreen(
     onBackClick: () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
+    val scrollState = rememberScrollState()
     val logs by remember(logFormatter) { logFormatter.format() }.collectAsState(emptyList())
 
     Scaffold(
@@ -112,7 +114,8 @@ fun SharedLogViewerScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .verticalScroll(rememberScrollState())
+                        .verticalScrollbar(scrollState.scrollIndicatorState)
+                        .verticalScroll(scrollState)
                 ) {
                     if (logs.isEmpty()) {
                         Text(
