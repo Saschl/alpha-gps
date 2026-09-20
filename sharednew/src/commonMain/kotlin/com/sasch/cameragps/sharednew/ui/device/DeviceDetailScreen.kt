@@ -31,10 +31,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import cameragps.sharednew.generated.resources.Res
 import cameragps.sharednew.generated.resources.always_on_description
-import cameragps.sharednew.generated.resources.auto_area_adjustment
-import cameragps.sharednew.generated.resources.auto_area_adjustment_hint
-import cameragps.sharednew.generated.resources.auto_time_correction
-import cameragps.sharednew.generated.resources.auto_time_correction_hint
 import cameragps.sharednew.generated.resources.camera_setting_connect
 import cameragps.sharednew.generated.resources.camera_setting_failed
 import cameragps.sharednew.generated.resources.camera_setting_pending
@@ -58,7 +54,6 @@ import cameragps.sharednew.generated.resources.rename_camera_save
 import cameragps.sharednew.generated.resources.rename_camera_title
 import cameragps.sharednew.generated.resources.setting_info
 import com.sasch.cameragps.sharednew.bluetooth.BleSessionPhase
-import com.sasch.cameragps.sharednew.bluetooth.session.CameraAutoCorrectionSetting
 import com.sasch.cameragps.sharednew.bluetooth.session.CameraSettingState
 import com.sasch.cameragps.sharednew.util.KotlinPlatform
 import com.sasch.cameragps.sharednew.util.currentPlatform
@@ -167,7 +162,7 @@ fun DeviceDetailContent(
             )
         }
 
-        for (setting in CameraAutoCorrectionSetting.entries) {
+        /*for (setting in CameraAutoCorrectionSetting.entries) {
             item(key = setting.name) {
                 val isTime = setting == CameraAutoCorrectionSetting.Time
                 CameraSettingRow(
@@ -179,7 +174,7 @@ fun DeviceDetailContent(
                     onRetry = { viewModel.refreshCameraSettings(deviceId) },
                 )
             }
-        }
+        }*/
     }
 }
 
