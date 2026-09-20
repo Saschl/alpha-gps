@@ -16,6 +16,11 @@ import com.saschl.cameragps.R
 internal object NotificationsHelper {
 
     const val NOTIFICATION_CHANNEL_ID = "general_notification_channel"
+
+    // The old low-importance channel remains the quiet foreground waiting state.
+    // Android cannot raise an existing channel's importance, so transmission
+    // alerts need their own channel, including for existing installations.
+    const val TRANSMISSION_NOTIFICATION_CHANNEL = "transmission_notification_channel"
     const val DISCONNECT_NOTIFICATION_CHANNEL = "disconnect_notification_channel"
 
 
@@ -25,11 +30,24 @@ internal object NotificationsHelper {
 
         val channel = NotificationChannel(
             NOTIFICATION_CHANNEL_ID,
-            context.getString(R.string.notification_channel_name),
+            context.getString(R.string.app_standby_title),
             NotificationManager.IMPORTANCE_LOW
         )
         channel.setSound(null, null)
         channel.enableVibration(false)
+
+        val transmissionChannel = NotificationChannel(
+            TRANSMISSION_NOTIFICATION_CHANNEL,
+            context.getString(R.string.notification_channel_name),
+            NotificationManager.IMPORTANCE_HIGH
+        )
+        transmissionChannel.setSound(
+            RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION),
+            AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build()
+        )
 
         val disconnectChannel = NotificationChannel(
             DISCONNECT_NOTIFICATION_CHANNEL,
@@ -44,6 +62,7 @@ internal object NotificationsHelper {
                 .build()
         )
         notificationManager.createNotificationChannel(channel)
+        notificationManager.createNotificationChannel(transmissionChannel)
         notificationManager.createNotificationChannel(disconnectChannel)
     }
 
@@ -67,7 +86,7 @@ internal object NotificationsHelper {
     fun buildNotification(
         context: Context,
         activeCameras: Int,
-        channelId: String = NOTIFICATION_CHANNEL_ID
+        channelId: String = TRANSMISSION_NOTIFICATION_CHANNEL
     ): Notification {
         return NotificationCompat.Builder(context, channelId)
             .setOngoing(true)
@@ -101,7 +120,6 @@ internal object NotificationsHelper {
         content: String,
         channelId: String = DISCONNECT_NOTIFICATION_CHANNEL
     ): Notification {
-        // TODO separate channels for standby and connected
         return NotificationCompat.Builder(context, channelId)
             .setOngoing(true)
             .setContentTitle(title)

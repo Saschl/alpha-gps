@@ -39,7 +39,7 @@
     <string name="ios_accessory_migration_success">Alle Kameras erfolgreich bestätigt.</string>
 
     <string name="ios_transmission_notifications_setting">Übertragungsmitteilung</string>
-    <string name="ios_transmission_notifications_description">Eine lautlose Mitteilung anzeigen, während Standortdaten an deine Kameras gesendet werden.</string>
+    <string name="ios_transmission_notifications_description">Eine Mitteilung anzeigen, während Standortdaten an deine Kameras gesendet werden.</string>
     <string name="ios_transmission_notifications_denied">Mitteilungen sind in den iOS-Einstellungen deaktiviert. Aktiviere sie dort, um den Übertragungsstatus zu sehen.</string>
     <string name="ios_transmission_notifications_open_settings">iOS-Einstellungen öffnen</string>
     <string name="ios_transmission_notification_title">Standortübertragung aktiv</string>

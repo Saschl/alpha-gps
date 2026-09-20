@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 import org.jetbrains.compose.resources.getPluralString
 import org.jetbrains.compose.resources.getString
 import platform.Foundation.NSNotificationCenter
@@ -21,22 +22,24 @@ import platform.UIKit.UIApplication
 import platform.UIKit.UIApplicationDidBecomeActiveNotification
 import platform.UIKit.UIApplicationState.UIApplicationStateActive
 import platform.UserNotifications.UNAuthorizationOptionAlert
+import platform.UserNotifications.UNAuthorizationOptionSound
 import platform.UserNotifications.UNAuthorizationStatusAuthorized
 import platform.UserNotifications.UNAuthorizationStatusDenied
 import platform.UserNotifications.UNAuthorizationStatusEphemeral
-import platform.UserNotifications.UNAuthorizationStatusNotDetermined
 import platform.UserNotifications.UNAuthorizationStatusProvisional
 import platform.UserNotifications.UNMutableNotificationContent
 import platform.UserNotifications.UNNotification
 import platform.UserNotifications.UNNotificationInterruptionLevel
+import platform.UserNotifications.UNNotificationPresentationOptionBanner
 import platform.UserNotifications.UNNotificationPresentationOptionList
+import platform.UserNotifications.UNNotificationPresentationOptionSound
 import platform.UserNotifications.UNNotificationPresentationOptions
 import platform.UserNotifications.UNNotificationRequest
+import platform.UserNotifications.UNNotificationSound
 import platform.UserNotifications.UNUserNotificationCenter
 import platform.UserNotifications.UNUserNotificationCenterDelegateProtocol
 import platform.darwin.NSObject
 import kotlin.coroutines.resume
-import kotlin.coroutines.suspendCoroutine
 
 /**
  * App-scoped iOS status notifications. Started from didFinishLaunching, including
@@ -88,11 +91,15 @@ internal class IosTransmissionNotifications(
         center.delegate = delegate
         scope.launch {
             for (presentation in presentations) {
-                // Keep this silent in the foreground. Other notifications retain
-                // the previous default behavior (no foreground presentation).
+                // Announce actual transmission in the foreground too. Other
+                // notifications retain their default (no foreground presentation).
                 val visible = presentation.isTransmissionStatus &&
                         (coordinator?.visibleCameraCount?.value ?: 0) > 0
-                presentation.completion(if (visible) UNNotificationPresentationOptionList else 0uL)
+                presentation.completion(
+                    if (visible) UNNotificationPresentationOptionBanner or
+                            UNNotificationPresentationOptionList or
+                            UNNotificationPresentationOptionSound else 0uL
+                )
             }
         }
         coordinator = TransmissionNotificationCoordinator(
@@ -130,10 +137,9 @@ internal class IosTransmissionNotifications(
     private data class Permission(
         val allowed: Boolean,
         val denied: Boolean,
-        val notDetermined: Boolean
     )
 
-    private suspend fun readPermission(): Permission = suspendCoroutine { continuation ->
+    private suspend fun readPermission(): Permission = suspendCancellableCoroutine { continuation ->
         center.getNotificationSettingsWithCompletionHandler { settings ->
             val status = settings?.authorizationStatus
             continuation.resume(
@@ -142,7 +148,6 @@ internal class IosTransmissionNotifications(
                             status == UNAuthorizationStatusProvisional ||
                             status == UNAuthorizationStatusEphemeral,
                     denied = status == UNAuthorizationStatusDenied,
-                    notDetermined = status == UNAuthorizationStatusNotDetermined,
                 )
             )
         }
@@ -151,11 +156,15 @@ internal class IosTransmissionNotifications(
     private suspend fun refreshPermission(explicitRequest: Boolean) {
         var permission = readPermission()
         val active = (coordinator?.transmittingCameraCount?.value ?: 0) > 0
-        if (enabled.value && permission.notDetermined && (explicitRequest || active) &&
+        if (enabled.value && !permission.denied && (explicitRequest || active) &&
             UIApplication.sharedApplication.applicationState == UIApplicationStateActive
         ) {
-            suspendCoroutine<Unit> { continuation ->
-                center.requestAuthorizationWithOptions(UNAuthorizationOptionAlert) { _, error ->
+            suspendCancellableCoroutine<Unit> { continuation ->
+                // Include sound for existing alert-only authorizations as well.
+                // iOS remembers the user's choices; this does not prompt again.
+                center.requestAuthorizationWithOptions(
+                    UNAuthorizationOptionAlert or UNAuthorizationOptionSound
+                ) { _, error ->
                     if (error != null) log.w { "Notification authorization failed: ${error.localizedDescription}" }
                     continuation.resume(Unit)
                 }
@@ -176,13 +185,13 @@ internal class IosTransmissionNotifications(
                     cameraCount
                 )
             )
-            setInterruptionLevel(UNNotificationInterruptionLevel.UNNotificationInterruptionLevelPassive)
-            // No sound or badge: this is current status, not an alert requiring action.
+            setInterruptionLevel(UNNotificationInterruptionLevel.UNNotificationInterruptionLevelActive)
+            setSound(UNNotificationSound.defaultSound)
         }
         // Resources are loaded asynchronously. Skip a superseded count before posting.
         if (coordinator?.visibleCameraCount?.value != cameraCount) return
         val request = UNNotificationRequest.requestWithIdentifier(REQUEST_ID, content, null)
-        suspendCoroutine<Unit> { continuation ->
+        suspendCancellableCoroutine<Unit> { continuation ->
             center.addNotificationRequest(request) { error ->
                 if (error != null) log.w { "Could not post transmission status: ${error.localizedDescription}" }
                 continuation.resume(Unit)

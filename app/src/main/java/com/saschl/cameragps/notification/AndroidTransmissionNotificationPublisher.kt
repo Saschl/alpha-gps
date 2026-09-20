@@ -16,10 +16,10 @@ internal class AndroidTransmissionNotificationPublisher(
     override fun showIdle() = publish(0)
 
     private fun publish(cameraCount: Int) {
-        val channelId = if (cameraCount < previousCameraCount) {
-            NotificationsHelper.DISCONNECT_NOTIFICATION_CHANNEL
-        } else {
-            NotificationsHelper.NOTIFICATION_CHANNEL_ID
+        val channelId = when {
+            cameraCount < previousCameraCount -> NotificationsHelper.DISCONNECT_NOTIFICATION_CHANNEL
+            cameraCount > 0 -> NotificationsHelper.TRANSMISSION_NOTIFICATION_CHANNEL
+            else -> NotificationsHelper.NOTIFICATION_CHANNEL_ID
         }
         val notification = if (cameraCount == 0) {
             NotificationsHelper.buildWaitingNotification(context, channelId)

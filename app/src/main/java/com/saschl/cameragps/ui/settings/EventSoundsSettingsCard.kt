@@ -186,7 +186,7 @@ internal fun EventSoundsSettingsCard() {
                 onClick = {
                     openNotificationChannelSettings(
                         context,
-                        NotificationsHelper.NOTIFICATION_CHANNEL_ID
+                        NotificationsHelper.TRANSMISSION_NOTIFICATION_CHANNEL
                     )
                 }
             )
@@ -413,6 +413,8 @@ private fun createRingtonePickerIntent(existingUri: Uri?): Intent {
 }
 
 private fun openNotificationChannelSettings(context: Context, channelId: String) {
+    // Settings may be opened before the service has created the new alert channel.
+    NotificationsHelper.createNotificationChannel(context)
     val intent = Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS).apply {
         putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
         putExtra(Settings.EXTRA_CHANNEL_ID, channelId)

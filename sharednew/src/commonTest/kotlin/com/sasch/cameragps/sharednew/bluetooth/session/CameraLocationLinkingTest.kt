@@ -12,6 +12,7 @@ import com.sasch.cameragps.sharednew.bluetooth.transport.BlePeripheralTransport
 import com.sasch.cameragps.sharednew.bluetooth.transport.BleTransportEvent
 import com.sasch.cameragps.sharednew.database.devices.CameraDevice
 import com.sasch.cameragps.sharednew.database.devices.CameraDeviceDAO
+import com.sasch.cameragps.sharednew.notification.TransmissionNotificationCoordinator
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
@@ -71,6 +72,49 @@ class CameraLocationLinkingTest {
             assertTrue(f.session("A").isLocationReady)
             f.orchestrator.shutdownAll()
         }
+    }
+
+    @Test
+    fun transmissionNotificationWaitsForFirstLocationAndDoesNotRepeatForGpsUpdates() = runTest {
+        val f = Fixture(backgroundScope)
+        val updates = mutableListOf<Int>()
+        TransmissionNotificationCoordinator(
+            backgroundScope,
+            f.orchestrator.sessions,
+            f.orchestrator.locationManager.isTransmitting,
+            publisher = object : TransmissionNotificationCoordinator.Publisher {
+                override suspend fun show(cameraCount: Int) {
+                    updates += cameraCount
+                }
+
+                override fun showIdle() {
+                    updates += 0
+                }
+            },
+        ).start()
+        f.connect("A")
+        runCurrent()
+        assertTrue(f.session("A").isLocationReady)
+        assertTrue(f.source.active)
+        advanceTimeBy(Sony.LOCATION_UPDATE_INTERVAL_MS * 2)
+        runCurrent()
+        assertTrue(f.transport.locationWrites().isEmpty())
+        assertEquals(listOf(0), updates)
+
+        f.fix()
+        runCurrent()
+        assertEquals(1, f.transport.locationWrites().size)
+        assertEquals(listOf(0, 1), updates)
+
+        f.fix()
+        advanceTimeBy(Sony.LOCATION_UPDATE_INTERVAL_MS * 2)
+        runCurrent()
+        assertTrue(f.transport.locationWrites().size > 1)
+        assertEquals(listOf(0, 1), updates)
+
+        f.transport.emit(BleTransportEvent.Disconnected("A", null))
+        runCurrent()
+        assertEquals(listOf(0, 1, 0), updates)
     }
 
     @Test
