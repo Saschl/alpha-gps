@@ -36,6 +36,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import cameragps.sharednew.generated.resources.Res
 import cameragps.sharednew.generated.resources.app_controls
@@ -46,6 +47,7 @@ import cameragps.sharednew.generated.resources.enable_app
 import cameragps.sharednew.generated.resources.enable_app_description
 import cameragps.sharednew.generated.resources.haptic_feedback
 import cameragps.sharednew.generated.resources.haptic_feedback_description
+import cameragps.sharednew.generated.resources.ios_transmission_notifications_customize
 import cameragps.sharednew.generated.resources.ios_transmission_notifications_denied
 import cameragps.sharednew.generated.resources.ios_transmission_notifications_description
 import cameragps.sharednew.generated.resources.ios_transmission_notifications_open_settings
@@ -139,14 +141,28 @@ internal fun IosSettingsScreen(
                     checked = transmissionNotificationsEnabled,
                     onCheckedChange = onTransmissionNotificationsEnabledChange,
                 )
-                if (transmissionNotificationsEnabled && transmissionNotificationsPermissionDenied) {
-                    Text(
-                        stringResource(Res.string.ios_transmission_notifications_denied),
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                    TextButton(onClick = onOpenNotificationSettings) {
-                        Text(stringResource(Res.string.ios_transmission_notifications_open_settings))
+                if (transmissionNotificationsEnabled) {
+                    if (transmissionNotificationsPermissionDenied) {
+                        Text(
+                            stringResource(Res.string.ios_transmission_notifications_denied),
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
                     }
+                    Text(
+                        text = stringResource(
+                            if (transmissionNotificationsPermissionDenied) {
+                                Res.string.ios_transmission_notifications_open_settings
+                            } else {
+                                Res.string.ios_transmission_notifications_customize
+                            }
+                        ),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        textDecoration = TextDecoration.Underline,
+                        modifier = Modifier
+                            .clickable { onOpenNotificationSettings() }
+                            .padding(vertical = 4.dp),
+                    )
                 }
                 SharedToggleRow(
                     title = stringResource(Res.string.haptic_feedback),

@@ -484,7 +484,7 @@ internal fun CameraGpsIosApp(
                     transmissionNotificationsEnabled = transmissionNotificationsEnabled,
                     transmissionNotificationsPermissionDenied = transmissionNotificationsPermissionDenied,
                     onTransmissionNotificationsEnabledChange = bluetoothController::setTransmissionNotificationsEnabled,
-                    onOpenNotificationSettings = { openAppSettings() },
+                    onOpenNotificationSettings = { openNotificationSettings() },
                     scrollToTipJarOnOpen = scrollToTipJarOnSettingsOpen,
                     onBackClick = { currentScreen = IosScreen.Devices },
                     onAppEnabledChange = { enabled ->
@@ -690,6 +690,15 @@ private fun openAppSettings() {
     if (UIApplication.sharedApplication.canOpenURL(settingsUrl)) {
         UIApplication.sharedApplication.openURL(settingsUrl, emptyMap<Any?, Any>(), {})
     }
+}
+
+/**
+ * Opens this app's notification settings so banners, sounds and the lock screen can be
+ * customized there; falls back to the app's Settings page when iOS refuses the deep link.
+ */
+private fun openNotificationSettings() {
+    val settingsUrl = notificationSettingsUrl() ?: return
+    UIApplication.sharedApplication.openURL(settingsUrl, emptyMap<Any?, Any>(), {})
 }
 
 /** Busy row shown inside the migration dialogs while an attempt is running. */

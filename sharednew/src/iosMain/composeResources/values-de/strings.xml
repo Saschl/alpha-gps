@@ -42,6 +42,7 @@
     <string name="ios_transmission_notifications_description">Eine Mitteilung anzeigen, während Standortdaten an deine Kameras gesendet werden.</string>
     <string name="ios_transmission_notifications_denied">Mitteilungen sind in den iOS-Einstellungen deaktiviert. Aktiviere sie dort, um den Übertragungsstatus zu sehen.</string>
     <string name="ios_transmission_notifications_open_settings">iOS-Einstellungen öffnen</string>
+    <string name="ios_transmission_notifications_customize">Mitteilungen in den iOS-Einstellungen anpassen</string>
     <string name="ios_transmission_notification_title">Standortübertragung aktiv</string>
     <plurals name="ios_transmission_notification_body">
         <item quantity="one">Standortdaten werden an %1$d Kamera übertragen</item>
