@@ -20,6 +20,20 @@ interface CameraDeviceDAO {
     @Insert(onConflict = IGNORE)
     suspend fun insertDevice(device: CameraDevice)
 
+    /**
+     * Update identity text without replacing per-camera settings. [isCustom]
+     * records whether a person chose the name, so a later hardware name can
+     * upgrade a derived one without overwriting a deliberate rename.
+     */
+    @Query(
+        "UPDATE camera_devices SET deviceName = :name, deviceNameIsCustom = :isCustom " +
+            "WHERE mac = UPPER(:deviceId)"
+    )
+    suspend fun setDeviceName(deviceId: String, name: String, isCustom: Boolean)
+
+    @Query("SELECT deviceName FROM camera_devices WHERE mac = UPPER(:address)")
+    suspend fun getDeviceName(address: String): String?
+
     @Delete
     suspend fun deleteDevice(device: CameraDevice)
 
@@ -53,4 +67,3 @@ interface CameraDeviceDAO {
     @Query("UPDATE camera_devices SET handshakeDelayMs = :delayMs WHERE mac = UPPER(:deviceId)")
     suspend fun setHandshakeDelayMs(deviceId: String, delayMs: Long)
 }
-

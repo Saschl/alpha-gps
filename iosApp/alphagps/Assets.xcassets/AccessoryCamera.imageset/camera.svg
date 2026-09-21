@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="540" height="360" viewBox="0 0 540 360" fill="none">
+  <title>Generic mirrorless camera</title>
+  <!-- Original vector artwork. Transparent padding fits the picker's 180 × 120 pt frame. -->
+  <rect x="412" y="84" width="42" height="24" rx="8" fill="#343B48" stroke="#B7BFCE" stroke-width="5"/>
+  <path d="M80 106H167L192 67C195 62 200 59 207 59H319C326 59 331 62 334 67L359 106H460C477 106 491 120 491 137V287C491 304 477 318 460 318H80C63 318 49 304 49 287V137C49 120 63 106 80 106Z" fill="#515968" stroke="#B7BFCE" stroke-width="5" stroke-linejoin="round"/>
+  <path d="M82 125H129V299H82C74 299 68 293 68 285V139C68 131 74 125 82 125Z" fill="#303644"/>
+  <rect x="232" y="77" width="62" height="19" rx="5" fill="#282E3B"/>
+  <rect x="391" y="130" width="50" height="18" rx="5" fill="#E4E8F0"/>
+  <circle cx="461" cy="155" r="6" fill="#B6A2EA"/>
+  <circle cx="286" cy="214" r="99" fill="#242A36" stroke="#CFD5E1" stroke-width="6"/>
+  <circle cx="286" cy="214" r="82" fill="#4A455E" stroke="#8F98AA" stroke-width="5"/>
+  <circle cx="286" cy="214" r="65" fill="#73609E"/>
+  <circle cx="286" cy="214" r="47" fill="#33324E"/>
+  <circle cx="286" cy="214" r="27" fill="#1C2333"/>
+  <path d="M241 204C244 184 261 168 282 166" stroke="#DFD4FF" stroke-width="10" stroke-linecap="round"/>
+  <path d="M308 251C318 246 325 238 329 228" stroke="#AAABD7" stroke-width="7" stroke-linecap="round"/>
+</svg>

@@ -65,11 +65,25 @@ internal fun IosDeviceDetailScreen(
         override suspend fun setHandshakeDelayMs(deviceId: String, delayMs: Long) {
             deviceDao.setHandshakeDelayMs(deviceId.uppercase(), delayMs)
         }
+
+        override suspend fun getDeviceName(deviceId: String): String? {
+            return deviceDao.getDeviceName(deviceId.uppercase())
+        }
+
+        override suspend fun setDeviceName(deviceId: String, name: String) {
+            deviceDao.setDeviceName(deviceId.uppercase(), name, isCustom = true)
+            IosBluetoothController.refreshDeviceNames()
+        }
     }
+    val canRenameInSystem = remember(device.identifier) {
+        IosBluetoothController.canRenameInSystem(device.identifier)
+    }
+
     val viewModel: DeviceDetailViewModel = viewModel(key = device.identifier) {
         DeviceDetailViewModel(
             dataSource = deviceDetailDataSource,
             serviceActions = IosDeviceDetailServiceActions(),
+            cameraSettings = IosBluetoothController.autoCorrectionControls,
         )
     }
 
@@ -92,8 +106,15 @@ internal fun IosDeviceDetailScreen(
             onDeviceEnabledChanged = { enabled ->
                 IosBluetoothController.applyDeviceEnabledState(device.identifier, enabled)
             },
+            // Authorized accessories rename in the system record so the app and
+            // iOS Settings agree; cameras paired before AccessorySetupKit have no
+            // such record and fall back to the shared in-app dialog.
+            onPresentSystemRename = if (canRenameInSystem) {
+                { IosBluetoothController.presentSystemRename(device.identifier) }
+            } else {
+                null
+            },
         )
     }
 }
-
 

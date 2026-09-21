@@ -1,10 +1,15 @@
 package com.sasch.cameragps.sharednew.bluetooth.coordinator
 
+import com.diamondedge.logging.FixedLogLevel
+import com.diamondedge.logging.KmLogging
+import com.diamondedge.logging.PlatformLogger
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runTest
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -12,6 +17,16 @@ import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class RemoteControlCoordinatorTest {
+
+    @BeforeTest
+    fun disablePlatformLogging() {
+        KmLogging.setLoggers()
+    }
+
+    @AfterTest
+    fun restorePlatformLogging() {
+        KmLogging.setLoggers(PlatformLogger(FixedLogLevel(true)))
+    }
 
     // ---- Pure function tests ----
 
@@ -135,6 +150,11 @@ class RemoteControlCoordinatorTest {
  * Minimal fake for testing the shared coordinator without real BLE.
  */
 private class FakeBleGattPort : BleGattPort {
+    override fun setAutoCorrectionState(
+        identifier: String,
+        setting: com.sasch.cameragps.sharednew.bluetooth.session.CameraAutoCorrectionSetting,
+        state: com.sasch.cameragps.sharednew.bluetooth.session.CameraSettingState,
+    ) = Unit
     val connectedDevices = mutableSetOf<String>()
     val devicesWithRemoteControl = mutableSetOf<String>()
     val remoteActiveDevices = mutableSetOf<String>()
@@ -178,7 +198,9 @@ private class FakeBleGattPort : BleGattPort {
 
     override fun readCharacteristic(identifier: String, characteristicUuid: String): Boolean = true
 
+    override fun setLocationDisabledByCamera(identifier: String, disabled: Boolean) = Unit
+    override fun isLocationDisabledByCamera(identifier: String) = false
+
     override fun hasCharacteristic(identifier: String, characteristicUuid: String): Boolean =
         identifier in devicesWithRemoteControl
 }
-

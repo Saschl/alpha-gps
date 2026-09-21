@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -64,6 +63,10 @@ import cameragps.sharednew.generated.resources.guide_repair_step_phone_path_ios
 import cameragps.sharednew.generated.resources.guide_repair_step_sony_app
 import cameragps.sharednew.generated.resources.guide_repair_step_sony_app_path
 import cameragps.sharednew.generated.resources.guide_repair_title
+import cameragps.sharednew.generated.resources.guide_startup_description
+import cameragps.sharednew.generated.resources.guide_startup_step_disable
+import cameragps.sharednew.generated.resources.guide_startup_title
+import com.sasch.cameragps.sharednew.ui.components.ScrollbarLazyColumn
 import com.sasch.cameragps.sharednew.util.KotlinPlatform
 import com.sasch.cameragps.sharednew.util.currentPlatform
 import org.jetbrains.compose.resources.StringResource
@@ -159,9 +162,14 @@ fun TroubleshootingGuideContent(innerPadding: PaddingValues) {
                 }
             },
         ),
+        GuideSection(
+            title = Res.string.guide_startup_title,
+            description = Res.string.guide_startup_description,
+            steps = listOf(GuideStep(Res.string.guide_startup_step_disable)),
+        ),
     )
 
-    LazyColumn(
+    ScrollbarLazyColumn(
         modifier = Modifier
             .fillMaxSize()
             .padding(innerPadding)

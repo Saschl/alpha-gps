@@ -10,10 +10,27 @@ internal object IosAppPreferences {
     private const val keyShowWelcome = "ios.showWelcome"
     private const val keyAppEnabled = "ios.appEnabled"
     private const val keyAutoScanEnabled = "ios.autoScanEnabled"
+    private const val keyTransmissionNotifications = "ios.transmissionNotifications"
     private const val keyHapticsEnabled = "ios.hapticsEnabled"
     private const val keyDonationHintLastShown = "ios.donationHintLastShown"
     private const val keyDonationHintShownTimes = "ios.donationHintShownTimes"
     private const val keyForceDonationDialogOnNextStart = "ios.forceDonationDialogOnNextStart"
+
+    /**
+     * Crash reporting opt-in. Both default to false and both have to be true
+     * before Sentry starts — see
+     * [com.sasch.cameragps.sharednew.crash.CrashReportPolicy.shouldInitialize].
+     */
+    private const val keySentryEnabled = "ios.sentryEnabled"
+    private const val keySentryConsentDialogDismissed = "ios.sentryConsentDialogDismissed"
+
+    /**
+     * Set once every camera saved before the AccessorySetupKit switch has been
+     * re-authorized through the system picker (or once there was nothing to
+     * migrate). Until then the CBCentralManager is not created, because
+     * AccessorySetupKit refuses to migrate when one already exists.
+     */
+    private const val keyAccessoryMigrationDone = "ios.accessoryMigrationDone"
 
     private const val logLevel = "ios.logLevel"
 
@@ -36,13 +53,15 @@ internal object IosAppPreferences {
         defaults.setBool(enabled, forKey = keyAppEnabled)
     }
 
+    fun isAccessoryMigrationDone(): Boolean = defaults.boolForKey(keyAccessoryMigrationDone)
+
+    fun setAccessoryMigrationDone(done: Boolean) {
+        defaults.setBool(done, forKey = keyAccessoryMigrationDone)
+    }
+
     fun isAutoScanEnabled(): Boolean = defaults.objectForKey(keyAutoScanEnabled)?.let {
         defaults.boolForKey(keyAutoScanEnabled)
     } ?: true
-
-    fun setAutoScanEnabled(enabled: Boolean) {
-        defaults.setBool(enabled, forKey = keyAutoScanEnabled)
-    }
 
     fun isHapticsEnabled(): Boolean = defaults.objectForKey(keyHapticsEnabled)?.let {
         defaults.boolForKey(keyHapticsEnabled)
@@ -50,6 +69,15 @@ internal object IosAppPreferences {
 
     fun setHapticsEnabled(enabled: Boolean) {
         defaults.setBool(enabled, forKey = keyHapticsEnabled)
+    }
+
+    fun isTransmissionNotificationsEnabled(): Boolean =
+        defaults.objectForKey(keyTransmissionNotifications)?.let {
+            defaults.boolForKey(keyTransmissionNotifications)
+        } ?: true
+
+    fun setTransmissionNotificationsEnabled(enabled: Boolean) {
+        defaults.setBool(enabled, forKey = keyTransmissionNotifications)
     }
 
     fun donationHintLastShownDaysAgo(initialize: Boolean = false): Long {
@@ -94,6 +122,19 @@ internal object IosAppPreferences {
             defaults.removeObjectForKey(keyForceDonationDialogOnNextStart)
         }
         return shouldForce
+    }
+
+    fun isSentryEnabled(): Boolean = defaults.boolForKey(keySentryEnabled)
+
+    fun setSentryEnabled(enabled: Boolean) {
+        defaults.setBool(enabled, forKey = keySentryEnabled)
+    }
+
+    fun isSentryConsentDialogDismissed(): Boolean =
+        defaults.boolForKey(keySentryConsentDialogDismissed)
+
+    fun setSentryConsentDialogDismissed(dismissed: Boolean) {
+        defaults.setBool(dismissed, forKey = keySentryConsentDialogDismissed)
     }
 
     fun getLogLevel(): String = defaults.stringForKey(logLevel) ?: LogLevel.Info.name

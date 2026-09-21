@@ -7,13 +7,11 @@ import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -34,12 +32,11 @@ import cameragps.sharednew.generated.resources.device_association_removed_retry
 import cameragps.sharednew.generated.resources.guide_open_button
 import cameragps.sharednew.generated.resources.internal_error_happened
 import cameragps.sharednew.generated.resources.no_device_matching_the_given_filter_were_found
-import cameragps.sharednew.generated.resources.scan_for_devices
 import cameragps.sharednew.generated.resources.scan_timeout_creators_app_hint
-import cameragps.sharednew.generated.resources.start
 import cameragps.sharednew.generated.resources.the_request_was_canceled
 import cameragps.sharednew.generated.resources.the_user_explicitly_declined_the_request
 import cameragps.sharednew.generated.resources.unknown_error
+import com.sasch.cameragps.sharednew.ui.devicelist.AddCameraButton
 import com.saschl.cameragps.service.AssociatedDeviceCompat
 import com.saschl.cameragps.ui.BluetoothWarningCard
 import com.saschl.cameragps.ui.LocationWarningCard
@@ -137,57 +134,47 @@ fun ScanForDevicesMenu(
     }
 
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-            .padding(16.dp),
+        modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
 
         if (!isBluetoothEnabled) {
-            BluetoothWarningCard()
+            Box(Modifier.padding(horizontal = 16.dp)) { BluetoothWarningCard() }
         }
 
         if (!isLocationEnabled) {
-            LocationWarningCard()
+            Box(Modifier.padding(horizontal = 16.dp)) { LocationWarningCard() }
         }
 
-        Row {
-            Text(
-                modifier = Modifier
-                    .padding(end = 8.dp)
-                    .weight(1f),
-                text = stringResource(Res.string.scan_for_devices),
-            )
-            Button(
-                modifier = Modifier.weight(0.5f),
-                // enabled = associatedDevices.isEmpty() && isBluetoothEnabled && isLocationEnabled,
-                onClick = {
-                    scope.launch {
-                        try {
-                            val intentSender =
-                                DeviceAssociationUtils.requestDeviceAssociation(deviceManager)
-                            launcher.launch(IntentSenderRequest.Builder(intentSender).build())
-                        } catch (e: CancellationException) {
-                            throw e
-                        } catch (e: Exception) {
-                            Timber.e(e, "Failed to start device association")
-                            showTroubleshootingHint = false
-                            errorMessage =
-                                e.message?.takeIf { it.isNotBlank() } ?: internalErrorText
-                        }
+        AddCameraButton(
+            onClick = {
+                scope.launch {
+                    try {
+                        val intentSender =
+                            DeviceAssociationUtils.requestDeviceAssociation(deviceManager)
+                        launcher.launch(IntentSenderRequest.Builder(intentSender).build())
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        Timber.e(e, "Failed to start device association")
+                        showTroubleshootingHint = false
+                        errorMessage =
+                            e.message?.takeIf { it.isNotBlank() } ?: internalErrorText
                     }
-                },
-            ) {
-                Text(text = stringResource(Res.string.start), maxLines = 1)
-            }
-        }
+                }
+            },
+        )
         if (errorMessage.isNotBlank()) {
-            Text(text = errorMessage, color = MaterialTheme.colorScheme.error)
+            Text(
+                text = errorMessage,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(horizontal = 16.dp),
+            )
             if (showTroubleshootingHint) {
                 Text(
                     text = stringResource(Res.string.scan_timeout_creators_app_hint),
+                    modifier = Modifier.padding(horizontal = 16.dp),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

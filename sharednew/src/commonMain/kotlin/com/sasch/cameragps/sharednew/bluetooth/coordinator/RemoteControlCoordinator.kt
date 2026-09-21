@@ -65,6 +65,9 @@ class RemoteControlCoordinator(
 
         if (!port.hasRemoteControlCharacteristic(normalized)) return
 
+        // CC09 describes Sony app remote availability, not the Bluetooth Rmt Ctrl
+        // setting (a6700 reports true even when Bluetooth remote control is off).
+        log.d { "Monitoring Bluetooth remote availability for $normalized via FF01 probes and FF02 feedback" }
         startProbeLoop(normalized)
     }
 
@@ -104,6 +107,7 @@ class RemoteControlCoordinator(
             stopProbeLoop(normalized)
         } else {
             port.setRemoteFeatureActive(normalized, false)
+            if (normalized in monitoredDevices) startProbeLoop(normalized)
         }
     }
 

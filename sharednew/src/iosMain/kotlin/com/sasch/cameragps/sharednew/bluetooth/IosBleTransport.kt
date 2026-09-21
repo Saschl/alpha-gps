@@ -16,6 +16,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
+import platform.CoreBluetooth.CBATTErrorDomain
 import platform.CoreBluetooth.CBCharacteristic
 import platform.CoreBluetooth.CBCharacteristicPropertyIndicate
 import platform.CoreBluetooth.CBCharacteristicPropertyNotify
@@ -71,6 +72,7 @@ internal class IosBleTransport(
         val notifiableCharacteristics = mutableListOf<CBCharacteristic>()
         var discovery: DiscoveryState? = null
         var connectedAnnounced = false
+        val pendingReads = mutableSetOf<String>()
     }
 
     /** Uppercased peripheral UUID string → handle. */
@@ -127,6 +129,10 @@ internal class IosBleTransport(
         handles[identifier.uppercase()]
             ?.characteristicsByUuid?.containsKey(characteristicUuid.lowercase()) == true
 
+    override fun finishRead(identifier: String, characteristicUuid: String) {
+        handles[identifier.uppercase()]?.pendingReads?.remove(characteristicUuid.lowercase())
+    }
+
     override fun initiateWrite(
         identifier: String,
         characteristicUuid: String,
@@ -147,6 +153,7 @@ internal class IosBleTransport(
         val handle = handles[identifier.uppercase()] ?: return false
         val characteristic =
             handle.characteristicsByUuid[characteristicUuid.lowercase()] ?: return false
+        handle.pendingReads.add(characteristicUuid.lowercase())
         handle.peripheral.readValueForCharacteristic(characteristic)
         return true
     }
@@ -267,13 +274,13 @@ internal class IosBleTransport(
             val sharedUuid = sharedUuidFor(didUpdateValueForCharacteristic)
             log.v { "Value update for $sharedUuid (error=${error?.code} / ${error?.localizedDescription})" }
 
-            // This callback serves both read responses and notifications. The config
-            // read is the protocol's only read; everything else is camera-initiated.
-            val isReadResponse = sharedUuid.equals(
-                SonyBluetoothConstants.CHARACTERISTIC_READ_UUID,
-                ignoreCase = true,
-            )
+            // CoreBluetooth shares this callback between reads and notifications.
+            // Track requested reads, including the DD32/DD33 camera settings.
+            val isReadResponse = handles[id]?.pendingReads?.remove(sharedUuid.lowercase()) == true
             if (isReadResponse) {
+                if (error != null) {
+                    log.i { "BLE read failed for $sharedUuid: ${error.domain} ${error.code} ${error.localizedDescription}" }
+                }
                 eventChannel.trySend(
                     BleTransportEvent.CharacteristicRead(
                         id,
@@ -304,7 +311,12 @@ internal class IosBleTransport(
             val sharedUuid = sharedUuidFor(didWriteValueForCharacteristic)
             log.v { "Write for $sharedUuid completed (error=${error?.code} / ${error?.localizedDescription})" }
 
-            if (error != null && !isAuthenticationError(error)) {
+            val isRemoteRefusal =
+                sharedUuid == SonyBluetoothConstants.REMOTE_CHARACTERISTIC_UUID &&
+                        error?.domain == CBATTErrorDomain &&
+                        error.code == 144L
+
+            if (error != null && !isAuthenticationError(error) && !isRemoteRefusal) {
                 log.e { "BLE write failed for $sharedUuid: ${error.localizedDescription} ${error.code}" }
             }
             eventChannel.trySend(
@@ -440,6 +452,8 @@ internal class IosBleTransport(
             SonyBluetoothConstants.CHARACTERISTIC_ENABLE_LOCK_GPS_COMMAND,
             SonyBluetoothConstants.CHARACTERISTIC_LOCATION_ENABLED_IN_CAMERA,
             SonyBluetoothConstants.TIME_SYNC_CHARACTERISTIC_UUID,
+            SonyBluetoothConstants.AUTO_TIME_CORRECTION_UUID,
+            SonyBluetoothConstants.AUTO_AREA_ADJUSTMENT_UUID,
             SonyBluetoothConstants.REMOTE_CHARACTERISTIC_UUID,
             SonyBluetoothConstants.REMOTE_STATUS_UUID,
         ).map { it to CBUUID.UUIDWithString(it) }

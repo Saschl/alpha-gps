@@ -25,6 +25,7 @@ import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
+import com.sasch.cameragps.sharednew.crash.CrashReportPolicy
 import com.sasch.cameragps.sharednew.database.LogDatabase
 import com.sasch.cameragps.sharednew.database.getDatabaseBuilder
 import com.sasch.cameragps.sharednew.database.logging.LogRepository
@@ -141,8 +142,11 @@ class MainActivity : AppCompatActivity() {
 
         var showSentryDialog by remember {
             mutableStateOf(
-                CrashReporting.AVAILABLE && !SCREENSHOT_MODE &&
-                        !PreferencesManager.isSentryConsentDialogDismissed(context)
+                !SCREENSHOT_MODE && CrashReportPolicy.shouldShowConsentDialog(
+                    available = CrashReporting.AVAILABLE,
+                    consentDialogDismissed =
+                        PreferencesManager.isSentryConsentDialogDismissed(context),
+                )
             )
         }
         var forceDonationDialogThisLaunch by remember {
@@ -206,8 +210,12 @@ class MainActivity : AppCompatActivity() {
                 AppDestination.Devices -> {
                     NavEntry(AppDestination.Devices) {
                         LaunchedEffect(Unit) {
-                            showSentryDialog = CrashReporting.AVAILABLE && !SCREENSHOT_MODE &&
-                                    !PreferencesManager.isSentryConsentDialogDismissed(context)
+                            showSentryDialog =
+                                !SCREENSHOT_MODE && CrashReportPolicy.shouldShowConsentDialog(
+                                    available = CrashReporting.AVAILABLE,
+                                    consentDialogDismissed =
+                                        PreferencesManager.isSentryConsentDialogDismissed(context),
+                                )
                         }
 
 

@@ -1,5 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="add_camera">Kamera hinzufügen</string>
+    <string name="device_list_need_help">Brauchst du Hilfe?</string>
+
+    <string name="location_linking_disabled_by_camera">Die Kamera hat die Standortverknüpfung deaktiviert. Aktiviere die Standortinformationen-Verknüpfung in den Kameraeinstellungen, um fortzufahren.</string>
+    <!-- Hinweise vor der Kamera-Suche im Systemdialog. -->
+    <string name="pairing_preparation_title">Kopplungsmodus aktivieren</string>
+    <string name="pairing_preparation_step_bluetooth">Schalte deine Kamera ein und aktiviere Bluetooth in ihren Einstellungen.</string>
+    <string name="pairing_preparation_step_pairing">Öffne den Bildschirm für die Bluetooth-Kopplung an der Kamera und starte die Kopplung.</string>
+    <string name="pairing_preparation_step_ready">Lass diesen Bildschirm geöffnet, halte die Kamera in der Nähe und tippe auf Kamera suchen.</string>
+    <string name="pairing_preparation_note">Bluetooth allein einzuschalten reicht nicht aus. Die Kamera muss im Kopplungsmodus sein, damit dein Smartphone sie finden kann. Die Menünamen unterscheiden sich je nach Kameramodell.</string>
+    <string name="pairing_preparation_search">Kamera suchen</string>
+    <string name="pairing_preparation_searching">Kamera wird gesucht…</string>
+    <string name="pairing_preparation_help">Brauchst du Hilfe?</string>
+    <!-- Kamera umbenennen. Unter iOS öffnet dies Apples System-Dialog. -->
+    <string name="rename_camera_title">Umbenennen</string>
+    <string name="rename_camera_label">Kameraname</string>
+    <string name="rename_camera_save">Speichern</string>
+    <string name="rename_camera_hint">Dieser Name wird nur in Alpha GPS verwendet.</string>
     <string name="app_name" translatable="false">AlphaGPS</string>
     <string name="app_name_ui" translatable="false">Alpha GPS</string>
     <string name="header_device_list">Meine Kameras</string>
@@ -264,6 +282,9 @@
     <string name="guide_remote_step_camera_path">MENU → Netzwerk → Bluetooth-Fernbed. → Aus</string>
     <string name="guide_remote_step_app">Tippe in Alpha GPS auf dem Hauptbildschirm auf die Kamera und deaktiviere 'Fernbedienung aktivieren'.</string>
     <string name="guide_link_remote_a6400">Sony-Hilfe: Bluetooth-Fernbedienung (α6400)</string>
+    <string name="guide_startup_title">Kamera startet langsam oder der Bildschirm bleibt schwarz</string>
+    <string name="guide_startup_description">Bei manchen Kameras können Smartphone-Verbindungen im ausgeschalteten Zustand den Start verzögern, wenn Alpha GPS aktiviert ist.</string>
+    <string name="guide_startup_step_disable">Schalte im Netzwerkmenü der Kamera die Verbindung mit dem Smartphone bei ausgeschalteter Kamera aus (im englischen Menü 'Cnct. while Power OFF' oder 'Cnct. during Power OFF'). Name und Menüposition hängen vom Modell ab. Der Smartphone-Zugriff bei ausgeschalteter Kamera ist dann deaktiviert. Lass Bluetooth für GPS und Fernsteuerung bei eingeschalteter Kamera aktiviert.</string>
     <string name="guide_accuracy_title">Standort ist ungenau oder veraltet</string>
     <string name="guide_accuracy_description">Werden Fotos mit einer deutlich abweichenden Position versehen, darf die App meist nicht den genauen Standort verwenden.</string>
     <string name="guide_accuracy_step_precise">Erlaube Alpha GPS den genauen Standort:</string>
@@ -288,4 +309,13 @@
     <string name="remote_feature_inactive">Verbunden. Fernauslöser deaktiviert in der Kamera oder in der App</string>
     <string name="haptic_feedback">Haptisches Feedback</string>
     <string name="haptic_feedback_description">Lässt das Smartphone vibrieren, wenn der Fernauslöser aktiviert wird</string>
+    <string name="auto_time_correction">Automatische Zeitkorrektur</string>
+    <string name="auto_time_correction_hint">Die Kamera korrigiert Datum und Uhrzeit automatisch anhand der Informationen deines Smartphones. Dies ändert die Einstellung auf der verbundenen Kamera.</string>
+    <string name="auto_area_adjustment">Automatische Gebietsanpassung</string>
+    <string name="auto_area_adjustment_hint">Die Kamera passt Gebiet und Zeitzone automatisch anhand der Informationen deines Smartphones an. Dies ändert die Einstellung auf der verbundenen Kamera.</string>
+    <string name="camera_setting_connect">Verbinde die Kamera, um diese Einstellung anzuzeigen oder zu ändern.</string>
+    <string name="camera_setting_pending">Warten auf die Kamera…</string>
+    <string name="camera_setting_unsupported">Diese Kamera unterstützt das Ändern dieser Einstellung über die App nicht.</string>
+    <string name="camera_setting_failed">Die Kameraeinstellung konnte nicht bestätigt werden. Aktualisiere die Anzeige, um den aktuellen Wert zu prüfen.</string>
+    <string name="camera_setting_retry">Kameraeinstellungen aktualisieren</string>
 </resources>

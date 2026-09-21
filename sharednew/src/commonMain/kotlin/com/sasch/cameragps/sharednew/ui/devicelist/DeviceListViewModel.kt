@@ -2,7 +2,6 @@ package com.sasch.cameragps.sharednew.ui.devicelist
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.sasch.cameragps.sharednew.bluetooth.BleSessionPhase
 import com.sasch.cameragps.sharednew.bluetooth.session.CameraSession
 import com.sasch.cameragps.sharednew.database.devices.CameraDevice
 import kotlinx.coroutines.flow.Flow
@@ -30,10 +29,16 @@ interface DeviceListDataSource {
  */
 data class DeviceListItem(
     val identifier: String,
+    /**
+     * A name a person chose, or null when the row should keep the identity name
+     * its platform already has (a CDM association name, a peripheral name).
+     */
+    val customName: String?,
     val isAlwaysOnEnabled: Boolean,
     val isTransmissionActive: Boolean,
     val isRemoteFeatureActive: Boolean,
     val isShutterActive: Boolean,
+    val locationDisabledByCamera: Boolean = false,
 )
 
 /**
@@ -51,13 +56,17 @@ class DeviceListViewModel(dataSource: DeviceListDataSource) : ViewModel() {
         val settingsByMac = settings.associateBy { it.mac.uppercase() }
         (sessions.keys + settingsByMac.keys).associateWith { identifier ->
             val session = sessions[identifier]
+            val persisted = settingsByMac[identifier]
             DeviceListItem(
                 identifier = identifier,
-                isAlwaysOnEnabled = settingsByMac[identifier]?.alwaysOnEnabled == true,
+                customName = persisted?.takeIf { it.deviceNameIsCustom }?.deviceName
+                    ?.takeUnless { it.isBlank() },
+                isAlwaysOnEnabled = persisted?.alwaysOnEnabled == true,
                 isTransmissionActive =
-                    session?.phase == BleSessionPhase.Transmitting && transmissionActive,
+                    session?.isLocationReady == true && transmissionActive,
                 isRemoteFeatureActive = session?.remoteFeatureActive == true,
                 isShutterActive = session?.shutterSequenceActive == true,
+                locationDisabledByCamera = session?.locationDisabledByCamera == true,
             )
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())

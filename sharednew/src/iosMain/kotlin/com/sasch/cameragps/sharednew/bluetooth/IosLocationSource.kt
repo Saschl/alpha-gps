@@ -13,6 +13,9 @@ import platform.CoreLocation.CLLocation
 import platform.CoreLocation.CLLocationManager
 import platform.CoreLocation.CLLocationManagerDelegateProtocol
 import platform.CoreLocation.kCLAuthorizationStatusAuthorizedWhenInUse
+import platform.CoreLocation.kCLAuthorizationStatusDenied
+import platform.CoreLocation.kCLAuthorizationStatusNotDetermined
+import platform.CoreLocation.kCLAuthorizationStatusRestricted
 import platform.CoreLocation.kCLDistanceFilterNone
 import platform.Foundation.NSError
 import platform.Foundation.timeIntervalSince1970
@@ -69,6 +72,11 @@ internal class IosLocationSource : LocationSource {
 
         override fun locationManager(manager: CLLocationManager, didFailWithError: NSError) {
             log.e { "Location error" }
+            log.d {
+                "Location error: domain=${didFailWithError.domain} code=${didFailWithError.code} " +
+                        "description=${didFailWithError.localizedDescription}, " +
+                        "authorization=${manager.authorizationStatus()}, started=$started"
+            }
         }
 
         override fun locationManagerDidChangeAuthorization(manager: CLLocationManager) {
@@ -89,9 +97,11 @@ internal class IosLocationSource : LocationSource {
 
     override fun start(): Boolean {
         if (!started) {
-            if (locationManager.authorizationStatus() == kCLAuthorizationStatusAuthorizedWhenInUse) {
-                locationManager.requestAlwaysAuthorization()
-            } else {
+            // notDetermined is the only status where a request shows UI: denied and
+            // restricted are silent no-ops, and the WhenInUse→Always escalation is
+            // handled by locationManagerDidChangeAuthorization, which Core Location
+            // also fires once when the manager is created.
+            if (locationManager.authorizationStatus() == kCLAuthorizationStatusNotDetermined) {
                 locationManager.requestWhenInUseAuthorization()
             }
             locationManager.startUpdatingLocation()
@@ -110,6 +120,21 @@ internal class IosLocationSource : LocationSource {
     override fun hasPreciseAuthorization(): Boolean =
         locationManager.accuracyAuthorization() ==
                 CLAccuracyAuthorization.CLAccuracyAuthorizationFullAccuracy
+
+    /**
+     * True when authorization is stuck below Always and only the Settings app can
+     * fix it: iOS shows the WhenInUse→Always upgrade prompt at most once, and a
+     * denied/restricted status never prompts again at all.
+     */
+    fun needsAlwaysAuthorizationFromSettings(): Boolean =
+        when (locationManager.authorizationStatus()) {
+            kCLAuthorizationStatusAuthorizedWhenInUse,
+            kCLAuthorizationStatusDenied,
+            kCLAuthorizationStatusRestricted,
+            -> true
+
+            else -> false
+        }
 
     private companion object {
         /** Matches AndroidLocationSource's staleness gate for delivered fixes. */

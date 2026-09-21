@@ -54,6 +54,11 @@ class LocationTransmissionManager(
     /** `true` while location updates and the periodic loop are running. */
     val isActive: StateFlow<Boolean> = _isActive
 
+    private val _isTransmitting = MutableStateFlow(false)
+
+    /** Tracking is active and at least one location packet has been accepted by the BLE queue. */
+    val isTransmitting: StateFlow<Boolean> = _isTransmitting
+
     private var latest: GeoLocation? = null
     private var hasSessionLocation = false
     private var collectJob: Job? = null
@@ -88,6 +93,7 @@ class LocationTransmissionManager(
 
     private fun startIfNeeded() {
         if (!isTransmissionAllowed()) return
+        if (readySessions().isEmpty()) return
         if (_isActive.value) return
 
         // Discard a fix cached from a previous session if it is too old
@@ -120,6 +126,7 @@ class LocationTransmissionManager(
     }
 
     private fun stopUpdates() {
+        _isTransmitting.value = false
         if (_isActive.value) {
             source.stop()
             log.i { "Stopped location transmission" }
@@ -155,6 +162,7 @@ class LocationTransmissionManager(
 
     private fun sendImmediateIfCached(identifier: String) {
         if (!isTransmissionAllowed()) return
+        if (identifier !in readySessions()) return
         latest?.let {
             if (hasSessionLocation || isFreshFix(it)) {
                 sendToDevice(identifier, it)
@@ -174,7 +182,9 @@ class LocationTransmissionManager(
             location.longitude,
             PlatformTimeZoneInfo(),
         )
-        port.writeCharacteristic(identifier, SonyBluetoothConstants.CHARACTERISTIC_UUID, packet)
+        val queued =
+            port.writeCharacteristic(identifier, SonyBluetoothConstants.CHARACTERISTIC_UUID, packet)
+        if (queued && _isActive.value) _isTransmitting.value = true
     }
 
     private fun shouldUpdateLocation(new: GeoLocation, current: GeoLocation?): Boolean {

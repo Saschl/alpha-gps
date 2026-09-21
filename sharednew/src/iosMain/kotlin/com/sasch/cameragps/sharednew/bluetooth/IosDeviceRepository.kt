@@ -1,6 +1,7 @@
 package com.sasch.cameragps.sharednew.bluetooth
 
 import com.diamondedge.logging.logging
+import com.sasch.cameragps.sharednew.bluetooth.accessory.AccessoryCameraName
 import com.sasch.cameragps.sharednew.database.devices.CameraDevice
 import com.sasch.cameragps.sharednew.database.devices.CameraDeviceDAO
 
@@ -14,7 +15,12 @@ import com.sasch.cameragps.sharednew.database.devices.CameraDeviceDAO
  * migration is injected via [resolveNames].
  */
 internal class IosDeviceRepository(
-    private val deviceDao: CameraDeviceDAO,
+    /**
+     * Resolved on first use, not at construction: this object is created before
+     * the CBCentralManager, and forcing the Room build here would put a disk
+     * open inside the state-restoration budget on every background launch.
+     */
+    private val deviceDao: () -> CameraDeviceDAO,
     /** Resolves peripheral UUID strings to display names (empty map if unavailable). */
     private val resolveNames: (List<String>) -> Map<String, String?>,
 ) {
@@ -48,7 +54,7 @@ internal class IosDeviceRepository(
         val normalized = identifier.uppercase()
         deviceEnabledOverrides[normalized]?.let { return it }
 
-        val enabled = deviceDao.findDeviceEnabled(normalized)
+        val enabled = deviceDao().findDeviceEnabled(normalized)
         if (enabled != null) {
             deviceEnabledOverrides[normalized] = enabled
             return enabled
@@ -68,20 +74,42 @@ internal class IosDeviceRepository(
                 ?: CameraDevice(mac = normalized, deviceEnabled = enabled)
     }
 
-    /** Insert-if-absent a device record and update the cache with [resolvedName]. */
-    suspend fun ensureDeviceRecord(identifier: String, resolvedName: String) {
+    /** Insert if absent, or persist only a name change without resetting device settings. */
+    suspend fun ensureDeviceRecord(identifier: String, accessoryName: String?, bluetoothName: String? = null) {
         val normalized = identifier.uppercase()
-        val entry = CameraDevice(mac = normalized, deviceName = resolvedName)
-        deviceDao.insertDevice(entry)
-        persistedDevices[normalized] =
-            persistedDevices[normalized]?.copy(deviceName = resolvedName) ?: entry
+        val dao = deviceDao()
+        // Read the real row: the in-memory cache may not be populated yet at launch.
+        val existing = dao.getAllCameraDevices().firstOrNull { it.mac.equals(normalized, ignoreCase = true) }
+        val resolved = AccessoryCameraName.resolve(
+            accessoryName = accessoryName,
+            bluetoothName = bluetoothName,
+            savedName = existing?.deviceName,
+            savedNameIsCustom = existing?.deviceNameIsCustom == true,
+        )
+        val entry = CameraDevice(
+            mac = normalized,
+            deviceName = resolved.name,
+            deviceNameIsCustom = resolved.isCustom,
+        )
+        if (existing == null) {
+            dao.insertDevice(entry)
+        } else if (
+            existing.deviceName != resolved.name ||
+            existing.deviceNameIsCustom != resolved.isCustom
+        ) {
+            dao.setDeviceName(normalized, resolved.name, resolved.isCustom)
+        }
+        persistedDevices[normalized] = existing?.copy(
+            deviceName = resolved.name,
+            deviceNameIsCustom = resolved.isCustom,
+        ) ?: entry
     }
 
     suspend fun deleteDevice(identifier: String) {
         val normalized = identifier.uppercase()
         deviceEnabledOverrides.remove(normalized)
         persistedDevices.remove(normalized)
-        deviceDao.deleteDevice(CameraDevice(mac = normalized))
+        deviceDao().deleteDevice(CameraDevice(mac = normalized))
     }
 
     /**
@@ -96,7 +124,7 @@ internal class IosDeviceRepository(
         val ids = autoReconnectStore.getAll()
         if (ids.isEmpty()) return
 
-        val knownMacs = deviceDao.getAllCameraDevices().mapTo(mutableSetOf()) { it.mac.uppercase() }
+        val knownMacs = deviceDao().getAllCameraDevices().mapTo(mutableSetOf()) { it.mac.uppercase() }
         val missing = ids.filterNot { it.uppercase() in knownMacs }
         if (missing.isEmpty()) return
 
@@ -104,7 +132,7 @@ internal class IosDeviceRepository(
 
         missing.forEach { id ->
             val normalized = id.uppercase()
-            deviceDao.insertDevice(
+            deviceDao().insertDevice(
                 CameraDevice(
                     mac = normalized,
                     deviceEnabled = true,
@@ -118,7 +146,7 @@ internal class IosDeviceRepository(
 
     /** Reload the caches from the database (the DB is the source of truth). */
     suspend fun sync() {
-        val devicesFromDb = deviceDao.getAllCameraDevices()
+        val devicesFromDb = deviceDao().getAllCameraDevices()
         persistedDevices.clear()
         devicesFromDb.forEach { device ->
             val normalized = device.mac.uppercase()

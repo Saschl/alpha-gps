@@ -1,0 +1,5 @@
+# Verified against 0.0.233. Older releases use different event/permission constants.
+bumble>=0.0.233
+
+# For --transport android-netsim (Android emulator), also install:
+#   pip install "bumble[android]"

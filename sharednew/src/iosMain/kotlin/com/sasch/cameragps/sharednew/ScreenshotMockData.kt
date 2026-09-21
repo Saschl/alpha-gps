@@ -24,6 +24,30 @@ internal val mockDevices = listOf(
         isConnected = false,
         isSaved = true,
     ),
+    BluetoothDeviceInfo(
+        identifier = "ILCE-7RM5",
+        name = "ILCE-7RM5",
+        isConnected = false,
+        isSaved = true,
+    ),
+    BluetoothDeviceInfo(
+        identifier = "ILCE-7CM2",
+        name = "ILCE-7CM2",
+        isConnected = false,
+        isSaved = true,
+    ),
+    BluetoothDeviceInfo(
+        identifier = "ILCE-7SM3",
+        name = "ILCE-7SM3",
+        isConnected = false,
+        isSaved = true,
+    ),
+    BluetoothDeviceInfo(
+        identifier = "ILCE-1",
+        name = "ILCE-1",
+        isConnected = false,
+        isSaved = true,
+    ),
     // Nearby (not yet saved) — appears in the "Nearby Cameras" section
     BluetoothDeviceInfo(
         identifier = "ZV-E10M2",
@@ -37,6 +61,42 @@ internal val mockDevices = listOf(
         isConnected = false,
         isSaved = false,
     ),
+    BluetoothDeviceInfo(
+        identifier = "ZV-E1",
+        name = "ZV-E1",
+        isConnected = false,
+        isSaved = false,
+    ),
+    BluetoothDeviceInfo(
+        identifier = "ILCE-7M3",
+        name = "ILCE-7M3",
+        isConnected = false,
+        isSaved = false,
+    ),
+    BluetoothDeviceInfo(
+        identifier = "ILCE-6400",
+        name = "ILCE-6400",
+        isConnected = false,
+        isSaved = false,
+    ),
+    BluetoothDeviceInfo(
+        identifier = "DSC-RX100M7",
+        name = "DSC-RX100M7",
+        isConnected = false,
+        isSaved = false,
+    ),
+    BluetoothDeviceInfo(
+        identifier = "ZV-1M2",
+        name = "ZV-1M2",
+        isConnected = false,
+        isSaved = false,
+    ),
+    BluetoothDeviceInfo(
+        identifier = "ILCE-7CR",
+        name = "ILCE-7CR",
+        isConnected = false,
+        isSaved = false,
+    ),
 )
 
 /**
@@ -47,10 +107,10 @@ internal val mockDevices = listOf(
 internal val mockDeviceListItems = mapOf(
     "ILCE-7M4" to DeviceListItem(
         identifier = "ILCE-7M4",
+        customName = null,
         isAlwaysOnEnabled = false,
         isTransmissionActive = true,
         isRemoteFeatureActive = true,
         isShutterActive = false,
     ),
 )
-

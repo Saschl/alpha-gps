@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
@@ -30,6 +29,7 @@ import cameragps.sharednew.generated.resources.Res
 import cameragps.sharednew.generated.resources.cancel_button
 import cameragps.sharednew.generated.resources.log_level
 import cameragps.sharednew.generated.resources.log_settings
+import com.sasch.cameragps.sharednew.ui.components.ScrollbarLazyColumn
 import com.saschl.cameragps.service.FileTree
 import com.saschl.cameragps.utils.PreferencesManager
 import org.jetbrains.compose.resources.stringResource
@@ -123,7 +123,7 @@ private fun LogLevelSelectionDialog(
             )
         },
         text = {
-            LazyColumn {
+            ScrollbarLazyColumn {
                 items(logLevels) { (level, name) ->
                     Row(
                         modifier = Modifier

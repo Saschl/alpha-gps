@@ -1,5 +1,8 @@
 package com.sasch.cameragps.sharednew.bluetooth.coordinator
 
+import com.sasch.cameragps.sharednew.bluetooth.session.CameraAutoCorrectionSetting
+import com.sasch.cameragps.sharednew.bluetooth.session.CameraSettingState
+
 /**
  * Platform abstraction over BLE GATT I/O operations.
  *
@@ -52,6 +55,16 @@ interface BleGattPort {
      */
     fun setShutterSequenceActive(identifier: String, active: Boolean)
 
+    /** Advisory camera status for the UI; must not gate GPS setup or transmission. */
+    fun setLocationDisabledByCamera(identifier: String, disabled: Boolean)
+    fun isLocationDisabledByCamera(identifier: String): Boolean
+
+    fun setAutoCorrectionState(
+        identifier: String,
+        setting: CameraAutoCorrectionSetting,
+        state: CameraSettingState,
+    )
+
     /**
      * Read the value of [characteristicUuid] on device [identifier].
      * The result arrives asynchronously via the platform's characteristic-read callback.
@@ -65,5 +78,3 @@ interface BleGattPort {
      */
     fun hasCharacteristic(identifier: String, characteristicUuid: String): Boolean
 }
-
-

@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
@@ -56,6 +55,7 @@ import cameragps.sharednew.generated.resources.event_sounds_set_default
 import cameragps.sharednew.generated.resources.event_sounds_set_silent
 import cameragps.sharednew.generated.resources.event_sounds_title
 import cameragps.sharednew.generated.resources.keyboard_arrow_right_24px
+import com.sasch.cameragps.sharednew.ui.components.ScrollbarLazyColumn
 import com.saschl.cameragps.notification.NotificationsHelper
 import com.saschl.cameragps.service.TransmissionSoundEvent
 import com.saschl.cameragps.service.TransmissionSoundMode
@@ -186,7 +186,7 @@ internal fun EventSoundsSettingsCard() {
                 onClick = {
                     openNotificationChannelSettings(
                         context,
-                        NotificationsHelper.NOTIFICATION_CHANNEL_ID
+                        NotificationsHelper.TRANSMISSION_NOTIFICATION_CHANNEL
                     )
                 }
             )
@@ -358,7 +358,7 @@ private fun SoundModeSelectionDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
         text = {
-            LazyColumn {
+            ScrollbarLazyColumn {
                 items(options) { (mode, label) ->
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -413,6 +413,8 @@ private fun createRingtonePickerIntent(existingUri: Uri?): Intent {
 }
 
 private fun openNotificationChannelSettings(context: Context, channelId: String) {
+    // Settings may be opened before the service has created the new alert channel.
+    NotificationsHelper.createNotificationChannel(context)
     val intent = Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS).apply {
         putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
         putExtra(Settings.EXTRA_CHANNEL_ID, channelId)

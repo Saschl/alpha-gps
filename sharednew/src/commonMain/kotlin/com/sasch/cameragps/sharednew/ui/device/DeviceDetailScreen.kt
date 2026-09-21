@@ -7,11 +7,11 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -26,8 +26,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import cameragps.sharednew.generated.resources.Res
 import cameragps.sharednew.generated.resources.always_on_description
+import cameragps.sharednew.generated.resources.camera_setting_connect
+import cameragps.sharednew.generated.resources.camera_setting_failed
+import cameragps.sharednew.generated.resources.camera_setting_pending
+import cameragps.sharednew.generated.resources.camera_setting_retry
+import cameragps.sharednew.generated.resources.camera_setting_unsupported
+import cameragps.sharednew.generated.resources.cancel_button
 import cameragps.sharednew.generated.resources.dialog_ok
 import cameragps.sharednew.generated.resources.enableConstantly
 import cameragps.sharednew.generated.resources.enable_device
@@ -39,7 +47,14 @@ import cameragps.sharednew.generated.resources.handshake_delay_title
 import cameragps.sharednew.generated.resources.hint_if_issues_after_switching
 import cameragps.sharednew.generated.resources.info_24px
 import cameragps.sharednew.generated.resources.remote_control_hint
+import cameragps.sharednew.generated.resources.rename_camera_hint
+import cameragps.sharednew.generated.resources.rename_camera_label
+import cameragps.sharednew.generated.resources.rename_camera_save
+import cameragps.sharednew.generated.resources.rename_camera_title
 import cameragps.sharednew.generated.resources.setting_info
+import com.sasch.cameragps.sharednew.bluetooth.BleSessionPhase
+import com.sasch.cameragps.sharednew.bluetooth.session.CameraSettingState
+import com.sasch.cameragps.sharednew.ui.components.ScrollbarLazyColumn
 import com.sasch.cameragps.sharednew.util.KotlinPlatform
 import com.sasch.cameragps.sharednew.util.currentPlatform
 import org.jetbrains.compose.resources.painterResource
@@ -56,16 +71,27 @@ fun DeviceDetailContent(
     deviceId: String,
     deviceName: String? = null,
     modifier: Modifier = Modifier,
-    headerContent: @Composable (() -> Unit)? = null,
+    headerContent: @Composable ((String) -> Unit)? = null,
     onDeviceEnabledChanged: ((Boolean) -> Unit)? = null,
+    onPresentSystemRename: (() -> Unit)? = null,
+    renameEnabled: Boolean = true,
 ) {
     val state = viewModel.uiState.collectAsState().value
+    val sessions by viewModel.sessions.collectAsState()
+    val session = sessions[deviceId.uppercase()]
+    val cameraReady = session?.phase == BleSessionPhase.Transmitting
 
-    LaunchedEffect(deviceId) {
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        viewModel.refreshCameraSettings(deviceId)
+    }
+
+    // Reload on a name change too: an iOS system rename lands asynchronously,
+    // through the accessory snapshot rather than through this screen.
+    LaunchedEffect(deviceId, deviceName) {
         viewModel.load(deviceId, deviceName)
     }
 
-    LazyColumn(
+    ScrollbarLazyColumn(
         modifier = modifier
             .fillMaxSize()
             .padding(16.dp),
@@ -73,7 +99,17 @@ fun DeviceDetailContent(
         contentPadding = PaddingValues(bottom = 16.dp),
     ) {
         if (headerContent != null) {
-            item { headerContent() }
+            item { headerContent(state.deviceName.ifEmpty { deviceName.orEmpty() }) }
+        }
+
+        if (renameEnabled) {
+            item {
+                DeviceRenameRow(
+                    currentName = state.deviceName.ifEmpty { deviceName.orEmpty() },
+                    onPresentSystemRename = onPresentSystemRename,
+                    onRenameInApp = { newName -> viewModel.renameDevice(deviceId, newName) },
+                )
+            }
         }
 
         item {
@@ -125,7 +161,155 @@ fun DeviceDetailContent(
                 infoText = stringResource(Res.string.handshake_delay_description),
             )
         }
+
+        /*for (setting in CameraAutoCorrectionSetting.entries) {
+            item(key = setting.name) {
+                val isTime = setting == CameraAutoCorrectionSetting.Time
+                CameraSettingRow(
+                    title = stringResource(if (isTime) Res.string.auto_time_correction else Res.string.auto_area_adjustment),
+                    infoText = stringResource(if (isTime) Res.string.auto_time_correction_hint else Res.string.auto_area_adjustment_hint),
+                    state = session?.autoCorrectionSetting(setting) ?: CameraSettingState(),
+                    cameraReady = cameraReady,
+                    onCheckedChange = { viewModel.setAutoCorrectionSetting(deviceId, setting, it) },
+                    onRetry = { viewModel.refreshCameraSettings(deviceId) },
+                )
+            }
+        }*/
     }
+}
+
+@Composable
+private fun CameraSettingRow(
+    title: String,
+    infoText: String,
+    state: CameraSettingState,
+    cameraReady: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    onRetry: () -> Unit,
+) {
+    Column {
+        DeviceToggleRow(
+            title = title,
+            checked = state.enabled == true,
+            enabled = cameraReady && state.supported == true && state.enabled != null && !state.pending,
+            onCheckedChange = onCheckedChange,
+            infoText = infoText,
+        )
+        val status = when {
+            !cameraReady -> Res.string.camera_setting_connect
+            state.pending -> Res.string.camera_setting_pending
+            state.supported == false -> Res.string.camera_setting_unsupported
+            state.failed -> Res.string.camera_setting_failed
+            state.enabled == null -> Res.string.camera_setting_pending
+            else -> null
+        }
+        if (status != null) {
+            Text(
+                stringResource(status),
+                style = MaterialTheme.typography.bodySmall,
+                color = if (state.failed && cameraReady) MaterialTheme.colorScheme.error
+                else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        if (cameraReady && state.failed && !state.pending) {
+            TextButton(onClick = onRetry) { Text(stringResource(Res.string.camera_setting_retry)) }
+        }
+    }
+}
+
+/**
+ * Rename affordance. When the platform can rename the camera in the system's own
+ * accessory record it presents that sheet instead of the in-app dialog, so the
+ * two never disagree; the app-side dialog is used everywhere else.
+ */
+@Composable
+private fun DeviceRenameRow(
+    currentName: String,
+    onPresentSystemRename: (() -> Unit)?,
+    onRenameInApp: (String) -> Unit,
+) {
+    var showDialog by remember { mutableStateOf(false) }
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = stringResource(Res.string.rename_camera_label),
+                style = MaterialTheme.typography.bodyLarge,
+            )
+            if (currentName.isNotEmpty()) {
+                Text(
+                    text = currentName,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        TextButton(
+            onClick = {
+                if (onPresentSystemRename != null) onPresentSystemRename() else showDialog = true
+            },
+        ) {
+            Text(stringResource(Res.string.rename_camera_title))
+        }
+    }
+
+    if (showDialog) {
+        RenameCameraDialog(
+            currentName = currentName,
+            onDismiss = { showDialog = false },
+            onConfirm = { newName ->
+                showDialog = false
+                onRenameInApp(newName)
+            },
+        )
+    }
+}
+
+@Composable
+private fun RenameCameraDialog(
+    currentName: String,
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit,
+) {
+    var text by remember(currentName) { mutableStateOf(currentName) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(Res.string.rename_camera_title)) },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = text,
+                    onValueChange = { text = it },
+                    singleLine = true,
+                    label = { Text(stringResource(Res.string.rename_camera_label)) },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Text(
+                    text = stringResource(Res.string.rename_camera_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 8.dp),
+                )
+            }
+        },
+        confirmButton = {
+            // A blank name would erase the camera's identity in the list.
+            TextButton(
+                onClick = { onConfirm(text) },
+                enabled = text.isNotBlank(),
+            ) {
+                Text(stringResource(Res.string.rename_camera_save))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(Res.string.cancel_button))
+            }
+        },
+    )
 }
 
 /**
@@ -233,6 +417,3 @@ private fun DeviceToggleRow(
         )
     }
 }
-
-
-

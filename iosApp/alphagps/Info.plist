@@ -4,8 +4,24 @@
     <dict>
         <key>CADisableMinimumFrameDurationOnPhone</key>
         <true />
-        <key>CFBundleIdentifier</key>
-        <string></string>
+        <key>NSAccessorySetupBluetoothCompanyIdentifiers</key>
+        <array>
+            <string>012D</string>
+        </array>
+        <key>NSAccessorySetupBluetoothServices</key>
+        <array>
+            <string>8000DD00-DD00-FFFF-FFFF-FFFFFFFFFFFF</string>
+            <string>8000CC00-CC00-FFFF-FFFF-FFFFFFFFFFFF</string>
+            <string>8000FF00-FF00-FFFF-FFFF-FFFFFFFFFFFF</string>
+        </array>
+        <key>NSAccessorySetupKitSupports</key>
+        <array>
+            <string>Bluetooth</string>
+        </array>
+        <key>NSAccessorySetupSupports</key>
+        <array>
+            <string>Bluetooth</string>
+        </array>
         <key>UIBackgroundModes</key>
         <array>
             <string>location</string>

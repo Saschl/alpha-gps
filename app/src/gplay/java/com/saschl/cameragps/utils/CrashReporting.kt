@@ -1,6 +1,7 @@
 package com.saschl.cameragps.utils
 
 import android.content.Context
+import com.sasch.cameragps.sharednew.crash.CrashReportPolicy
 import io.sentry.SentryLevel
 import io.sentry.SentryLogLevel
 import io.sentry.SentryOptions
@@ -20,10 +21,11 @@ object CrashReporting {
     fun init(context: Context) {
         SentryAndroid.init(context) { options ->
             options.isSendDefaultPii = false
-            val macRegex = Regex("([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})")
 
             options.logs.isEnabled = true
 
+            // These thresholds are the ones CrashReportPolicy.route encodes for
+            // both platforms — change them together.
             options.addIntegration(
                 SentryTimberIntegration(
                     minEventLevel = SentryLevel.ERROR,
@@ -32,8 +34,8 @@ object CrashReporting {
                 )
             )
             options.logs.beforeSend = SentryOptions.Logs.BeforeSendLogCallback { event ->
-                // Modify the event here if needed
-                event.body = event.body.replace(macRegex, "XX:XX:XX:XX:XX:XX")
+                // Scrubbing lives in the shared module so iOS redacts identically.
+                event.body = CrashReportPolicy.redact(event.body)
                 event
             }
         }

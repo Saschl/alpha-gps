@@ -1,6 +1,5 @@
 <resources>
     <string name="ios_no_devices_message">Make sure your camera is powered on and in Bluetooth pairing or discovery mode.</string>
-    <string name="ios_troubleshooting_need_help">Need help?</string>
     <string name="ios_troubleshooting_title">Having trouble connecting?</string>
     <string name="ios_troubleshooting_step_1_bluetooth">1. Turn on Bluetooth on both your iPhone and camera.</string>
     <string name="ios_troubleshooting_step_2_pairing_mode">2. If the camera is not paired yet, enable pairing mode on the camera before tapping connect.</string>
@@ -14,5 +13,40 @@
     <string name="precise_location">Precise Location authorization needed</string>
     <string name="open_settings_for_precise_location">For the app to function as intended, you need to allow precise location. Open the settings via the button and enable precise location in the settings. </string>
 
-</resources>
+    <string name="always_location">Location access "Always" needed</string>
+    <string name="open_settings_for_always_location">To send GPS data to your camera while the app is in the background, location access must be set to "Always". iOS only shows this permission prompt once, so it can now only be changed in the Settings app. Open the settings via the button, tap "Location" and choose "Always".</string>
 
+
+    <string name="ios_accessory_migration_title">Confirm your cameras once</string>
+    <string name="ios_accessory_migration_message">Confirm your saved cameras once so iOS can reconnect to them more reliably, even after you swipe Alpha GPS away from the app switcher. All your cameras and settings carry over, with no need to pair again.</string>
+    <string name="ios_accessory_migration_action">Confirm cameras</string>
+
+    <string name="ios_no_cameras_title">No cameras yet</string>
+    <string name="ios_no_cameras_message">Put your camera into pairing mode, then add it. iOS shows its own list of nearby Sony cameras.</string>
+
+    <string name="ios_accessory_migration_dialog_title">Confirm your cameras</string>
+    <string name="ios_accessory_migration_dialog_message">Confirm your saved cameras once so iOS can reconnect to them more reliably, even after you swipe Alpha GPS away from the app switcher.\n\nTap Continue and iOS takes care of the rest, usually in a few seconds and without asking you anything. Everything carries over, including all your settings. Nothing is lost and you do not have to pair the cameras again.\n\nYour cameras keep working in the meantime, so you can also do this later.</string>
+    <string name="ios_accessory_migration_dialog_confirm">Continue</string>
+    <string name="ios_accessory_migration_dialog_later">Not now</string>
+
+
+    <string name="ios_accessory_migration_error_title">Could not confirm your cameras</string>
+    <string name="ios_accessory_migration_error_message">iOS could not take your cameras over. Turn off all your cameras, then try again while they are switched off.\n\nIf it keeps failing, close Alpha GPS completely from the app switcher and open it again, then try once more.</string>
+    <string name="ios_accessory_migration_error_retry">Try again</string>
+
+
+    <string name="ios_accessory_migration_busy">Confirming your cameras…</string>
+    <string name="ios_accessory_migration_success">All cameras confirmed successfully.</string>
+
+    <string name="ios_transmission_notifications_setting">Transmission notification</string>
+    <string name="ios_transmission_notifications_description">Show a notification while location is being sent to your cameras.</string>
+    <string name="ios_transmission_notifications_denied">Notifications are disabled in iOS Settings. Enable them there to see transmission status.</string>
+    <string name="ios_transmission_notifications_open_settings">Open iOS Settings</string>
+    <string name="ios_transmission_notifications_customize">Customize notifications in iOS Settings</string>
+    <string name="ios_transmission_notification_title">Location transmission active</string>
+    <plurals name="ios_transmission_notification_body">
+        <item quantity="one">Transmitting location data to %1$d camera</item>
+        <item quantity="other">Transmitting location data to %1$d cameras</item>
+    </plurals>
+
+</resources>

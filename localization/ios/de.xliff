@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xliff xmlns="urn:oasis:names:tc:xliff:document:1.2" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="1.2" xsi:schemaLocation="urn:oasis:names:tc:xliff:document:1.2 http://docs.oasis-open.org/xliff/v1.2/os/xliff-core-1.2-strict.xsd">
+  <file original="InfoPlist.xcstrings" source-language="en" target-language="de" datatype="plaintext">
+    <header>
+      <tool tool-id="com.apple.dt.xcode" tool-name="Xcode" tool-version="26.6" build-num="17F113"/>
+    </header>
+    <body>
+      <trans-unit id="CFBundleDisplayName" xml:space="preserve">
+        <source>Alpha GPS</source>
+        <note>Bundle display name</note>
+      </trans-unit>
+      <trans-unit id="CFBundleName" xml:space="preserve">
+        <source>alphagps</source>
+        <note>Bundle name</note>
+      </trans-unit>
+      <trans-unit id="NSBluetoothAlwaysUsageDescription" xml:space="preserve">
+        <source>This app needs access to Bluetooth to connect to your cameras and transmit location data for geotagging your photos.</source>
+        <note>Privacy - Bluetooth Always Usage Description</note>
+      </trans-unit>
+      <trans-unit id="NSLocationAlwaysAndWhenInUseUsageDescription" xml:space="preserve">
+        <source>This app uses your location to send GPS coordinates to your connected camera, enabling automatic geotagging of your photos, even when the phone is locked. Select "Always" to enable geotagging in the background.</source>
+        <target state="translated">Diese App sendet deine GPS-Koordinaten an die verbundene Kamera, damit deine Fotos automatisch mit Standortdaten versehen werden – auch wenn dein iPhone gesperrt ist. Wähle „Immer“, um dies auch im Hintergrund zu ermöglichen.</target>
+        <note>Location permission for background geotagging, including while the phone is locked.</note>
+      </trans-unit>
+      <trans-unit id="NSLocationWhenInUseUsageDescription" xml:space="preserve">
+        <source>This app needs constant access to location services to send GPS coordinates to your connected camera, enabling automatic geotagging of your photos.</source>
+        <target state="translated">Diese App benötigt fortlaufenden Zugriff auf deinen Standort, um GPS-Koordinaten an die verbundene Kamera zu senden und deine Fotos automatisch mit Standortdaten zu versehen.</target>
+        <note>Location permission for sending GPS coordinates to the connected camera.</note>
+      </trans-unit>
+    </body>
+  </file>
+</xliff>

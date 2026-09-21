@@ -50,6 +50,20 @@ class BleSessionCoordinator(
         port.setRemoteFeatureActive(id, false)
         emitPhase(id, BleSessionPhase.DiscoveringServices)
 
+        if (port.hasCharacteristic(
+                id,
+                SonyBluetoothConstants.CHARACTERISTIC_LOCATION_ENABLED_IN_CAMERA
+            )
+        ) {
+            // Observe status for the UI, including during setup. DD01 is advisory:
+            // a startup "disabled" notification must not prevent GPS setup.
+            // Older cameras may omit DD01.
+            port.subscribeToNotifications(
+                id,
+                SonyBluetoothConstants.CHARACTERISTIC_LOCATION_ENABLED_IN_CAMERA
+            )
+        }
+
         if (port.hasCharacteristic(id, SonyBluetoothConstants.CHARACTERISTIC_READ_UUID)) {
             log.d { "Handshake[$id]: requesting config read" }
             emitPhase(id, BleSessionPhase.ReadingConfig)
@@ -123,6 +137,26 @@ class BleSessionCoordinator(
         value: ByteArray,
     ): Boolean {
         val id = identifier.uppercase()
+        if (characteristicUuid.equals(
+                SonyBluetoothConstants.CHARACTERISTIC_LOCATION_ENABLED_IN_CAMERA,
+                ignoreCase = true,
+            ) && port.isConnected(id)
+        ) {
+            when {
+                value.contentEquals(SonyBluetoothConstants.LOCATION_TRANSFER_DISABLED) -> {
+                    log.d { "Camera $id reports location linking disabled (advisory)" }
+                    port.setLocationDisabledByCamera(id, true)
+                }
+
+                value.contentEquals(SonyBluetoothConstants.LOCATION_TRANSFER_AVAILABLE) -> {
+                    log.d { "Camera $id reports location transfer available" }
+                    port.setLocationDisabledByCamera(id, false)
+                }
+
+                else -> return false
+            }
+            return true
+        }
         if (characteristicUuid.equals(
                 SonyBluetoothConstants.REMOTE_STATUS_UUID,
                 ignoreCase = true
@@ -239,4 +273,3 @@ class BleSessionCoordinator(
         _events.trySend(BleSessionEvent.PhaseChanged(identifier, phase))
     }
 }
-

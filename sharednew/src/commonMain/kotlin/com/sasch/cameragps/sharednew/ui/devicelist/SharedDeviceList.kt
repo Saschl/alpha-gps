@@ -14,11 +14,9 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilledTonalButton
@@ -57,7 +55,9 @@ import cameragps.sharednew.generated.resources.delete_device_confirmation
 import cameragps.sharednew.generated.resources.enable_pairing_mode_continue
 import cameragps.sharednew.generated.resources.enable_pairing_mode_message
 import cameragps.sharednew.generated.resources.enable_pairing_mode_title
+import cameragps.sharednew.generated.resources.guide_open_button
 import cameragps.sharednew.generated.resources.keyboard_arrow_right_24px
+import cameragps.sharednew.generated.resources.location_linking_disabled_by_camera
 import cameragps.sharednew.generated.resources.nearby_cameras
 import cameragps.sharednew.generated.resources.not_paired_tap_to_pair_again
 import cameragps.sharednew.generated.resources.remote_feature_inactive
@@ -70,6 +70,7 @@ import cameragps.sharednew.generated.resources.trigger_shutter
 import com.sasch.cameragps.sharednew.bluetooth.BluetoothDeviceInfo
 import com.sasch.cameragps.sharednew.ui.ShutterPulseIcon
 import com.sasch.cameragps.sharednew.ui.TransmissionDot
+import com.sasch.cameragps.sharednew.ui.components.ScrollbarLazyColumn
 import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
@@ -94,6 +95,7 @@ fun SharedDeviceList(
     onTriggerRemoteShutter: (BluetoothDeviceInfo) -> Unit,
     onDelete: (BluetoothDeviceInfo) -> Unit,
     onOpenDetails: (BluetoothDeviceInfo) -> Unit,
+    onOpenTroubleshooting: () -> Unit,
 ) {
     var deviceToDelete by remember { mutableStateOf<BluetoothDeviceInfo?>(null) }
     var deviceToPair by remember { mutableStateOf<BluetoothDeviceInfo?>(null) }
@@ -157,7 +159,7 @@ fun SharedDeviceList(
     val savedDevices = devices.filter { it.isSaved }
     val nearbyDevices = devices.filter { !it.isSaved }
 
-    LazyColumn(
+    ScrollbarLazyColumn(
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 16.dp),
@@ -178,6 +180,7 @@ fun SharedDeviceList(
                     onTriggerRemoteShutter = { onTriggerRemoteShutter(device) },
                     onDeleteRequest = { deviceToDelete = device },
                     onOpenDetails = { onOpenDetails(device) },
+                    onOpenTroubleshooting = onOpenTroubleshooting,
                 )
             }
         }
@@ -204,6 +207,7 @@ fun SharedDeviceList(
                     onConnect = { deviceToPair = device },
                     onTriggerRemoteShutter = { onTriggerRemoteShutter(device) },
                     onOpenDetails = { onOpenDetails(device) },
+                    onOpenTroubleshooting = onOpenTroubleshooting,
                 )
             }
         }
@@ -211,11 +215,12 @@ fun SharedDeviceList(
 }
 
 @Composable
-internal fun EmptyStateCard(
+fun EmptyStateCard(
     title: String,
     message: String,
-    actionLabel: String,
-    onAction: () -> Unit,
+    /** Null hides the action button, for a card that only explains something. */
+    actionLabel: String? = null,
+    onAction: () -> Unit = {},
 ) {
     Box(
         modifier = Modifier.fillMaxSize(),
@@ -241,8 +246,10 @@ internal fun EmptyStateCard(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                TextButton(onClick = onAction) {
-                    Text(actionLabel)
+                if (actionLabel != null) {
+                    TextButton(onClick = onAction) {
+                        Text(actionLabel)
+                    }
                 }
             }
         }
@@ -270,6 +277,7 @@ private fun SwipeToDeleteDeviceCard(
     onTriggerRemoteShutter: () -> Unit,
     onDeleteRequest: () -> Unit,
     onOpenDetails: () -> Unit,
+    onOpenTroubleshooting: () -> Unit,
 ) {
 
     val dismissState = rememberSwipeToDismissBoxState()
@@ -320,6 +328,7 @@ private fun SwipeToDeleteDeviceCard(
             onConnect = onConnect,
             onTriggerRemoteShutter = onTriggerRemoteShutter,
             onOpenDetails = onOpenDetails,
+            onOpenTroubleshooting = onOpenTroubleshooting,
         )
     }
 }
@@ -334,6 +343,7 @@ private fun DeviceCard(
     onConnect: () -> Unit,
     onTriggerRemoteShutter: () -> Unit,
     onOpenDetails: () -> Unit,
+    onOpenTroubleshooting: () -> Unit,
 ) {
     val isTransmissionActive = item?.isTransmissionActive == true
     val isRemoteFeatureActive = item?.isRemoteFeatureActive == true
@@ -378,11 +388,12 @@ private fun DeviceCard(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    val transmissionStatusDescription = if (isTransmissionActive) {
-                        stringResource(Res.string.transmission_active)
+                    val transmissionStatusDescription = when {
+                        item?.locationDisabledByCamera == true ->
+                            stringResource(Res.string.location_linking_disabled_by_camera)
 
-                    } else {
-                        stringResource(Res.string.transmission_inactive)
+                        isTransmissionActive -> stringResource(Res.string.transmission_active)
+                        else -> stringResource(Res.string.transmission_inactive)
                     }
                     TransmissionDot(
                         isTransmissionActive,
@@ -406,6 +417,19 @@ private fun DeviceCard(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
                 )
+            }
+            if (item?.locationDisabledByCamera == true) {
+                Text(
+                    text = stringResource(Res.string.location_linking_disabled_by_camera),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                )
+                TextButton(
+                    onClick = onOpenTroubleshooting,
+                    contentPadding = PaddingValues(horizontal = 0.dp),
+                ) {
+                    Text(stringResource(Res.string.guide_open_button))
+                }
             }
             if (showKeepAliveHint && item?.isAlwaysOnEnabled == false) {
                 Text(

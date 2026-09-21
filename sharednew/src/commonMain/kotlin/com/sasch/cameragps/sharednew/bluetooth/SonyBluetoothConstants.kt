@@ -18,11 +18,15 @@ object SonyBluetoothConstants {
 
     val TIME_SYNC_CHARACTERISTIC_UUID = "0000cc13-0000-1000-8000-00805f9b34fb"
 
+    val AUTO_TIME_CORRECTION_UUID = "0000dd32-0000-1000-8000-00805f9b34fb"
+    val AUTO_AREA_ADJUSTMENT_UUID = "0000dd33-0000-1000-8000-00805f9b34fb"
+
     val REMOTE_SERVICE_UUID = "8000ff00-ff00-ffff-ffff-ffffffffffff"
 
     val REMOTE_CHARACTERISTIC_UUID = "0000ff01-0000-1000-8000-00805f9b34fb"
 
     val REMOTE_STATUS_UUID = "0000ff02-0000-1000-8000-00805f9b34fb"
+    val CAMERA_STATUS_UUID = "0000cc09-0000-1000-8000-00805f9b34fb"
 
     val CCCD_UUID = "00002902-0000-1000-8000-00805f9b34fb"
 
@@ -40,6 +44,11 @@ object SonyBluetoothConstants {
 
     // GPS enable command bytes
     val GPS_ENABLE_COMMAND = byteArrayOf(0x01)
+
+    // DD01 notifications verified
+    val LOCATION_TRANSFER_DISABLED = byteArrayOf(0x03, 0x01, 0x02, 0x00)
+    val LOCATION_TRANSFER_AVAILABLE = byteArrayOf(0x03, 0x01, 0x03, 0x01)
+    val LOCATION_LOCK_RELEASE_COMMAND = byteArrayOf(0x00)
 
     // remote control commands (see tools/sony_shutter/intervalometer.py)
     val FULL_SHUTTER_DOWN_COMMAND = byteArrayOf(0x01, 0x09)

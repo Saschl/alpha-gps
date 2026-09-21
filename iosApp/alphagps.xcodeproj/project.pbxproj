@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		2B2597FC2F7146300006B4E3 /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2B2597FB2F7146300006B4E3 /* StoreKit.framework */; };
+		2BAB7506304CDA98002DE729 /* Sentry-Dynamic in Frameworks */ = {isa = PBXBuildFile; productRef = 2BAB7505304CDA98002DE729 /* Sentry-Dynamic */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -41,6 +42,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				2BAB7506304CDA98002DE729 /* Sentry-Dynamic in Frameworks */,
 				2B2597FC2F7146300006B4E3 /* StoreKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -94,6 +96,7 @@
 			);
 			name = alphagps;
 			packageProductDependencies = (
+				2BAB7505304CDA98002DE729 /* Sentry-Dynamic */,
 			);
 			productName = alphagps;
 			productReference = 2BE082CC2F6824510077F638 /* alphagps.app */;
@@ -120,9 +123,13 @@
 			knownRegions = (
 				en,
 				Base,
+				de,
 			);
 			mainGroup = 2BE082C32F6824510077F638;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				2BAB7504304CDA98002DE729 /* XCRemoteSwiftPackageReference "sentry-cocoa" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 2BE082CD2F6824510077F638 /* Products */;
 			projectDirPath = "";
@@ -233,6 +240,7 @@
 				SDKROOT = iphoneos;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
 			name = Debug;
@@ -291,6 +299,7 @@
 				SDKROOT = iphoneos;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_EMIT_LOC_STRINGS = YES;
 				VALIDATE_PRODUCT = YES;
 			};
 			name = Release;
@@ -304,7 +313,7 @@
 				CODE_SIGN_ENTITLEMENTS = alphagps/alphagps.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 141;
+				CURRENT_PROJECT_VERSION = 160;
 				DEVELOPMENT_TEAM = 6T589MK27K;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
@@ -312,7 +321,7 @@
 				INFOPLIST_FILE = alphagps/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Alpha GPS";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.photography";
 				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "This app needs access to Bluetooth to connect to your cameras and transmit location data for geotagging your photos.";
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "This app uses your location to send GPS coordinates to your connected camera, enabling automatic geotagging of your photos, even when the phone is locked. Select \"Always\" to enable geotagging in the background.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "This app needs constant access to location services to send GPS coordinates to your connected camera, enabling automatic geotagging of your photos.";
@@ -320,12 +329,12 @@
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
-				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.4.1;
+				MARKETING_VERSION = 1.6.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.saschl.cameragps;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -352,7 +361,7 @@
 				CODE_SIGN_ENTITLEMENTS = alphagps/alphagps.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 141;
+				CURRENT_PROJECT_VERSION = 160;
 				DEVELOPMENT_TEAM = 6T589MK27K;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
@@ -360,20 +369,20 @@
 				INFOPLIST_FILE = alphagps/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Alpha GPS";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.photography";
 				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "This app needs access to Bluetooth to connect to your cameras and transmit location data for geotagging your photos.";
-				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "This app uses your location to send GPS coordinates to your connected camera, enabling automatic geotagging of your photos, even when the phone is locked.";
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "This app needs constant access to location services to send GPS coordinates to your connected camera, enabling automatic geotagging of your photos. Select \"Always\" to enable geotagging in the background.";
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "This app uses your location to send GPS coordinates to your connected camera, enabling automatic geotagging of your photos, even when the phone is locked. Select \"Always\" to enable geotagging in the background.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "This app needs constant access to location services to send GPS coordinates to your connected camera, enabling automatic geotagging of your photos.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
-				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.4.1;
+				MARKETING_VERSION = 1.6.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.saschl.cameragps;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -413,6 +422,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		2BAB7504304CDA98002DE729 /* XCRemoteSwiftPackageReference "sentry-cocoa" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/getsentry/sentry-cocoa.git";
+			requirement = {
+				kind = exactVersion;
+				version = 8.58.2;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		2BAB7505304CDA98002DE729 /* Sentry-Dynamic */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 2BAB7504304CDA98002DE729 /* XCRemoteSwiftPackageReference "sentry-cocoa" */;
+			productName = "Sentry-Dynamic";
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 2BE082C42F6824510077F638 /* Project object */;
 }

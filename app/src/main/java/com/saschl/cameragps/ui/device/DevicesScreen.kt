@@ -25,21 +25,21 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import cameragps.sharednew.generated.resources.Res
-import cameragps.sharednew.generated.resources.app_name_ui
 import cameragps.sharednew.generated.resources.app_settings
+import cameragps.sharednew.generated.resources.header_device_list
 import cameragps.sharednew.generated.resources.help_menu_item
 import cameragps.sharednew.generated.resources.permissions_missing_description
 import cameragps.sharednew.generated.resources.permissions_missing_title
 import cameragps.sharednew.generated.resources.settings
 import cameragps.sharednew.generated.resources.view_logs
 import com.sasch.cameragps.sharednew.ui.device.SharedDevicesScreen
+import com.sasch.cameragps.sharednew.ui.devicelist.DeviceListLayout
 import com.saschl.cameragps.R
 import com.saschl.cameragps.service.AssociatedDeviceCompat
 import com.saschl.cameragps.ui.AssociatedDevicesList
@@ -91,7 +91,7 @@ fun DevicesScreen(
     }
 
     SharedDevicesScreen(
-        title = stringResource(Res.string.app_name_ui),
+        title = stringResource(Res.string.header_device_list),
         topBarActions = {
             IconButton(
                 onClick = onHelpClick
@@ -121,96 +121,94 @@ fun DevicesScreen(
         }
     ) {
 
-        Column(
-            /* modifier = Modifier
-                 .padding(innerPadding),*/
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-
-            if (missingPermissions.isNotEmpty()) {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.errorContainer
-                    )
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+        DeviceListLayout(
+            onNeedHelp = onTroubleshootingClick,
+            header = {
+                if (missingPermissions.isNotEmpty()) {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer
+                        )
                     ) {
-                        Text(
-                            text = stringResource(Res.string.permissions_missing_title),
-                            style = MaterialTheme.typography.titleSmall,
-                            color = MaterialTheme.colorScheme.onErrorContainer
-                        )
-                        val missingPermissionNames = missingPermissions
-                            .mapNotNull { permission ->
-                                getPermissionDescription(permission)?.let { res ->
-                                    " - ${stringResource(res)}"
-                                }
-                            }
-                            .joinToString("\n")
-                        Text(
-                            text = stringResource(
-                                Res.string.permissions_missing_description,
-                                missingPermissionNames
-                            ),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onErrorContainer
-                        )
-                        TextButton(
-                            onClick = {
-                                val intent =
-                                    Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                                        data = Uri.fromParts("package", context.packageName, null)
-                                    }
-                                context.startActivity(intent)
-                            }
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Text(text = stringResource(Res.string.app_settings))
+                            Text(
+                                text = stringResource(Res.string.permissions_missing_title),
+                                style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.onErrorContainer
+                            )
+                            val missingPermissionNames = missingPermissions
+                                .mapNotNull { permission ->
+                                    getPermissionDescription(permission)?.let { res ->
+                                        " - ${stringResource(res)}"
+                                    }
+                                }
+                                .joinToString("\n")
+                            Text(
+                                text = stringResource(
+                                    Res.string.permissions_missing_description,
+                                    missingPermissionNames
+                                ),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onErrorContainer
+                            )
+                            TextButton(
+                                onClick = {
+                                    val intent =
+                                        Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                            data =
+                                                Uri.fromParts("package", context.packageName, null)
+                                        }
+                                    context.startActivity(intent)
+                                }
+                            ) {
+                                Text(text = stringResource(Res.string.app_settings))
+                            }
                         }
                     }
                 }
-            }
 
-            ScanForDevicesMenu(
-                deviceManager,
-                isBluetoothEnabled,
-                isLocationEnabled,
-                associatedDevices,
-                onSetPairingDevice = { device -> pendingPairingDevice = device },
-                onDeviceAssociated = onDeviceAssociated,
-                onTroubleshootingClick = onTroubleshootingClick
-            )
-
-
+                ScanForDevicesMenu(
+                    deviceManager,
+                    isBluetoothEnabled,
+                    isLocationEnabled,
+                    associatedDevices,
+                    onSetPairingDevice = { device -> pendingPairingDevice = device },
+                    onDeviceAssociated = onDeviceAssociated,
+                    onTroubleshootingClick = onTroubleshootingClick
+                )
+            },
+        ) {
             AssociatedDevicesList(
                 associatedDevices = associatedDevices,
                 onConnect = onConnect,
                 onDisassociate = onDisassociate,
+                onOpenTroubleshooting = onTroubleshootingClick,
             )
+        }
 
-            // Handle pairing for newly associated device
-            pendingPairingDevice?.let { device ->
-                PairingManager(
-                    device = device,
-                    deviceManager = deviceManager,
-                    onPairingComplete = {
-                        Timber.i("Pairing completed for newly associated device ${device.name}")
-                        onDeviceAssociated(device)
-                        pendingPairingDevice = null
-                    },
-                    onPairingCancelled = {
-                        Timber.i("Pairing cancelled for newly associated device ${device.name}")
-                        // Still add the device even if pairing was cancelled
-                        onDeviceAssociated(device)
-                        pendingPairingDevice = null
-                    }
-                )
-            }
+        // Handle pairing for newly associated device
+        pendingPairingDevice?.let { device ->
+            PairingManager(
+                device = device,
+                deviceManager = deviceManager,
+                onPairingComplete = {
+                    Timber.i("Pairing completed for newly associated device ${device.name}")
+                    onDeviceAssociated(device)
+                    pendingPairingDevice = null
+                },
+                onPairingCancelled = {
+                    Timber.i("Pairing cancelled for newly associated device ${device.name}")
+                    // Still add the device even if pairing was cancelled
+                    onDeviceAssociated(device)
+                    pendingPairingDevice = null
+                }
+            )
         }
     }
 }
