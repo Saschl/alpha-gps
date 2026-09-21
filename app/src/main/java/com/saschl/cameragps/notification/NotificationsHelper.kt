@@ -86,10 +86,12 @@ internal object NotificationsHelper {
     fun buildNotification(
         context: Context,
         activeCameras: Int,
-        channelId: String = TRANSMISSION_NOTIFICATION_CHANNEL
+        channelId: String = TRANSMISSION_NOTIFICATION_CHANNEL,
+        silent: Boolean = false,
     ): Notification {
         return NotificationCompat.Builder(context, channelId)
             .setOngoing(true)
+            .setSilent(silent)
             .setContentTitle(
                 context.getString(
                     R.string.foreground_service_notification,
