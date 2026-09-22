@@ -277,7 +277,7 @@ internal class SonyImageTransfer(
     }
 
     internal companion object {
-        const val PAGE_SIZE = 20
+        const val PAGE_SIZE = 40
         const val MAX_IMAGE_BYTES = 512L * 1024 * 1024
         private const val GET_STORAGE_IDS = 0x1004
         private const val GET_HANDLES = 0x1007

@@ -111,10 +111,9 @@ internal class SonyContentCatalog(
     val hasThumbnails = capabilities.deviceInfo.supports(0x923e)
     private var requested = false
     private var enabled = false
-    private var cursor = 0L
-    private var exhausted = false
     private var identity: List<Byte>? = null
     private val files = linkedMapOf<Long, SonyContentFile>()
+    private var orderedFiles = emptyList<SonyContentFile>()
 
     suspend fun open(): CameraPhotoPage {
         if (!enabled) {
@@ -122,32 +121,31 @@ internal class SonyContentCatalog(
             control(true)
             enabled = true
         }
-        cursor = 0L
-        exhausted = false
         identity = null
         files.clear()
-        return page(0)
-    }
-
-    suspend fun page(offset: Int): CameraPhotoPage {
-        require(offset >= 0 && offset <= files.size)
-        while (files.size < offset + SonyImageTransfer.PAGE_SIZE && !exhausted) {
+        orderedFiles = emptyList()
+        var cursor = 0L
+        while (true) {
             val batch = fetch(cursor)
             verifyIdentity(batch)
             val previousCount = files.size
             batch.files.forEach { files[it.photo.handle] = it }
             require(files.size <= 100_000) { "Too many camera photos" }
-            exhausted = batch.timestamps.size < 100
-            if (!exhausted) {
-                val last = batch.timestamps.last()
-                require(last >= cursor) { "Camera catalog did not advance" }
-                cursor =
-                    if (last == batch.timestamps.first() || files.size == previousCount) last + 1 else last
-            }
+            if (batch.timestamps.size < 100) break
+            val last = batch.timestamps.last()
+            require(last >= cursor) { "Camera catalog did not advance" }
+            cursor =
+                if (last == batch.timestamps.first() || files.size == previousCount) last + 1 else last
         }
+        orderedFiles = files.values.sortedByDescending { it.created }
+        return page(0)
+    }
+
+    fun page(offset: Int): CameraPhotoPage {
+        require(offset >= 0 && offset <= orderedFiles.size)
         return CameraPhotoPage(
-            files.values.drop(offset).take(SonyImageTransfer.PAGE_SIZE).map { it.photo },
-            offset, files.size, !exhausted
+            orderedFiles.drop(offset).take(SonyImageTransfer.PAGE_SIZE).map { it.photo },
+            offset, orderedFiles.size, offset + SonyImageTransfer.PAGE_SIZE < orderedFiles.size
         )
     }
 
@@ -197,6 +195,7 @@ internal class SonyContentCatalog(
         requested = false
         enabled = false
         files.clear()
+        orderedFiles = emptyList()
     }
 
     private suspend fun control(down: Boolean) = coroutineScope {
