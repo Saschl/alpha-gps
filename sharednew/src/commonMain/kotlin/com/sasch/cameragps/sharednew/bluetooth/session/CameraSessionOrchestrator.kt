@@ -65,6 +65,13 @@ class CameraSessionOrchestrator(
             // location status is advisory and does not gate transmission.
             when {
                 operation !is BleOperation.Write -> true
+                operation.characteristicUuid.equals(SonyBluetoothConstants.REMOTE_CHARACTERISTIC_UUID, true) &&
+                    registry.get(id)?.wifiRemote?.phase?.let {
+                        it != com.sasch.cameragps.sharednew.remote.wifi.WifiRemotePhase.Idle &&
+                            it != com.sasch.cameragps.sharednew.remote.wifi.WifiRemotePhase.Failed
+                    } == true -> listOf(SonyBluetoothConstants.FULL_SHUTTER_UP_COMMAND,
+                        SonyBluetoothConstants.HALF_SHUTTER_UP_COMMAND, SonyBluetoothConstants.AF_ON_UP_COMMAND)
+                        .any { it.contentEquals(operation.value) }
                 operation.characteristicUuid.equals(
                     SonyBluetoothConstants.CHARACTERISTIC_UUID,
                     true
@@ -158,6 +165,9 @@ class CameraSessionOrchestrator(
     fun triggerRemoteShutter(identifier: String): Boolean =
         sendRemoteCommand(identifier, RemoteCommand.ShutterFullPress)
 
+    suspend fun claimWifiControls(identifier: String) = remoteControl.claimWifiControls(identifier)
+    fun releaseWifiControls(identifier: String) = remoteControl.releaseWifiControls(identifier)
+
     /**
      * Send a remote-control command. The coordinator gates on an active
      * connection and remote feature; the write is serialized via the queue.
@@ -188,7 +198,7 @@ class CameraSessionOrchestrator(
         autoCorrection.clear(id)
         queue.cancelOperations(id, "session cleared")
         sessionCoordinator.clearSession(id)
-        registry.remove(id)
+        registry.markBleDisconnected(id)
         locationManager.updateTracking()
     }
 

@@ -456,6 +456,11 @@ internal class IosBleTransport(
             SonyBluetoothConstants.AUTO_AREA_ADJUSTMENT_UUID,
             SonyBluetoothConstants.REMOTE_CHARACTERISTIC_UUID,
             SonyBluetoothConstants.REMOTE_STATUS_UUID,
+            SonyBluetoothConstants.WIFI_SSID_UUID,
+            SonyBluetoothConstants.WIFI_PASSWORD_UUID,
+            SonyBluetoothConstants.WIFI_ON_UUID,
+            SonyBluetoothConstants.WIFI_BSSID_UUID,
+            SonyBluetoothConstants.CAMERA_STATUS_UUID,
         ).map { it to CBUUID.UUIDWithString(it) }
     }
 }

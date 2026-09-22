@@ -79,6 +79,28 @@ class RemoteControlCoordinatorTest {
     // ---- Coordinator integration tests with fake port ----
 
     @Test
+    fun wifiOwnershipStopsBleProbesAndPressesUntilReleased() = runTest {
+        val id = "AA:BB:CC:DD:EE:FF"
+        val port = FakeBleGattPort()
+        port.connectedDevices.add(id)
+        port.devicesWithRemoteControl.add(id)
+        port.remoteActiveDevices.add(id)
+        val coordinator = RemoteControlCoordinator(port, backgroundScope)
+        coordinator.startRemoteStatusMonitoring(id)
+        coordinator.claimWifiControls(id)
+        val writes = port.writtenCharacteristics.size
+        assertFalse(coordinator.sendCommand(id, RemoteCommand.ShutterFullPress))
+        assertFalse(coordinator.startShutterSequence(id))
+        assertFalse(coordinator.onRemoteStatusChanged(id, byteArrayOf(2, 0xa0.toByte(), 0)))
+        coordinator.startRemoteStatusMonitoring(id)
+        advanceTimeBy(10_000)
+        assertEquals(writes, port.writtenCharacteristics.size)
+        coordinator.releaseWifiControls(id)
+        coordinator.onRemoteStatusChanged(id, byteArrayOf(2, 0xa0.toByte(), 0))
+        assertTrue(coordinator.sendCommand(id, RemoteCommand.ShutterFullPress))
+    }
+
+    @Test
     fun handleRemoteShutterRequest_notConnected_returnsFalse() = runTest {
         val port = FakeBleGattPort()
         val coordinator = RemoteControlCoordinator(port, backgroundScope)

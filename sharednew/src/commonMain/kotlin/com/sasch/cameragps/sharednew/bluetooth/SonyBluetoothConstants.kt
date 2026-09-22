@@ -28,6 +28,13 @@ object SonyBluetoothConstants {
     val REMOTE_STATUS_UUID = "0000ff02-0000-1000-8000-00805f9b34fb"
     val CAMERA_STATUS_UUID = "0000cc09-0000-1000-8000-00805f9b34fb"
 
+    // Camera Wi-Fi bootstrap, observed in Creators' App 3.5.0; only use on user request.
+    val WIFI_SSID_UUID = "0000cc06-0000-1000-8000-00805f9b34fb"
+    val WIFI_PASSWORD_UUID = "0000cc07-0000-1000-8000-00805f9b34fb"
+    val WIFI_ON_UUID = "0000cc08-0000-1000-8000-00805f9b34fb"
+    val WIFI_BSSID_UUID = "0000cc0c-0000-1000-8000-00805f9b34fb"
+    val WIFI_ON_COMMAND = byteArrayOf(0x01)
+
     val CCCD_UUID = "00002902-0000-1000-8000-00805f9b34fb"
 
     const val ACTION_REQUEST_SHUTDOWN = "com.saschl.cameragps.ACTION_REQUEST_SHUTDOWN"

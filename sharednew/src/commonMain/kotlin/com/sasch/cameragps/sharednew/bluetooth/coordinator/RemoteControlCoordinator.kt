@@ -44,6 +44,7 @@ class RemoteControlCoordinator(
 
     /** Devices whose sequence is in the trailing ready-wait (buttons already released). */
     private val readyWaitDevices = mutableSetOf<String>()
+    private val wifiOwners = mutableSetOf<String>()
 
     /** Every remote-status notification (identifier to raw value), for sequence waits. */
     private val statusUpdates = MutableSharedFlow<Pair<String, ByteArray>>(extraBufferCapacity = 16)
@@ -59,6 +60,7 @@ class RemoteControlCoordinator(
     fun startRemoteStatusMonitoring(identifier: String) {
         val normalized = identifier.uppercase()
         monitoredDevices.add(normalized)
+        if (normalized in wifiOwners) return
 
         // Subscribe to remote status characteristic notifications
         port.subscribeToNotifications(normalized, SonyBluetoothConstants.REMOTE_STATUS_UUID)
@@ -78,6 +80,7 @@ class RemoteControlCoordinator(
     fun onRemoteStatusChanged(identifier: String, value: ByteArray): Boolean {
         val normalized = identifier.uppercase()
         statusUpdates.tryEmit(normalized to value)
+        if (normalized in wifiOwners) return false
 
         val active = isRemoteFeatureActive(value)
         port.setRemoteFeatureActive(normalized, active)
@@ -102,6 +105,7 @@ class RemoteControlCoordinator(
      */
     fun onRemoteControlWriteResponse(identifier: String, success: Boolean) {
         val normalized = identifier.uppercase()
+        if (normalized in wifiOwners) return
         if (success) {
             port.setRemoteFeatureActive(normalized, true)
             stopProbeLoop(normalized)
@@ -118,6 +122,8 @@ class RemoteControlCoordinator(
      */
     fun sendCommand(identifier: String, command: RemoteCommand): Boolean {
         val normalized = identifier.uppercase()
+        if (normalized in wifiOwners && command !in setOf(RemoteCommand.ShutterFullRelease,
+                RemoteCommand.ShutterHalfRelease, RemoteCommand.AfOnRelease)) return false
 
         if (!port.isConnected(normalized)) return false
         if (!port.isRemoteFeatureActive(normalized)) return false
@@ -155,6 +161,7 @@ class RemoteControlCoordinator(
      */
     fun startShutterSequence(identifier: String): Boolean {
         val normalized = identifier.uppercase()
+        if (normalized in wifiOwners) return false
         if (!port.isConnected(normalized)) return false
         if (!port.isRemoteFeatureActive(normalized)) return false
 
@@ -308,10 +315,26 @@ class RemoteControlCoordinator(
         return handleRemoteShutterRequest(identifier)
     }
 
-    /**
-     * Cancel the probe loop and any running command sequence for a single
-     * device (e.g. on disconnect).
-     */
+    /** Finish BLE button releases before Wi-Fi takes ownership of camera controls. */
+    suspend fun claimWifiControls(identifier: String) {
+        val id = identifier.uppercase()
+        wifiOwners.add(id)
+        val probe = activeProbeJobs.remove(id)
+        val sequence = activeSequenceJobs[id]
+        probe?.cancel()
+        sequence?.cancel()
+        probe?.join()
+        sequence?.join()
+        port.setRemoteFeatureActive(id, false)
+    }
+
+    fun releaseWifiControls(identifier: String) {
+        val id = identifier.uppercase()
+        wifiOwners.remove(id)
+        if (id in monitoredDevices && port.isConnected(id)) startRemoteStatusMonitoring(id)
+    }
+
+    /** Cancel BLE probes and sequences on disconnect, retaining any Wi-Fi ownership. */
     fun cancelProbe(identifier: String) {
         val normalized = identifier.uppercase()
         monitoredDevices.remove(normalized)
@@ -338,6 +361,7 @@ class RemoteControlCoordinator(
     // ---- Internal probe loop ----
 
     private fun startProbeLoop(identifier: String) {
+        if (identifier in wifiOwners) return
         if (activeProbeJobs.containsKey(identifier)) return
         if (!port.hasRemoteControlCharacteristic(identifier)) return
 
@@ -428,4 +452,3 @@ class RemoteControlCoordinator(
         }
     }
 }
-

@@ -5,6 +5,7 @@ import com.sasch.cameragps.sharednew.bluetooth.coordinator.BleGattPort
 import com.sasch.cameragps.sharednew.bluetooth.transport.BleOperation
 import com.sasch.cameragps.sharednew.bluetooth.transport.BleOperationQueue
 import com.sasch.cameragps.sharednew.bluetooth.transport.BlePeripheralTransport
+import com.sasch.cameragps.sharednew.remote.wifi.WifiBootstrapBlePort
 
 /**
  * The single [BleGattPort] implementation, backed by the sequential
@@ -16,9 +17,9 @@ internal class QueuedBleGattPort(
     private val queue: BleOperationQueue,
     private val transport: BlePeripheralTransport,
     private val registry: CameraSessionRegistry,
-) : BleGattPort {
+) : BleGattPort, WifiBootstrapBlePort {
 
-    suspend fun execute(identifier: String, operation: BleOperation) =
+    override suspend fun execute(identifier: String, operation: BleOperation) =
         queue.execute(identifier.uppercase(), operation)
 
     override fun setAutoCorrectionState(

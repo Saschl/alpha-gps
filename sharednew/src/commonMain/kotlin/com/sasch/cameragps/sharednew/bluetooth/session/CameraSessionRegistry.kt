@@ -1,6 +1,8 @@
 package com.sasch.cameragps.sharednew.bluetooth.session
 
 import com.sasch.cameragps.sharednew.bluetooth.BleSessionPhase
+import com.sasch.cameragps.sharednew.remote.wifi.WifiRemotePhase
+import com.sasch.cameragps.sharednew.remote.wifi.WifiRemoteState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -23,6 +25,8 @@ data class CameraSession(
     val locationDisabledByCamera: Boolean = false,
     val autoTimeCorrection: CameraSettingState = CameraSettingState(),
     val autoAreaAdjustment: CameraSettingState = CameraSettingState(),
+    /** Wi-Fi control has its own lifecycle and may outlive a BLE disconnection. */
+    val wifiRemote: WifiRemoteState = WifiRemoteState(),
 ) {
     fun autoCorrectionSetting(setting: CameraAutoCorrectionSetting): CameraSettingState =
         when (setting) {
@@ -59,6 +63,35 @@ class CameraSessionRegistry {
 
     fun remove(identifier: String) {
         _sessions.value = _sessions.value - identifier.uppercase()
+    }
+
+    /** Forget BLE state, preserving a live Wi-Fi attempt or session for the selected device. */
+    fun markBleDisconnected(identifier: String) {
+        val id = identifier.uppercase()
+        val current = _sessions.value[id] ?: return
+        if (current.wifiRemote.phase == WifiRemotePhase.Idle) {
+            remove(id)
+        } else {
+            _sessions.value = _sessions.value + (id to current.copy(
+                phase = BleSessionPhase.Disconnected,
+                remoteFeatureActive = false,
+                shutterSequenceActive = false,
+                locationDisabledByCamera = false,
+                autoTimeCorrection = CameraSettingState(),
+                autoAreaAdjustment = CameraSettingState(),
+            ))
+        }
+    }
+
+    /** Called by Wi-Fi ownership; closing the last transport removes a disconnected row. */
+    fun updateWifiRemote(identifier: String, state: WifiRemoteState) {
+        val id = identifier.uppercase()
+        val current = _sessions.value[id] ?: return
+        if (state.phase == WifiRemotePhase.Idle && current.phase == BleSessionPhase.Disconnected) {
+            remove(id)
+        } else {
+            _sessions.value = _sessions.value + (id to current.copy(wifiRemote = state))
+        }
     }
 
     fun clear() {
