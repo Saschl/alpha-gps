@@ -215,4 +215,24 @@ Both Android flavors compile and a FOSS debug APK builds. Shared Android host an
 iOS simulator tests pass. No Android phone was attached for this implementation
 run, so actual phone pixel decoding, repeated capture and lifecycle behavior still
 need the [Android test](wifi-remote-android-testing.md). iOS networking and automatic
-network joining are deferred while the maintainer collects Android experience.
+network joining were deferred for the first Android slice.
+
+### Android preview confirmation and automatic setup implementation
+
+The maintainer subsequently reported **live preview works** in the Android app.
+This confirms Android pixel decoding/display through the manual Wi-Fi path on the
+a6700. The report did not yet confirm app capture, rotation or long-session behavior.
+
+Automatic connection now follows the inspected BLE setup: write CC08 `{01}` once,
+poll the CC09 type-1 Wi-Fi status until launched, then read CC06/CC07 and optional
+CC0C. The APK parser maps Wi-Fi states 0/1/2/3 to off/starting/on/stopping, with a
+separate error byte. Unknown/missing status falls back to bounded credential reads.
+Those reads skip the APK-observed three-byte prefix; credentials stay out of state
+and logs. BLE bootstrap itself is still awaiting a6700 confirmation.
+
+Android 10+ uses `WifiNetworkSpecifier` with exact SSID, WPA2 passphrase and optional
+valid BSSID. An app-owned network request handles approval, cancellation and loss;
+network-bound sockets open only after IPv4 link properties arrive. The endpoint is
+the unique local IPv4 default gateway, following the APK's `WifiUtil.getDhcpInfo`
+route lookup. No fixed Sony IP or home-router discovery is assumed. This automatic
+Android flow is implemented and regression tested, not yet hardware validated.

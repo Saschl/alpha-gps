@@ -32,30 +32,52 @@ fun AndroidWifiRemoteScreen(identifier: String, onClose: () -> Unit) {
         WifiRemoteViewModel(identifier.uppercase(), controller)
     }
     var pendingHost by rememberSaveable { mutableStateOf<String?>(null) }
-    val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+    var pendingAutomatic by rememberSaveable { mutableStateOf(false) }
+    val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { grants ->
         val host = pendingHost
+        val automatic = pendingAutomatic
         pendingHost = null
-        if (!granted) controller.permissionDenied(identifier)
-        else if (host != null && lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) controller.connect(identifier, host)
+        pendingAutomatic = false
+        if (automatic || host != null) {
+            if (grants.values.any { !it }) controller.permissionDenied(identifier)
+            else if (lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
+                if (automatic) controller.connectAutomatically(identifier) else controller.connect(identifier, host!!)
+            }
+        }
     }
     val close = { controller.disconnect(identifier); onClose() }
     BackHandler(onBack = close)
     LifecycleEventEffect(Lifecycle.Event.ON_STOP) {
         if (activity?.isChangingConfigurations != true) {
             pendingHost = null
+            pendingAutomatic = false
             controller.disconnect(identifier)
         }
     }
     DisposableEffect(identifier) {
         onDispose { if (activity?.isChangingConfigurations != true) controller.disconnect(identifier) }
     }
-    WifiRemoteScreen(model, onConnect = { host ->
-        val localNetwork = "android.permission.ACCESS_LOCAL_NETWORK"
-        if (Build.VERSION.SDK_INT >= 37 && ContextCompat.checkSelfPermission(context, localNetwork) != PackageManager.PERMISSION_GRANTED) {
+    val connect: (String?) -> Unit = { host ->
+        val required = buildList {
+            if (Build.VERSION.SDK_INT >= 37) add("android.permission.ACCESS_LOCAL_NETWORK")
+            if (host == null) {
+                if (Build.VERSION.SDK_INT >= 33) add("android.permission.NEARBY_WIFI_DEVICES")
+                else {
+                    add("android.permission.ACCESS_FINE_LOCATION")
+                    add("android.permission.ACCESS_COARSE_LOCATION")
+                }
+            }
+        }
+        val missing = required.filter { ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED }
+        if (missing.isNotEmpty()) {
             pendingHost = host
-            permission.launch(localNetwork)
-        } else controller.connect(identifier, host)
-    }, onWifiSettings = { context.startActivity(Intent(Settings.ACTION_WIFI_SETTINGS)) }, onClose = close)
+            pendingAutomatic = host == null
+            // Android 12 requires fine and coarse to be requested together.
+            permission.launch(required.toTypedArray())
+        } else if (host == null) controller.connectAutomatically(identifier) else controller.connect(identifier, host)
+    }
+    WifiRemoteScreen(model, onConnect = { connect(it) }, onConnectAutomatically = { connect(null) },
+        onWifiSettings = { context.startActivity(Intent(Settings.ACTION_WIFI_SETTINGS)) }, onClose = close)
 }
 
 private fun Context.activity(): Activity? = when (this) {

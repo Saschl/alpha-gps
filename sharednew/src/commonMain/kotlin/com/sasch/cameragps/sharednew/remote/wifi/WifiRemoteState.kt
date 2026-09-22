@@ -21,6 +21,12 @@ enum class WifiRemoteFailure {
     ProtocolError,
     InvalidAddress,
     JoinCameraWifi,
+    BluetoothRequired,
+    CameraSetupFailed,
+    NetworkJoinFailed,
+    CameraAddressUnavailable,
+    WifiDisabled,
+    LocationServicesRequired,
 }
 
 enum class WifiCaptureStatus { Idle, Shooting, Captured, Uncertain, Rejected }

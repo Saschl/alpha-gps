@@ -5,6 +5,7 @@ import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
+import android.os.Build
 import com.sasch.cameragps.sharednew.bluetooth.session.CameraSessionOrchestrator
 import java.net.InetAddress
 import kotlinx.coroutines.*
@@ -13,9 +14,20 @@ import kotlinx.coroutines.flow.*
 import kotlin.random.Random
 
 fun createAndroidWifiRemoteController(context: Context, scope: CoroutineScope,
-                                      orchestrator: CameraSessionOrchestrator): WifiRemoteController =
-    WifiRemoteController(scope, orchestrator.registry, AndroidWifiRemoteConnector(context.applicationContext),
-        orchestrator::claimWifiControls, orchestrator::releaseWifiControls)
+                                      orchestrator: CameraSessionOrchestrator): WifiRemoteController {
+    val connector = AndroidWifiRemoteConnector(context.applicationContext)
+    val automatic = if (Build.VERSION.SDK_INT >= 29) AutomaticWifiRemoteConnector(
+        orchestrator::prepareCameraWifi,
+        { credentials -> AndroidCameraNetworkRequest(context.applicationContext, credentials) },
+        connector::openOnNetwork,
+    ) else null
+    return WifiRemoteController(scope, orchestrator.registry, connector,
+        orchestrator::claimWifiControls, orchestrator::releaseWifiControls,
+        automatic?.let { delegate -> WifiAutomaticConnector { id, sessionScope, phase ->
+            try { delegate.open(id, sessionScope, phase) }
+            catch (_: SecurityException) { throw WifiRemoteConnectException(WifiRemoteFailure.NetworkPermissionDenied) }
+        } })
+}
 
 private class AndroidWifiRemoteConnector(context: Context) : WifiRemoteConnector {
     private val connectivity = context.getSystemService(ConnectivityManager::class.java)
@@ -35,6 +47,10 @@ private class AndroidWifiRemoteConnector(context: Context) : WifiRemoteConnector
         }
         if (candidates.size != 1) throw WifiRemoteConnectException(WifiRemoteFailure.JoinCameraWifi)
         val network = candidates.single()
+        return openOnNetwork(network, host, scope)
+    }
+
+    suspend fun openOnNetwork(network: Network, host: String, scope: CoroutineScope): WifiRemoteConnection {
         val address = InetAddress.getByName(host) // Validated literal; never performs a hostname lookup.
         val links = connectivity.getLinkProperties(network)
             ?: throw WifiRemoteConnectException(WifiRemoteFailure.NetworkLost)

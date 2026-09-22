@@ -17,6 +17,10 @@ import com.sasch.cameragps.sharednew.bluetooth.transport.BleOperationStatus
 import com.sasch.cameragps.sharednew.bluetooth.transport.BlePeripheralTransport
 import com.sasch.cameragps.sharednew.bluetooth.transport.BleTransportEvent
 import com.sasch.cameragps.sharednew.database.devices.CameraDeviceDAO
+import com.sasch.cameragps.sharednew.remote.wifi.CameraWifiCredentials
+import com.sasch.cameragps.sharednew.remote.wifi.SonyWifiBootstrap
+import com.sasch.cameragps.sharednew.remote.wifi.WifiRemoteConnectException
+import com.sasch.cameragps.sharednew.remote.wifi.WifiRemoteFailure
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.delay
@@ -166,6 +170,13 @@ class CameraSessionOrchestrator(
         sendRemoteCommand(identifier, RemoteCommand.ShutterFullPress)
 
     suspend fun claimWifiControls(identifier: String) = remoteControl.claimWifiControls(identifier)
+
+    internal suspend fun prepareCameraWifi(identifier: String): CameraWifiCredentials? {
+        if (registry.get(identifier)?.phase != BleSessionPhase.Transmitting) {
+            throw WifiRemoteConnectException(WifiRemoteFailure.BluetoothRequired)
+        }
+        return SonyWifiBootstrap(port).prepare(identifier)
+    }
     fun releaseWifiControls(identifier: String) = remoteControl.releaseWifiControls(identifier)
 
     /**

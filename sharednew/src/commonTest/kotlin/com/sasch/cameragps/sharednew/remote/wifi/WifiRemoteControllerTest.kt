@@ -106,4 +106,28 @@ class WifiRemoteControllerTest {
         runCurrent()
         assertNull(controller.owner.value)
     }
+
+    @Test
+    fun automaticApprovalUsesSessionStateAndExcludesAnotherAttempt() = runTest {
+        val registry = CameraSessionRegistry()
+        var attempts = 0
+        var released = false
+        val controller = WifiRemoteController(backgroundScope, registry, { _, _ -> error("Not manual") }, {},
+            { released = true }, WifiAutomaticConnector { id, _, onPhase ->
+                assertEquals("CAMERA", id)
+                attempts++
+                onPhase(WifiRemotePhase.AwaitingNetworkApproval)
+                awaitCancellation()
+            })
+        controller.connectAutomatically("camera")
+        runCurrent()
+        assertEquals(WifiRemotePhase.AwaitingNetworkApproval, registry.get("camera")?.wifiRemote?.phase)
+        controller.connectAutomatically("other")
+        controller.connect("other", "127.0.0.1")
+        controller.capture("camera")
+        assertEquals(1, attempts)
+        controller.closeAndJoin()
+        assertTrue(released)
+        assertNull(controller.owner.value)
+    }
 }

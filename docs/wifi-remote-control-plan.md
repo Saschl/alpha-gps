@@ -33,13 +33,18 @@ outcomes, suppresses competing BLE shutter probes, and cleans up on exit, backgr
 network loss, device removal and service shutdown. Rotation retains the connection.
 Android 17 local-network permission is requested when connecting. The camera's plain
 HTTP reader uses the selected network's sockets; no global cleartext exception or
-process-wide network binding is enabled. This Android path is built and regression
-tested, but has not yet been tested on a phone with the camera. See the
+process-wide network binding is enabled. The maintainer has now confirmed live
+preview on Android with the a6700. Repeated app capture/lifecycle validation remains.
+Automatic BLE setup and Android 10+ network joining have since been added: queued
+CC08 startup, bounded CC09 readiness and credential reads, exact network request
+with Android approval, and route-derived IPv4 camera address. Failure/cancellation
+releases the network request. This new automatic path still needs hardware testing.
+Android 8/9 retain the manual path. See the
 [Android test guide](wifi-remote-android-testing.md).
 
 The maintainer requested Android-first development to collect practical experience.
-Automatic BLE credential retrieval/network joining, iOS networking, autofocus,
-property-based URL fallback and IPv6 remain later work. Manual entry currently
+Automatic setup hardware validation, iOS networking, autofocus, property-based URL
+fallback and IPv6 remain later work. Manual entry currently
 relies on the user choosing the correct camera network/IP; the connected camera's
 name is displayed, but BLE-to-Wi-Fi identity is not yet verified.
 

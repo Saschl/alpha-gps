@@ -20,6 +20,10 @@ internal fun interface WifiRemoteConnector {
     suspend fun open(host: String, scope: CoroutineScope): WifiRemoteConnection
 }
 
+internal fun interface WifiAutomaticConnector {
+    suspend fun open(identifier: String, scope: CoroutineScope, onPhase: (WifiRemotePhase) -> Unit): WifiRemoteConnection
+}
+
 internal class WifiRemoteConnectException(val failure: WifiRemoteFailure) : Exception("Wi-Fi remote connection failed")
 
 /** App-owned, Main.immediate-confined. Images stay separate from per-camera session state. */
@@ -29,7 +33,9 @@ class WifiRemoteController internal constructor(
     private val connector: WifiRemoteConnector,
     private val claimControls: suspend (String) -> Unit,
     private val releaseControls: (String) -> Unit,
+    private val automaticConnector: WifiAutomaticConnector? = null,
 ) {
+    val supportsAutomaticConnection get() = automaticConnector != null
     val sessions = registry.sessions
     private val _image = MutableStateFlow<ImageBitmap?>(null)
     val image = _image.asStateFlow()
@@ -39,16 +45,34 @@ class WifiRemoteController internal constructor(
     private var captureRequests: Channel<Unit>? = null
 
     fun connect(identifier: String, host: String) {
+        start(identifier, WifiRemotePhase.OpeningSession) { _, sessionScope ->
+            connector.open(host.trim(), sessionScope)
+        }
+    }
+
+    fun connectAutomatically(identifier: String) {
+        val automatic = automaticConnector ?: return
+        start(identifier, WifiRemotePhase.PreparingCamera) { id, sessionScope ->
+            automatic.open(id, sessionScope) { phase ->
+                if (registry.get(id)?.wifiRemote?.phase != WifiRemotePhase.Closing) {
+                    registry.updateWifiRemote(id, WifiRemoteState(phase = phase))
+                }
+            }
+        }
+    }
+
+    private fun start(identifier: String, phase: WifiRemotePhase,
+                      open: suspend (String, CoroutineScope) -> WifiRemoteConnection) {
         if (job != null) return
         val id = identifier.uppercase()
         if (registry.get(id) == null) registry.upsert(id) { it.copy(phase = BleSessionPhase.Disconnected) }
         _owner.value = id
         _image.value = null
-        registry.updateWifiRemote(id, WifiRemoteState(phase = WifiRemotePhase.OpeningSession))
+        registry.updateWifiRemote(id, WifiRemoteState(phase = phase))
         var entered = false
         val connecting = scope.launch(start = CoroutineStart.LAZY) {
             entered = true
-            runSession(id, host.trim())
+            runSession(id, open)
         }
         job = connecting
         connecting.invokeOnCompletion {
@@ -90,13 +114,13 @@ class WifiRemoteController internal constructor(
         registry.updateWifiRemote(identifier, WifiRemoteState(WifiRemotePhase.Failed, WifiRemoteFailure.NetworkPermissionDenied))
     }
 
-    private suspend fun runSession(id: String, host: String) {
+    private suspend fun runSession(id: String, open: suspend (String, CoroutineScope) -> WifiRemoteConnection) {
         var connection: WifiRemoteConnection? = null
         var failure: WifiRemoteFailure? = null
         try {
             claimControls(id)
             coroutineScope {
-                val opened = connector.open(host, this)
+                val opened = open(id, this)
                 connection = opened
                 val requests = Channel<Unit>(Channel.RENDEZVOUS)
                 captureRequests = requests

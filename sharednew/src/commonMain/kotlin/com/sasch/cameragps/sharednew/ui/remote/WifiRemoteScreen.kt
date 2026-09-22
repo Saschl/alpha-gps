@@ -27,7 +27,7 @@ class WifiRemoteViewModel(val identifier: String, val controller: WifiRemoteCont
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WifiRemoteScreen(viewModel: WifiRemoteViewModel, onConnect: (String) -> Unit,
-                     onWifiSettings: () -> Unit, onClose: () -> Unit) {
+                     onWifiSettings: () -> Unit, onClose: () -> Unit, onConnectAutomatically: () -> Unit = {}) {
     val controller = viewModel.controller
     val sessions by controller.sessions.collectAsState()
     val owner by controller.owner.collectAsState()
@@ -37,6 +37,7 @@ fun WifiRemoteScreen(viewModel: WifiRemoteViewModel, onConnect: (String) -> Unit
     val ready = state.phase == WifiRemotePhase.Ready
     val busy = state.phase !in setOf(WifiRemotePhase.Idle, WifiRemotePhase.Failed)
     val otherCamera = owner != null && owner != id
+    var manual by remember { mutableStateOf(!controller.supportsAutomaticConnection) }
     Scaffold(topBar = {
         TopAppBar(title = { Text(stringResource(Res.string.wifi_remote_title)) }, navigationIcon = {
             TextButton(onClick = onClose) { Text(stringResource(Res.string.wifi_remote_close)) }
@@ -57,17 +58,31 @@ fun WifiRemoteScreen(viewModel: WifiRemoteViewModel, onConnect: (String) -> Unit
             val controls: @Composable (Modifier) -> Unit = { modifier ->
                 Column(modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     if (!busy) {
-                        Text(stringResource(Res.string.wifi_remote_setup))
-                        OutlinedButton(onClick = onWifiSettings) { Text(stringResource(Res.string.wifi_remote_settings)) }
-                        OutlinedTextField(value = viewModel.host, onValueChange = { viewModel.host = it.take(64) },
-                            label = { Text(stringResource(Res.string.wifi_remote_ip)) }, singleLine = true,
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
-                        Button(onClick = { onConnect(viewModel.host) }, enabled = viewModel.host.isNotBlank() && !otherCamera) {
-                            Text(stringResource(Res.string.wifi_remote_connect))
+                        if (controller.supportsAutomaticConnection) {
+                            Text(stringResource(Res.string.wifi_remote_auto_setup))
+                            Button(onClick = onConnectAutomatically, enabled = !otherCamera) {
+                                Text(stringResource(Res.string.wifi_remote_auto_connect))
+                            }
+                            TextButton(onClick = { manual = !manual }) {
+                                Text(stringResource(Res.string.wifi_remote_manual))
+                            }
+                        }
+                        if (manual) {
+                            Text(stringResource(Res.string.wifi_remote_setup))
+                            OutlinedButton(onClick = onWifiSettings) { Text(stringResource(Res.string.wifi_remote_settings)) }
+                            OutlinedTextField(value = viewModel.host, onValueChange = { viewModel.host = it.take(64) },
+                                label = { Text(stringResource(Res.string.wifi_remote_ip)) }, singleLine = true,
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
+                            Button(onClick = { onConnect(viewModel.host) }, enabled = viewModel.host.isNotBlank() && !otherCamera) {
+                                Text(stringResource(Res.string.wifi_remote_connect))
+                            }
                         }
                     }
                     if (otherCamera) Text(stringResource(Res.string.wifi_remote_other_camera))
                     if (state.phase == WifiRemotePhase.OpeningSession) Text(stringResource(Res.string.wifi_remote_opening))
+                    if (state.phase == WifiRemotePhase.PreparingCamera) Text(stringResource(Res.string.wifi_remote_preparing))
+                    if (state.phase == WifiRemotePhase.AwaitingNetworkApproval) Text(stringResource(Res.string.wifi_remote_approval))
+                    if (state.phase == WifiRemotePhase.JoiningNetwork) Text(stringResource(Res.string.wifi_remote_joining))
                     if (state.phase == WifiRemotePhase.Closing) Text(stringResource(Res.string.wifi_remote_closing))
                     state.failure?.let { failure ->
                         Text(stringResource(when (failure) {
@@ -75,6 +90,12 @@ fun WifiRemoteScreen(viewModel: WifiRemoteViewModel, onConnect: (String) -> Unit
                             WifiRemoteFailure.JoinCameraWifi -> Res.string.wifi_remote_join_wifi
                             WifiRemoteFailure.NetworkPermissionDenied -> Res.string.wifi_remote_permission
                             WifiRemoteFailure.NetworkLost -> Res.string.wifi_remote_lost
+                            WifiRemoteFailure.BluetoothRequired -> Res.string.wifi_remote_bluetooth_required
+                            WifiRemoteFailure.CameraSetupFailed -> Res.string.wifi_remote_setup_failed
+                            WifiRemoteFailure.NetworkJoinFailed -> Res.string.wifi_remote_join_failed
+                            WifiRemoteFailure.CameraAddressUnavailable -> Res.string.wifi_remote_address_failed
+                            WifiRemoteFailure.WifiDisabled -> Res.string.wifi_remote_wifi_disabled
+                            WifiRemoteFailure.LocationServicesRequired -> Res.string.wifi_remote_location_required
                             else -> Res.string.wifi_remote_failed
                         }), color = MaterialTheme.colorScheme.error)
                     }

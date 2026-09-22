@@ -19,8 +19,20 @@
     <string name="wifi_remote_preview_failed">Preview stopped. Disconnect and reconnect to try again.</string>
     <string name="wifi_remote_invalid_ip">Enter the camera’s IPv4 address, for example the address shown in its Wi-Fi connection details.</string>
     <string name="wifi_remote_join_wifi">Join the camera’s Wi-Fi network in phone settings, then return here.</string>
-    <string name="wifi_remote_permission">Local network permission is required. Allow Nearby devices in the app’s permission settings, then try connecting again.</string>
+    <string name="wifi_remote_permission">Connection permission was denied. Allow Nearby devices in the app’s permission settings, or precise Location on older Android versions, then try again.</string>
     <string name="wifi_remote_failed">Could not connect. Check the camera IP, keep its smartphone connection active, and close other camera-control apps.</string>
     <string name="wifi_remote_lost">The camera connection was lost. Join its Wi-Fi again and reconnect.</string>
     <string name="wifi_remote_other_camera">Another Wi-Fi remote session is open. Close it before connecting this camera.</string>
+    <string name="wifi_remote_auto_setup">Keep the camera connected by Bluetooth and close Creators’ App. Alpha GPS will start camera Wi-Fi and ask Android to connect.</string>
+    <string name="wifi_remote_auto_connect">Connect automatically</string>
+    <string name="wifi_remote_manual">Manual connection</string>
+    <string name="wifi_remote_preparing">Starting camera Wi-Fi…</string>
+    <string name="wifi_remote_approval">Approve the camera Wi-Fi connection in Android’s dialog…</string>
+    <string name="wifi_remote_joining">Joining camera Wi-Fi…</string>
+    <string name="wifi_remote_bluetooth_required">Wait for the camera’s Bluetooth connection to finish, then try again. You can also use manual connection.</string>
+    <string name="wifi_remote_setup_failed">Could not start camera Wi-Fi or read its connection details. Keep the camera awake, close Creators’ App, and retry or use manual connection.</string>
+    <string name="wifi_remote_join_failed">Android could not join camera Wi-Fi or the request was declined. Retry and approve the connection, or use manual connection.</string>
+    <string name="wifi_remote_address_failed">Connected to Wi-Fi but could not find the camera address. Use manual connection with the camera IP.</string>
+    <string name="wifi_remote_wifi_disabled">Turn on phone Wi-Fi, then try again.</string>
+    <string name="wifi_remote_location_required">This Android version requires phone Location to be turned on for automatic Wi-Fi joining.</string>
 </resources>
