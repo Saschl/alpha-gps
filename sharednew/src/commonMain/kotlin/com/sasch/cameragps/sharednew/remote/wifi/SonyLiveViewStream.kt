@@ -1,23 +1,24 @@
 package com.sasch.cameragps.sharednew.remote.wifi
 
 import androidx.compose.ui.graphics.ImageBitmap
-import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.async
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.buffer
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import org.jetbrains.compose.resources.decodeToImageBitmap
+import kotlin.time.Duration.Companion.milliseconds
 
 internal interface SonyLiveViewByteStream {
     /** Each chunk is owned by the caller and bounded to 64 KiB. Null means EOF. */
@@ -84,7 +85,7 @@ internal class SonyLiveViewStream(
                 stream = opened
                 val decoder = SonyLiveViewFrameDecoder()
                 while (true) {
-                    val frames = withTimeout(10_000) {
+                    val frames = withTimeout(10_000.milliseconds) {
                         var decoded = emptyList<SonyLiveViewFrame>()
                         while (decoded.isEmpty()) {
                             val chunk = opened.read() ?: error("Live-view stream closed")
@@ -119,7 +120,7 @@ internal class SonyLiveViewStream(
     private suspend fun openWithRetry(endpoint: SonyLiveViewEndpoint): SonyLiveViewByteStream {
         var opened: SonyLiveViewByteStream? = null
         try {
-            return withTimeout(15_000) {
+            return withTimeout(15_000.milliseconds) {
                 repeat(3) { attempt ->
                     try {
                         val stream = http.open(endpoint)
@@ -127,7 +128,7 @@ internal class SonyLiveViewStream(
                         return@withTimeout stream
                     } catch (failure: SonyLiveViewHttpStatus) {
                         if (failure.status != 503 || attempt == 2) throw failure
-                        delay(500)
+                        delay(500.milliseconds)
                     }
                 }
                 error("Live-view open failed")

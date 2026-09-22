@@ -2,21 +2,88 @@ package com.sasch.cameragps.sharednew.ui.remote
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Modifier
+import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
-import cameragps.sharednew.generated.resources.*
-import com.sasch.cameragps.sharednew.remote.wifi.*
+import cameragps.sharednew.generated.resources.Res
+import cameragps.sharednew.generated.resources.wifi_remote_address_failed
+import cameragps.sharednew.generated.resources.wifi_remote_approval
+import cameragps.sharednew.generated.resources.wifi_remote_auto_connect
+import cameragps.sharednew.generated.resources.wifi_remote_auto_setup
+import cameragps.sharednew.generated.resources.wifi_remote_bluetooth_required
+import cameragps.sharednew.generated.resources.wifi_remote_capture
+import cameragps.sharednew.generated.resources.wifi_remote_capture_hint
+import cameragps.sharednew.generated.resources.wifi_remote_captured
+import cameragps.sharednew.generated.resources.wifi_remote_close
+import cameragps.sharednew.generated.resources.wifi_remote_closing
+import cameragps.sharednew.generated.resources.wifi_remote_connect
+import cameragps.sharednew.generated.resources.wifi_remote_connected
+import cameragps.sharednew.generated.resources.wifi_remote_disconnect
+import cameragps.sharednew.generated.resources.wifi_remote_failed
+import cameragps.sharednew.generated.resources.wifi_remote_invalid_ip
+import cameragps.sharednew.generated.resources.wifi_remote_ip
+import cameragps.sharednew.generated.resources.wifi_remote_join_failed
+import cameragps.sharednew.generated.resources.wifi_remote_join_wifi
+import cameragps.sharednew.generated.resources.wifi_remote_joining
+import cameragps.sharednew.generated.resources.wifi_remote_location_required
+import cameragps.sharednew.generated.resources.wifi_remote_lost
+import cameragps.sharednew.generated.resources.wifi_remote_manual
+import cameragps.sharednew.generated.resources.wifi_remote_opening
+import cameragps.sharednew.generated.resources.wifi_remote_other_camera
+import cameragps.sharednew.generated.resources.wifi_remote_permission
+import cameragps.sharednew.generated.resources.wifi_remote_preparing
+import cameragps.sharednew.generated.resources.wifi_remote_preview_failed
+import cameragps.sharednew.generated.resources.wifi_remote_preview_waiting
+import cameragps.sharednew.generated.resources.wifi_remote_rejected
+import cameragps.sharednew.generated.resources.wifi_remote_settings
+import cameragps.sharednew.generated.resources.wifi_remote_setup
+import cameragps.sharednew.generated.resources.wifi_remote_setup_failed
+import cameragps.sharednew.generated.resources.wifi_remote_shooting
+import cameragps.sharednew.generated.resources.wifi_remote_shutdown_requested
+import cameragps.sharednew.generated.resources.wifi_remote_shutdown_unavailable
+import cameragps.sharednew.generated.resources.wifi_remote_shutdown_unconfirmed
+import cameragps.sharednew.generated.resources.wifi_remote_title
+import cameragps.sharednew.generated.resources.wifi_remote_uncertain
+import cameragps.sharednew.generated.resources.wifi_remote_wifi_disabled
+import com.sasch.cameragps.sharednew.remote.wifi.WifiCaptureStatus
+import com.sasch.cameragps.sharednew.remote.wifi.WifiPreviewStatus
+import com.sasch.cameragps.sharednew.remote.wifi.WifiRemoteController
+import com.sasch.cameragps.sharednew.remote.wifi.WifiRemoteFailure
+import com.sasch.cameragps.sharednew.remote.wifi.WifiRemotePhase
+import com.sasch.cameragps.sharednew.remote.wifi.WifiRemoteState
+import com.sasch.cameragps.sharednew.remote.wifi.WifiShutdownStatus
 import org.jetbrains.compose.resources.stringResource
 
 class WifiRemoteViewModel(val identifier: String, val controller: WifiRemoteController) : ViewModel() {
@@ -79,6 +146,15 @@ fun WifiRemoteScreen(viewModel: WifiRemoteViewModel, onConnect: (String) -> Unit
                         }
                     }
                     if (otherCamera) Text(stringResource(Res.string.wifi_remote_other_camera))
+                    if (state.phase == WifiRemotePhase.Idle) {
+                        val shutdownMessage = when (state.wifiShutdown) {
+                            WifiShutdownStatus.Requested -> Res.string.wifi_remote_shutdown_requested
+                            WifiShutdownStatus.Unavailable -> Res.string.wifi_remote_shutdown_unavailable
+                            WifiShutdownStatus.Unconfirmed -> Res.string.wifi_remote_shutdown_unconfirmed
+                            WifiShutdownStatus.NotRequested -> null
+                        }
+                        shutdownMessage?.let { Text(stringResource(it)) }
+                    }
                     if (state.phase == WifiRemotePhase.OpeningSession) Text(stringResource(Res.string.wifi_remote_opening))
                     if (state.phase == WifiRemotePhase.PreparingCamera) Text(stringResource(Res.string.wifi_remote_preparing))
                     if (state.phase == WifiRemotePhase.AwaitingNetworkApproval) Text(stringResource(Res.string.wifi_remote_approval))

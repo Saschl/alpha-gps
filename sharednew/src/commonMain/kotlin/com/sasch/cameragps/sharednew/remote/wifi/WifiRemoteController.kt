@@ -3,9 +3,22 @@ package com.sasch.cameragps.sharednew.remote.wifi
 import androidx.compose.ui.graphics.ImageBitmap
 import com.sasch.cameragps.sharednew.bluetooth.BleSessionPhase
 import com.sasch.cameragps.sharednew.bluetooth.session.CameraSessionRegistry
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 internal interface WifiRemoteConnection {
     val cameraName: String
@@ -13,6 +26,7 @@ internal interface WifiRemoteConnection {
     val images: Flow<ImageBitmap>
     val lost: Flow<Unit>
     suspend fun capture(): WifiCaptureStatus
+    suspend fun turnOffWifi(): WifiShutdownStatus = WifiShutdownStatus.NotRequested
     suspend fun close()
 }
 
@@ -117,6 +131,7 @@ class WifiRemoteController internal constructor(
     private suspend fun runSession(id: String, open: suspend (String, CoroutineScope) -> WifiRemoteConnection) {
         var connection: WifiRemoteConnection? = null
         var failure: WifiRemoteFailure? = null
+        var shutdown = WifiShutdownStatus.NotRequested
         try {
             claimControls(id)
             coroutineScope {
@@ -162,14 +177,28 @@ class WifiRemoteController internal constructor(
             captureRequests?.close()
             captureRequests = null
             withContext(NonCancellable) {
-                try { connection?.close() } catch (_: Exception) { /* Best-effort socket teardown. */ }
-                finally {
-                    _image.value = null
-                    registry.updateWifiRemote(id, if (failure == null) WifiRemoteState()
-                        else WifiRemoteState(WifiRemotePhase.Failed, failure))
-                    releaseControls(id)
-                    _owner.value = null
-                    job = null
+                try {
+                    if (connection != null && failure == null && registry.get(id)?.wifiRemote?.phase == WifiRemotePhase.Closing) {
+                        shutdown = try {
+                            connection.turnOffWifi()
+                        } catch (_: Exception) {
+                            WifiShutdownStatus.Unconfirmed
+                        }
+                    }
+                } finally {
+                    try {
+                        connection?.close()
+                    } catch (_: Exception) { /* Best-effort socket teardown. */
+                    } finally {
+                        _image.value = null
+                        registry.updateWifiRemote(
+                            id, if (failure == null) WifiRemoteState(wifiShutdown = shutdown)
+                            else WifiRemoteState(WifiRemotePhase.Failed, failure)
+                        )
+                        releaseControls(id)
+                        _owner.value = null
+                        job = null
+                    }
                 }
             }
         }

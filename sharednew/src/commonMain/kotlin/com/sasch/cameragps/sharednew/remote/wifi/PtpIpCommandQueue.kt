@@ -8,6 +8,7 @@ import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
+import kotlin.time.Duration.Companion.milliseconds
 
 /** One instance belongs to one TCP command connection. The transport performs socket I/O off Main. */
 internal interface PtpIpCommandTransport {
@@ -47,7 +48,7 @@ internal class PtpIpCommandQueue(
                 if (pending.result.isCancelled) continue
                 active = pending
                 val result = try {
-                    withTimeout(pending.timeoutMs) {
+                    withTimeout(pending.timeoutMs.milliseconds) {
                         require(nextTransactionId > 0) { "PTP/IP transaction IDs exhausted; reopen the connection" }
                         val transactionId = nextTransactionId++
                         val dataIn = if (pending.dataIn) PtpIpDataIn(transactionId) else null
@@ -102,8 +103,17 @@ internal class PtpIpCommandQueue(
         return execute(code, parameters, dataIn = false, dataOut = null)
     }
 
-    suspend fun executeDataIn(code: Int, parameters: List<Long> = emptyList()): PtpIpTransactionResult =
-        execute(code, parameters, dataIn = true, dataOut = null)
+    suspend fun executeDataIn(
+        code: Int, parameters: List<Long> = emptyList(),
+        operationTimeoutMs: Long = timeoutMs
+    ): PtpIpTransactionResult =
+        execute(
+            code,
+            parameters,
+            dataIn = true,
+            dataOut = null,
+            operationTimeoutMs = operationTimeoutMs
+        )
 
     suspend fun executeDataOut(code: Int, parameters: List<Long>, data: ByteArray,
                                operationTimeoutMs: Long = timeoutMs): PtpIpTransactionResult {

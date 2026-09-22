@@ -31,6 +31,7 @@ enum class WifiRemoteFailure {
 
 enum class WifiCaptureStatus { Idle, Shooting, Captured, Uncertain, Rejected }
 enum class WifiPreviewStatus { Waiting, Streaming, Failed }
+enum class WifiShutdownStatus { NotRequested, Requested, Unavailable, Unconfirmed }
 
 data class WifiRemoteState(
     val phase: WifiRemotePhase = WifiRemotePhase.Idle,
@@ -40,6 +41,7 @@ data class WifiRemoteState(
     val cameraName: String = "",
     val capture: WifiCaptureStatus = WifiCaptureStatus.Idle,
     val preview: WifiPreviewStatus = WifiPreviewStatus.Waiting,
+    val wifiShutdown: WifiShutdownStatus = WifiShutdownStatus.NotRequested,
 ) {
     init {
         require((phase == WifiRemotePhase.Failed) == (failure != null))

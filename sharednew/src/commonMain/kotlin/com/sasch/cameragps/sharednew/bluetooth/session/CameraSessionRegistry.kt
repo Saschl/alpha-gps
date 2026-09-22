@@ -3,6 +3,7 @@ package com.sasch.cameragps.sharednew.bluetooth.session
 import com.sasch.cameragps.sharednew.bluetooth.BleSessionPhase
 import com.sasch.cameragps.sharednew.remote.wifi.WifiRemotePhase
 import com.sasch.cameragps.sharednew.remote.wifi.WifiRemoteState
+import com.sasch.cameragps.sharednew.remote.wifi.WifiShutdownStatus
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -83,11 +84,13 @@ class CameraSessionRegistry {
         }
     }
 
-    /** Called by Wi-Fi ownership; closing the last transport removes a disconnected row. */
+    /** Retain shutdown feedback after closure; otherwise remove rows with no remaining transport. */
     fun updateWifiRemote(identifier: String, state: WifiRemoteState) {
         val id = identifier.uppercase()
         val current = _sessions.value[id] ?: return
-        if (state.phase == WifiRemotePhase.Idle && current.phase == BleSessionPhase.Disconnected) {
+        if (state.phase == WifiRemotePhase.Idle && current.phase == BleSessionPhase.Disconnected &&
+            state.wifiShutdown == WifiShutdownStatus.NotRequested
+        ) {
             remove(id)
         } else {
             _sessions.value = _sessions.value + (id to current.copy(wifiRemote = state))

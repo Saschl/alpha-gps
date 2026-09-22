@@ -7,10 +7,19 @@ import android.net.NetworkCapabilities
 import android.net.NetworkRequest
 import android.os.Build
 import com.sasch.cameragps.sharednew.bluetooth.session.CameraSessionOrchestrator
-import java.net.InetAddress
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.merge
+import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.withContext
+import java.net.InetAddress
 import kotlin.random.Random
 
 fun createAndroidWifiRemoteController(context: Context, scope: CoroutineScope,
@@ -98,6 +107,8 @@ private class AndroidWifiRemoteConnector(context: Context) : WifiRemoteConnector
                     is SonyPtpCaptureResult.Rejected, SonyPtpCaptureResult.Unsupported -> WifiCaptureStatus.Rejected
                     else -> WifiCaptureStatus.Uncertain
                 }
+                override suspend fun turnOffWifi() =
+                    SonyWifiShutdown(opened.commands, ready).request()
                 override suspend fun close() {
                     try { opened.close() }
                     finally { protocolScope.cancel(); connectivity.unregisterNetworkCallback(callback); losses.close() }

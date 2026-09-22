@@ -10,9 +10,16 @@ import android.provider.Settings
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
@@ -28,6 +35,8 @@ fun AndroidWifiRemoteScreen(identifier: String, onClose: () -> Unit) {
     val activity = remember(context) { context.activity() }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val controller = AppServices.from(context).wifiRemote
+    val owner by controller.owner.collectAsState()
+    KeepScreenOnWhileRemoteActive(owner.equals(identifier, ignoreCase = true))
     val model: WifiRemoteViewModel = viewModel(key = "wifi-remote-${identifier.uppercase()}") {
         WifiRemoteViewModel(identifier.uppercase(), controller)
     }
@@ -78,6 +87,18 @@ fun AndroidWifiRemoteScreen(identifier: String, onClose: () -> Unit) {
     }
     WifiRemoteScreen(model, onConnect = { connect(it) }, onConnectAutomatically = { connect(null) },
         onWifiSettings = { context.startActivity(Intent(Settings.ACTION_WIFI_SETTINGS)) }, onClose = close)
+}
+
+@Composable
+internal fun KeepScreenOnWhileRemoteActive(active: Boolean) {
+    val view = LocalView.current
+    if (active) {
+        DisposableEffect(view) {
+            val previous = view.keepScreenOn
+            view.keepScreenOn = true
+            onDispose { view.keepScreenOn = previous }
+        }
+    }
 }
 
 private fun Context.activity(): Activity? = when (this) {

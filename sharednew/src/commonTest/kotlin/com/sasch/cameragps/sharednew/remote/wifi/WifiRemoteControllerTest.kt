@@ -2,11 +2,20 @@ package com.sasch.cameragps.sharednew.remote.wifi
 
 import androidx.compose.ui.graphics.ImageBitmap
 import com.sasch.cameragps.sharednew.bluetooth.session.CameraSessionRegistry
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.*
-import kotlinx.coroutines.test.*
-import kotlin.test.*
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.runTest
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class WifiRemoteControllerTest {
@@ -17,6 +26,7 @@ class WifiRemoteControllerTest {
         val losses = Channel<Unit>(Channel.CONFLATED)
         val result = CompletableDeferred<WifiCaptureStatus>()
         var captures = 0
+        var shutdownEnabled = false
         override val images: Flow<ImageBitmap> = flow {
             try { awaitCancellation() } finally { cleanup += "preview" }
         }
@@ -26,6 +36,11 @@ class WifiRemoteControllerTest {
             return try { result.await() } finally { cleanup += "capture" }
         }
         override suspend fun close() { cleanup += "connection" }
+        override suspend fun turnOffWifi(): WifiShutdownStatus {
+            if (!shutdownEnabled) return WifiShutdownStatus.NotRequested
+            cleanup += "wifi-off"
+            return WifiShutdownStatus.Requested
+        }
     }
 
     @Test
@@ -129,5 +144,34 @@ class WifiRemoteControllerTest {
         controller.closeAndJoin()
         assertTrue(released)
         assertNull(controller.owner.value)
+    }
+
+    @Test
+    fun disconnectRequestsWifiOffAfterPreviewCleanupAndBeforeClosingSockets() = runTest {
+        val registry = CameraSessionRegistry()
+        val connection = Connection().apply { shutdownEnabled = true }
+        val controller =
+            WifiRemoteController(backgroundScope, registry, { _, _ -> connection }, {}, {})
+        controller.connect("camera", "127.0.0.1")
+        runCurrent()
+        controller.closeAndJoin()
+        assertEquals(listOf("preview", "wifi-off", "connection"), connection.cleanup)
+        assertEquals(WifiShutdownStatus.Requested, registry.get("camera")?.wifiRemote?.wifiShutdown)
+    }
+
+    @Test
+    fun connectionLossDoesNotAttemptWifiShutdown() = runTest {
+        val connection = Connection().apply { shutdownEnabled = true }
+        val controller = WifiRemoteController(
+            backgroundScope,
+            CameraSessionRegistry(),
+            { _, _ -> connection },
+            {},
+            {})
+        controller.connect("camera", "127.0.0.1")
+        runCurrent()
+        connection.losses.send(Unit)
+        runCurrent()
+        assertFalse("wifi-off" in connection.cleanup)
     }
 }
