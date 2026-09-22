@@ -35,7 +35,8 @@ internal class PtpIpCommandQueue(
     }
 
     private class Pending(val code: Int, val parameters: List<Long>, val dataIn: Boolean,
-                          val dataOut: ByteArray?, val timeoutMs: Long) {
+                          val dataOut: ByteArray?, val timeoutMs: Long, val maxDataBytes: Int
+    ) {
         val result = CompletableDeferred<PtpIpTransactionResult>()
     }
 
@@ -51,7 +52,10 @@ internal class PtpIpCommandQueue(
                     withTimeout(pending.timeoutMs.milliseconds) {
                         require(nextTransactionId > 0) { "PTP/IP transaction IDs exhausted; reopen the connection" }
                         val transactionId = nextTransactionId++
-                        val dataIn = if (pending.dataIn) PtpIpDataIn(transactionId) else null
+                        val dataIn = if (pending.dataIn) PtpIpDataIn(
+                            transactionId,
+                            pending.maxDataBytes
+                        ) else null
                         transport.send(PtpIpOperations.request(pending.code, transactionId, pending.parameters,
                             dataOut = pending.dataOut != null))
                         pending.dataOut?.let { bytes ->
@@ -105,14 +109,16 @@ internal class PtpIpCommandQueue(
 
     suspend fun executeDataIn(
         code: Int, parameters: List<Long> = emptyList(),
-        operationTimeoutMs: Long = timeoutMs
+        operationTimeoutMs: Long = timeoutMs,
+        maxDataBytes: Int = 8 * 1024 * 1024
     ): PtpIpTransactionResult =
         execute(
             code,
             parameters,
             dataIn = true,
             dataOut = null,
-            operationTimeoutMs = operationTimeoutMs
+            operationTimeoutMs = operationTimeoutMs,
+            maxDataBytes = maxDataBytes
         )
 
     suspend fun executeDataOut(code: Int, parameters: List<Long>, data: ByteArray,
@@ -123,9 +129,13 @@ internal class PtpIpCommandQueue(
     }
 
     private suspend fun execute(code: Int, parameters: List<Long>, dataIn: Boolean,
-                                dataOut: ByteArray?, operationTimeoutMs: Long = timeoutMs): PtpIpTransactionResult {
+                                dataOut: ByteArray?, operationTimeoutMs: Long = timeoutMs,
+                                maxDataBytes: Int = 8 * 1024 * 1024
+    ): PtpIpTransactionResult {
         require(operationTimeoutMs > 0)
-        val pending = Pending(code, parameters.toList(), dataIn, dataOut, operationTimeoutMs)
+        require(maxDataBytes in 0..8 * 1024 * 1024)
+        val pending =
+            Pending(code, parameters.toList(), dataIn, dataOut, operationTimeoutMs, maxDataBytes)
         if (!requests.trySend(pending).isSuccess) return PtpIpTransactionResult.Closed
         return try {
             pending.result.await()

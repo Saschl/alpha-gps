@@ -7,7 +7,10 @@
     <string name="wifi_remote_disconnect">Disconnect</string>
     <string name="wifi_remote_close">Back</string>
     <string name="wifi_remote_opening">Connecting to camera…</string>
-    <string name="wifi_remote_closing">Disconnecting…</string>
+    <string name="wifi_remote_closing">Ending camera Wi-Fi session…</string>
+    <string name="wifi_remote_shutdown_requested">Disconnected. Camera Wi-Fi shutdown requested.</string>
+    <string name="wifi_remote_shutdown_unavailable">Disconnected. The camera did not allow Wi-Fi shutdown; you may need to turn it off on the camera.</string>
+    <string name="wifi_remote_shutdown_unconfirmed">Disconnected. Could not confirm the Wi-Fi shutdown request. Check the camera if Wi-Fi remains on.</string>
     <string name="wifi_remote_connected">Connected to %1$s</string>
     <string name="wifi_remote_capture_hint">For this first version, select still-photo, single-shot drive mode and manual focus on the camera. Photos stay on the camera. Remote control stops when you leave this screen or put the app in the background.</string>
     <string name="wifi_remote_capture">Take photo</string>
@@ -35,4 +38,25 @@
     <string name="wifi_remote_address_failed">Connected to Wi-Fi but could not find the camera address. Use manual connection with the camera IP.</string>
     <string name="wifi_remote_wifi_disabled">Turn on phone Wi-Fi, then try again.</string>
     <string name="wifi_remote_location_required">This Android version requires phone Location to be turned on for automatic Wi-Fi joining.</string>
+    <string name="wifi_remote_browse">Browse camera photos</string>
+    <string name="wifi_remote_browser_hint">Download original JPEG, RAW and HEIF files to Pictures/Alpha GPS. Browses card slot 1 on newer cameras. Files stay on the camera. Keep this screen open until the download finishes.</string>
+    <string name="wifi_remote_browser_loading">Reading camera photos…</string>
+    <string name="wifi_remote_browser_failed">Could not read camera photos or change transfer mode. Retry, or disconnect and reconnect if the camera is busy.</string>
+    <string name="wifi_remote_browser_empty">No supported photos on this page.</string>
+    <string name="wifi_remote_browser_refresh">Refresh</string>
+    <string name="wifi_remote_browser_back">Back to remote shooting</string>
+    <string name="wifi_remote_browser_previous">Previous</string>
+    <string name="wifi_remote_browser_next">Next</string>
+    <string name="wifi_remote_browser_page">Page %1$d</string>
+    <string name="wifi_remote_photo_size">%1$d KB</string>
+    <string name="wifi_remote_download">Download</string>
+    <string name="wifi_remote_download_saved">Saved</string>
+    <string name="wifi_remote_download_too_large">Image exceeds the 512 MB download limit.</string>
+    <string name="wifi_remote_transfer_progress">Saving %1$s…</string>
+    <string name="wifi_remote_transfer_saved">Saved %1$s to Pictures/Alpha GPS.</string>
+    <string name="wifi_remote_transfer_failed">Download failed. Any incomplete file was removed. You can retry the download.</string>
+    <string name="wifi_remote_transfer_cancelled">Download cancelled. Any incomplete file was removed.</string>
+    <string name="wifi_remote_transfer_cancel">Cancel</string>
+    <string name="wifi_remote_storage_permission">Allow storage access to save photos to your phone.</string>
+    <string name="wifi_remote_browse_unsupported">This camera does not advertise supported photo browsing.</string>
 </resources>

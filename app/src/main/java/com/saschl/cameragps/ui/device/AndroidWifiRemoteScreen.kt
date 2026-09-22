@@ -54,6 +54,17 @@ fun AndroidWifiRemoteScreen(identifier: String, onClose: () -> Unit) {
             }
         }
     }
+    var pendingPhoto by rememberSaveable { mutableStateOf<Long?>(null) }
+    val storagePermission =
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+            val handle = pendingPhoto
+            pendingPhoto = null
+            if (granted && handle != null && lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) controller.downloadPhoto(
+                identifier,
+                handle
+            )
+            else if (!granted) controller.imageStoragePermissionDenied(identifier)
+        }
     val close = { controller.disconnect(identifier); onClose() }
     BackHandler(onBack = close)
     LifecycleEventEffect(Lifecycle.Event.ON_STOP) {
@@ -86,6 +97,16 @@ fun AndroidWifiRemoteScreen(identifier: String, onClose: () -> Unit) {
         } else if (host == null) controller.connectAutomatically(identifier) else controller.connect(identifier, host)
     }
     WifiRemoteScreen(model, onConnect = { connect(it) }, onConnectAutomatically = { connect(null) },
+        onDownloadPhoto = { handle ->
+            if (Build.VERSION.SDK_INT <= 28 && ContextCompat.checkSelfPermission(
+                    context,
+                    android.Manifest.permission.WRITE_EXTERNAL_STORAGE
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                pendingPhoto = handle
+                storagePermission.launch(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
+            } else controller.downloadPhoto(identifier, handle)
+        },
         onWifiSettings = { context.startActivity(Intent(Settings.ACTION_WIFI_SETTINGS)) }, onClose = close)
 }
 

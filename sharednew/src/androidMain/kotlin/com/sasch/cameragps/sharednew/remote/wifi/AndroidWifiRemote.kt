@@ -39,6 +39,7 @@ fun createAndroidWifiRemoteController(context: Context, scope: CoroutineScope,
 }
 
 private class AndroidWifiRemoteConnector(context: Context) : WifiRemoteConnector {
+    private val imageStore = AndroidCameraImageStore(context)
     private val connectivity = context.getSystemService(ConnectivityManager::class.java)
 
     override suspend fun open(host: String, scope: CoroutineScope): WifiRemoteConnection {
@@ -89,11 +90,26 @@ private class AndroidWifiRemoteConnector(context: Context) : WifiRemoteConnector
                 is SonyPtpInitializationResult.Rejected -> throw WifiRemoteConnectException(WifiRemoteFailure.CameraRefused)
                 else -> throw WifiRemoteConnectException(WifiRemoteFailure.ProtocolError)
             }
+            val transfer = SonyImageTransfer(
+                opened.commands, ready, opened.events,
+                ::decodeAndroidCameraThumbnail, imageStore
+            )
             val shutter = SonyPtpShutter(opened.commands, ready, opened.events)
             val preview = SonyLiveViewStream(opened.commands, ready, opened.events,
                 AndroidCameraHttpTransport(network.socketFactory))
             return object : WifiRemoteConnection {
                 override val cameraName = opened.camera.cameraName
+                override val canTransferImages = transfer.supported
+                override suspend fun openPhotoBrowser() = transfer.openBrowser()
+                override suspend fun photoPage(offset: Int) = transfer.page(offset)
+                override suspend fun photoThumbnail(handle: Long) = transfer.thumbnail(handle)
+                override suspend fun downloadPhoto(
+                    handle: Long,
+                    onProgress: (WifiImageTransferState) -> Unit
+                ) =
+                    transfer.download(handle, onProgress)
+
+                override suspend fun closePhotoBrowser() = transfer.closeBrowser()
                 override val canCapture = ready.deviceInfo.supports(SonyPtpOperation.SDIO_CONTROL_DEVICE) &&
                     ready.extendedInfo.supportsControl(SonyPtpControlCode.HALF_PRESS) &&
                     ready.extendedInfo.supportsControl(SonyPtpControlCode.FULL_PRESS)

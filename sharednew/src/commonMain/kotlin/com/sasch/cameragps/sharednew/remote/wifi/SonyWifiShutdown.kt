@@ -66,80 +66,8 @@ internal class SonyWifiShutdown(
     }
 }
 
-/** Retains only Wi-Fi shutdown availability; unused strings and arrays are consumed without decoding. */
 internal object SonyWifiShutdownProperties {
-    fun parse(data: ByteArray, controlCodes: Set<Int>): Set<Int> {
-        var offset = 0
-        fun take(size: Int): Int {
-            require(size >= 0 && size <= data.size - offset) { "Truncated camera properties" }
-            return offset.also { offset += size }
-        }
-
-        fun number(size: Int): Long {
-            val start = take(size)
-            return (0 until size).fold(0L) { value, i -> value or ((data[start + i].toLong() and 255) shl (8 * i)) }
-        }
-
-        fun scalarSize(kind: Int) = when (kind) {
-            1, 2 -> 1
-            3, 4 -> 2
-            5, 6 -> 4
-            7, 8 -> 8
-            9, 10 -> 16
-            else -> error("Unsupported camera property type")
-        }
-
-        fun value(kind: Int): Long? = when {
-            kind == 0xffff -> {
-                take(number(1).toInt() * 2); null
-            }
-
-            kind in 0x4001..0x400a -> {
-                val count = number(4)
-                require(count in 0..4096) { "Camera property array too large" }
-                take(count.toInt() * scalarSize(kind - 0x4000)); null
-            }
-
-            else -> scalarSize(kind).let { size ->
-                if (size <= 8) number(size) else {
-                    take(size); null
-                }
-            }
-        }
-
-        val count = number(8)
-        require(count in 0..4096) { "Too many camera properties" }
-        val allowed = mutableSetOf<Int>()
-        val seen = mutableSetOf<Int>()
-        repeat(count.toInt()) {
-            val code = number(2).toInt()
-            val kind = number(2).toInt()
-            number(1) // Access flag; availability properties are read-only.
-            val enabled = number(1)
-            if (code in controlCodes) {
-                take(4)
-                require(number(1) == 0L) { "Unsupported camera control form" }
-            } else {
-                value(kind)
-                val current = value(kind)
-                when (number(1).toInt()) {
-                    0 -> Unit
-                    1 -> repeat(3) { value(kind) }
-                    2 -> repeat(2) {
-                        val options = number(2).toInt()
-                        require(options <= 4096) { "Too many camera property values" }
-                        repeat(options) { value(kind) }
-                    }
-
-                    else -> error("Unsupported camera property form")
-                }
-                if (code == 0xd12b || code == 0xd296) {
-                    require(seen.add(code)) { "Duplicate camera Wi-Fi property" }
-                    if (enabled in 1L..2L && current != null && (current and 0xffff) == 1L) allowed += code
-                }
-            }
-        }
-        require(offset == data.size) { "Trailing camera property bytes" }
-        return allowed
-    }
+    fun parse(data: ByteArray, controlCodes: Set<Int>): Set<Int> =
+        SonyCameraProperties.parse(data, controlCodes, setOf(0xd12b, 0xd296))
+            .filterValues { it.enabled && it.value?.and(0xffff) == 1L }.keys
 }

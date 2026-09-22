@@ -22,6 +22,39 @@ class WifiRemoteControllerTest {
     private class Connection : WifiRemoteConnection {
         override val cameraName = "Test camera"
         override val canCapture = true
+        override val canTransferImages = true
+        var browsing = false
+        var downloads = 0
+        var failBrowserExit = false
+        val downloadResult = CompletableDeferred<WifiImageTransferState>()
+        override suspend fun openPhotoBrowser(): CameraPhotoPage {
+            browsing = true
+            cleanup += "browse"
+            return CameraPhotoPage(
+                listOf(WifiCameraPhoto(42L, "DSC.JPG", 100L, "image/jpeg", "")),
+                0,
+                1
+            )
+        }
+
+        override suspend fun downloadPhoto(
+            handle: Long,
+            onProgress: (WifiImageTransferState) -> Unit
+        ): WifiImageTransferState {
+            downloads++
+            return try {
+                downloadResult.await()
+            } finally {
+                cleanup += "download"
+            }
+        }
+
+        override suspend fun closePhotoBrowser() {
+            if (!browsing) return
+            check(!failBrowserExit)
+            cleanup += "browse-close"
+            browsing = false
+        }
         val cleanup = mutableListOf<String>()
         val losses = Channel<Unit>(Channel.CONFLATED)
         val result = CompletableDeferred<WifiCaptureStatus>()
@@ -174,4 +207,97 @@ class WifiRemoteControllerTest {
         runCurrent()
         assertFalse("wifi-off" in connection.cleanup)
     }
+
+    @Test
+    fun browserPausesPreviewBlocksCaptureAndPreventsDuplicateDownloads() = runTest {
+        val registry = CameraSessionRegistry()
+        val connection = Connection()
+        val controller =
+            WifiRemoteController(backgroundScope, registry, { _, _ -> connection }, {}, {})
+        controller.connect("camera", "127.0.0.1")
+        runCurrent()
+        controller.browsePhotos("camera")
+        controller.capture("camera")
+        runCurrent()
+        assertEquals(listOf("preview", "browse"), connection.cleanup)
+        assertEquals(0, connection.captures)
+        controller.downloadPhoto("camera", 42L)
+        controller.downloadPhoto("camera", 42L)
+        runCurrent()
+        assertEquals(1, connection.downloads)
+        connection.downloadResult.complete(
+            WifiImageTransferState(
+                WifiImageTransferStatus.Saved,
+                "DSC.JPG"
+            )
+        )
+        runCurrent()
+        controller.downloadPhoto("camera", 42L)
+        runCurrent()
+        assertEquals(1, connection.downloads)
+        assertEquals(setOf(42L), registry.get("camera")?.wifiRemote?.photoBrowser?.savedHandles)
+        controller.leavePhotoBrowser("camera")
+        runCurrent()
+        assertFalse(registry.get("camera")!!.wifiRemote.photoBrowser.open)
+        controller.closeAndJoin()
+        assertEquals(
+            listOf("browse-close", "preview", "connection"),
+            connection.cleanup.takeLast(3)
+        )
+    }
+
+    @Test
+    fun disconnectAbortsDownloadBeforeLeavingBrowseModeAndTurningOffWifi() = runTest {
+        val connection = Connection().apply { shutdownEnabled = true }
+        val controller = WifiRemoteController(
+            backgroundScope,
+            CameraSessionRegistry(),
+            { _, _ -> connection },
+            {},
+            {})
+        controller.connect("camera", "127.0.0.1")
+        runCurrent()
+        controller.browsePhotos("camera")
+        runCurrent()
+        controller.downloadPhoto("camera", 42L)
+        runCurrent()
+        controller.closeAndJoin()
+        assertEquals(
+            listOf("download", "browse-close", "wifi-off", "connection"),
+            connection.cleanup.takeLast(4)
+        )
+        assertTrue(controller.thumbnails.value.isEmpty())
+    }
+
+    @Test
+    fun cancelledDownloadKeepsConnectionAndFailedModeExitDoesNotRestartPreview() = runTest {
+        val registry = CameraSessionRegistry()
+        val connection = Connection()
+        val controller =
+            WifiRemoteController(backgroundScope, registry, { _, _ -> connection }, {}, {})
+        controller.connect("camera", "127.0.0.1")
+        runCurrent()
+        controller.browsePhotos("camera")
+        runCurrent()
+        controller.downloadPhoto("camera", 42L)
+        runCurrent()
+        controller.cancelPhotoOperation("camera")
+        runCurrent()
+        assertEquals(
+            WifiImageTransferStatus.Cancelled,
+            registry.get("camera")?.wifiRemote?.imageTransfer?.status
+        )
+        assertEquals(WifiRemotePhase.Ready, registry.get("camera")?.wifiRemote?.phase)
+        connection.failBrowserExit = true
+        controller.leavePhotoBrowser("camera")
+        runCurrent()
+        assertTrue(registry.get("camera")!!.wifiRemote.photoBrowser.open)
+        assertTrue(registry.get("camera")!!.wifiRemote.photoBrowser.failed)
+        controller.capture("camera")
+        assertEquals(0, connection.captures)
+        connection.failBrowserExit = false
+        controller.closeAndJoin()
+        assertEquals(1, connection.cleanup.count { it == "preview" })
+    }
+
 }

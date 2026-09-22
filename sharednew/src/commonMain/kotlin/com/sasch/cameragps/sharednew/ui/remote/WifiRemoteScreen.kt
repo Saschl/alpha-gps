@@ -43,6 +43,8 @@ import cameragps.sharednew.generated.resources.wifi_remote_approval
 import cameragps.sharednew.generated.resources.wifi_remote_auto_connect
 import cameragps.sharednew.generated.resources.wifi_remote_auto_setup
 import cameragps.sharednew.generated.resources.wifi_remote_bluetooth_required
+import cameragps.sharednew.generated.resources.wifi_remote_browse
+import cameragps.sharednew.generated.resources.wifi_remote_browse_unsupported
 import cameragps.sharednew.generated.resources.wifi_remote_capture
 import cameragps.sharednew.generated.resources.wifi_remote_capture_hint
 import cameragps.sharednew.generated.resources.wifi_remote_captured
@@ -94,7 +96,16 @@ class WifiRemoteViewModel(val identifier: String, val controller: WifiRemoteCont
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WifiRemoteScreen(viewModel: WifiRemoteViewModel, onConnect: (String) -> Unit,
-                     onWifiSettings: () -> Unit, onClose: () -> Unit, onConnectAutomatically: () -> Unit = {}) {
+                     onWifiSettings: () -> Unit,
+                     onClose: () -> Unit,
+                     onConnectAutomatically: () -> Unit = {},
+                     onDownloadPhoto: (Long) -> Unit = {
+                         viewModel.controller.downloadPhoto(
+                             viewModel.identifier,
+                             it
+                         )
+                     }
+) {
     val controller = viewModel.controller
     val sessions by controller.sessions.collectAsState()
     val owner by controller.owner.collectAsState()
@@ -111,6 +122,10 @@ fun WifiRemoteScreen(viewModel: WifiRemoteViewModel, onConnect: (String) -> Unit
         })
     }) { padding ->
         BoxWithConstraints(Modifier.fillMaxSize().padding(padding).padding(16.dp)) {
+            if (state.photoBrowser.open) {
+                WifiPhotoBrowser(state, controller, id, onDownloadPhoto)
+                return@BoxWithConstraints
+            }
             val preview: @Composable (Modifier) -> Unit = { modifier ->
                 Box(modifier.background(Color.Black), contentAlignment = Alignment.Center) {
                     if (owner == id && image != null) {
@@ -178,8 +193,15 @@ fun WifiRemoteScreen(viewModel: WifiRemoteViewModel, onConnect: (String) -> Unit
                     if (ready) {
                         Text(stringResource(Res.string.wifi_remote_connected, state.cameraName))
                         Text(stringResource(Res.string.wifi_remote_capture_hint))
+                        if (state.canTransferImages) OutlinedButton(
+                            onClick = { controller.browsePhotos(id) },
+                            enabled = state.capture != WifiCaptureStatus.Shooting
+                        ) {
+                            Text(stringResource(Res.string.wifi_remote_browse))
+                        } else Text(stringResource(Res.string.wifi_remote_browse_unsupported))
                         Button(onClick = { controller.capture(id) },
-                            enabled = state.canCaptureStill && state.capture != WifiCaptureStatus.Shooting) {
+                            enabled = state.canCaptureStill && state.capture != WifiCaptureStatus.Shooting && !state.imageTransfer.busy
+                        ) {
                             Text(stringResource(if (state.capture == WifiCaptureStatus.Shooting)
                                 Res.string.wifi_remote_shooting else Res.string.wifi_remote_capture))
                         }
