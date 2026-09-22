@@ -93,6 +93,7 @@ class LocationSenderService : LifecycleService() {
         }.onFailure { e ->
             Timber.e(e, "Failed to unregister Bluetooth state receiver")
         }
+        com.saschl.cameragps.AppServices.from(this).wifiRemote.disconnect()
         orchestrator.shutdownAll()
         transport.disconnectAll()
         if (::eventSoundPlayer.isInitialized) eventSoundPlayer.release()

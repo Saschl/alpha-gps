@@ -9,6 +9,7 @@ import com.sasch.cameragps.sharednew.bluetooth.session.PairingRetryPolicy
 import com.sasch.cameragps.sharednew.database.LogDatabase
 import com.sasch.cameragps.sharednew.database.devices.CameraDeviceDAO
 import com.sasch.cameragps.sharednew.database.getDatabaseBuilder
+import com.sasch.cameragps.sharednew.remote.wifi.createAndroidWifiRemoteController
 import com.saschl.cameragps.service.location.createLocationSource
 import com.saschl.cameragps.service.transport.AndroidBleTransport
 import kotlinx.coroutines.CoroutineScope
@@ -62,6 +63,7 @@ class AppServices(context: Context) {
      * with the same device clears the source and re-arms the dialog.
      */
     private val _pairingFailedDevice = MutableStateFlow<String?>(null)
+    val wifiRemote = createAndroidWifiRemoteController(appContext, scope, orchestrator)
     val pairingFailedDevice: StateFlow<String?> = _pairingFailedDevice
 
     init {

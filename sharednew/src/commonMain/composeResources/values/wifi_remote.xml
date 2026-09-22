@@ -1,0 +1,26 @@
+<resources>
+    <string name="wifi_remote_title">Wi-Fi remote (experimental)</string>
+    <string name="wifi_remote_setup">Start the camera’s smartphone Wi-Fi connection, disconnect Creators’ App, then join the camera’s Wi-Fi in phone settings. Enter the camera IP address.</string>
+    <string name="wifi_remote_ip">Camera IP address</string>
+    <string name="wifi_remote_settings">Open Wi-Fi settings</string>
+    <string name="wifi_remote_connect">Connect</string>
+    <string name="wifi_remote_disconnect">Disconnect</string>
+    <string name="wifi_remote_close">Back</string>
+    <string name="wifi_remote_opening">Connecting to camera…</string>
+    <string name="wifi_remote_closing">Disconnecting…</string>
+    <string name="wifi_remote_connected">Connected to %1$s</string>
+    <string name="wifi_remote_capture_hint">For this first version, select still-photo, single-shot drive mode and manual focus on the camera. Photos stay on the camera. Remote control stops when you leave this screen or put the app in the background.</string>
+    <string name="wifi_remote_capture">Take photo</string>
+    <string name="wifi_remote_shooting">Taking photo…</string>
+    <string name="wifi_remote_captured">Camera confirmed capture.</string>
+    <string name="wifi_remote_uncertain">Capture could not be confirmed. Check the camera before taking another photo.</string>
+    <string name="wifi_remote_rejected">The camera refused the shutter request. Check its shooting mode and card.</string>
+    <string name="wifi_remote_preview_waiting">Waiting for preview…</string>
+    <string name="wifi_remote_preview_failed">Preview stopped. Disconnect and reconnect to try again.</string>
+    <string name="wifi_remote_invalid_ip">Enter the camera’s IPv4 address, for example the address shown in its Wi-Fi connection details.</string>
+    <string name="wifi_remote_join_wifi">Join the camera’s Wi-Fi network in phone settings, then return here.</string>
+    <string name="wifi_remote_permission">Local network permission is required. Allow Nearby devices in the app’s permission settings, then try connecting again.</string>
+    <string name="wifi_remote_failed">Could not connect. Check the camera IP, keep its smartphone connection active, and close other camera-control apps.</string>
+    <string name="wifi_remote_lost">The camera connection was lost. Join its Wi-Fi again and reconnect.</string>
+    <string name="wifi_remote_other_camera">Another Wi-Fi remote session is open. Close it before connecting this camera.</string>
+</resources>

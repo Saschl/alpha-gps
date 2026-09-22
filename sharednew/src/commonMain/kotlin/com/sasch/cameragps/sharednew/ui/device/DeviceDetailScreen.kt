@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import cameragps.sharednew.generated.resources.Res
+import cameragps.sharednew.generated.resources.wifi_remote_title
 import cameragps.sharednew.generated.resources.always_on_description
 import cameragps.sharednew.generated.resources.camera_setting_connect
 import cameragps.sharednew.generated.resources.camera_setting_failed
@@ -75,6 +76,7 @@ fun DeviceDetailContent(
     onDeviceEnabledChanged: ((Boolean) -> Unit)? = null,
     onPresentSystemRename: (() -> Unit)? = null,
     renameEnabled: Boolean = true,
+    onWifiRemote: (() -> Unit)? = null,
 ) {
     val state = viewModel.uiState.collectAsState().value
     val sessions by viewModel.sessions.collectAsState()
@@ -100,6 +102,14 @@ fun DeviceDetailContent(
     ) {
         if (headerContent != null) {
             item { headerContent(state.deviceName.ifEmpty { deviceName.orEmpty() }) }
+        }
+
+        if (onWifiRemote != null) {
+            item {
+                androidx.compose.material3.OutlinedButton(onClick = onWifiRemote, enabled = state.isDeviceEnabled) {
+                    Text(stringResource(cameragps.sharednew.generated.resources.Res.string.wifi_remote_title))
+                }
+            }
         }
 
         if (renameEnabled) {

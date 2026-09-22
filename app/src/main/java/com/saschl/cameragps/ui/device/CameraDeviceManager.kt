@@ -223,6 +223,8 @@ fun CameraDeviceManager(
                     Timber.i("Disassociating device: ${foundDevice.name} (${foundDevice.address})")
                     scope.launch {
 
+                        AppServices.from(context).wifiRemote.closeAndJoin(foundDevice.address)
+
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA) {
                             deviceManager.stopObservingDevicePresence(
                                 ObservingDevicePresenceRequest.Builder()
