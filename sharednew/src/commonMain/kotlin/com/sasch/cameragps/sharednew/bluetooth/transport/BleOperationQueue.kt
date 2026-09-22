@@ -2,6 +2,7 @@ package com.sasch.cameragps.sharednew.bluetooth.transport
 
 import com.diamondedge.logging.logging
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.TimeoutCancellationException
@@ -103,10 +104,16 @@ class BleOperationQueue(
      */
     suspend fun execute(identifier: String, op: BleOperation): BleOperationResult {
         val queued = QueuedOperation(op)
-        if (!laneFor(identifier).channel.trySend(queued).isSuccess) {
+        val lane = laneFor(identifier)
+        if (!lane.channel.trySend(queued).isSuccess) {
             return BleOperationResult.Cancelled
         }
-        return queued.result.await()
+        return try { queued.result.await() }
+        catch (cancelled: CancellationException) {
+            // Drop parked work, but drain an in-flight GATT response before advancing the lane.
+            if (lane.pending !== queued) queued.result.cancel()
+            throw cancelled
+        }
     }
 
     /**
