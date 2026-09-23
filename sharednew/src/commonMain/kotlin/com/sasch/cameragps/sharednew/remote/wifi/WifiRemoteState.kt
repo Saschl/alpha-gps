@@ -51,6 +51,7 @@ data class WifiCameraPhoto(
     val mimeType: String,
     val capturedAt: String,
     val downloadable: Boolean = true,
+    val captureId: String? = null,
 )
 
 data class WifiPhotoBrowserState(

@@ -29,7 +29,8 @@ internal data class SonyImageInfo(
     val size: Long,
     val filename: String,
     val mimeType: String,
-    val capturedAt: String = ""
+    val capturedAt: String = "",
+    val captureId: String? = null,
 ) {
     companion object {
         fun parse(data: ByteArray): SonyImageInfo {
@@ -67,7 +68,9 @@ internal data class SonyImageInfo(
                         filename.none { it == '/' || it == '\\' || it.code < 32 || it.code == 127 }) {
                 "Invalid image filename"
             }
-            return SonyImageInfo(size, filename, mime, capturedAt)
+            val captureId = "object:${number(0, 4)}:${number(38, 4)}:" +
+                "${filename.substringBeforeLast('.').uppercase()}:$capturedAt"
+            return SonyImageInfo(size, filename, mime, capturedAt, captureId)
         }
     }
 }
@@ -102,7 +105,7 @@ internal class SonyImageTransfer(
             )) &&
             capabilities.extendedInfo.supportsProperty(TRANSFER_ENABLED)
     private var modeRequested = false
-    private var handles = emptyList<Long>()
+    private var captures = emptyList<WifiCameraCapture>()
     private var pagePhotos = emptyList<WifiCameraPhoto>()
 
     suspend fun openBrowser(): CameraPhotoPage {
@@ -130,24 +133,22 @@ internal class SonyImageTransfer(
             found += parseIds(data(GET_HANDLES, listOf(storage, 0L, 0L), 400_004), 100_000)
             require(found.size <= 100_000) { "Too many camera objects" }
         }
-        handles = found.distinct().asReversed()
+        val photos = mutableListOf<WifiCameraPhoto>()
+        for (handle in found.distinct().asReversed()) {
+            val info = SonyImageInfo.parse(data(GET_OBJECT_INFO, listOf(handle), 4096))
+            if (info.mimeType.isNotEmpty()) photos += WifiCameraPhoto(
+                handle, info.filename, info.size, info.mimeType, info.capturedAt,
+                info.size in 1..MAX_IMAGE_BYTES, info.captureId
+            )
+        }
+        captures = groupCameraPhotos(photos.sortedByDescending { it.capturedAt })
         return page(0)
     }
 
     suspend fun page(offset: Int): CameraPhotoPage {
         catalog?.let { return it.page(offset).also { page -> pagePhotos = page.photos } }
         check(modeRequested)
-        require(offset >= 0 && (offset < handles.size || offset == 0))
-        val photos = mutableListOf<WifiCameraPhoto>()
-        for (handle in handles.drop(offset).take(PAGE_SIZE)) {
-            val info = SonyImageInfo.parse(data(GET_OBJECT_INFO, listOf(handle), 4096))
-            if (info.mimeType.isNotEmpty()) photos += WifiCameraPhoto(
-                handle, info.filename, info.size,
-                info.mimeType, info.capturedAt, info.size in 1..MAX_IMAGE_BYTES
-            )
-        }
-        pagePhotos = photos
-        return CameraPhotoPage(photos, offset, handles.size)
+        return cameraPhotoPage(captures, offset).also { pagePhotos = it.photos }
     }
 
     suspend fun thumbnail(handle: Long): ImageBitmap? {
@@ -258,7 +259,7 @@ internal class SonyImageTransfer(
         // A failed exit must not restart shutter/live view while the camera is still in transfer mode.
         accepted(commands.executeNoData(SET_TRANSFER_MODE, listOf(2L, 0L, 0L)))
         modeRequested = false
-        handles = emptyList()
+        captures = emptyList()
         pagePhotos = emptyList()
     }
 

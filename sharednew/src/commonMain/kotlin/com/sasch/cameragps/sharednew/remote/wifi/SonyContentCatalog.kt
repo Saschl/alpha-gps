@@ -89,7 +89,8 @@ internal object SonyContentParser {
                     files += SonyContentFile(
                         WifiCameraPhoto(
                             id, name, size, mime, date,
-                            size in 1..SonyImageTransfer.MAX_IMAGE_BYTES
+                            size in 1..SonyImageTransfer.MAX_IMAGE_BYTES,
+                            captureId = "content:$slot:$contentId"
                         ), created, modified
                     )
                 }
@@ -113,7 +114,7 @@ internal class SonyContentCatalog(
     private var enabled = false
     private var identity: List<Byte>? = null
     private val files = linkedMapOf<Long, SonyContentFile>()
-    private var orderedFiles = emptyList<SonyContentFile>()
+    private var captures = emptyList<WifiCameraCapture>()
 
     suspend fun open(): CameraPhotoPage {
         if (!enabled) {
@@ -123,7 +124,7 @@ internal class SonyContentCatalog(
         }
         identity = null
         files.clear()
-        orderedFiles = emptyList()
+        captures = emptyList()
         var cursor = 0L
         while (true) {
             val batch = fetch(cursor)
@@ -137,16 +138,12 @@ internal class SonyContentCatalog(
             cursor =
                 if (last == batch.timestamps.first() || files.size == previousCount) last + 1 else last
         }
-        orderedFiles = files.values.sortedByDescending { it.created }
+        captures = groupCameraPhotos(files.values.sortedByDescending { it.created }.map { it.photo })
         return page(0)
     }
 
     fun page(offset: Int): CameraPhotoPage {
-        require(offset >= 0 && offset <= orderedFiles.size)
-        return CameraPhotoPage(
-            orderedFiles.drop(offset).take(SonyImageTransfer.PAGE_SIZE).map { it.photo },
-            offset, orderedFiles.size, offset + SonyImageTransfer.PAGE_SIZE < orderedFiles.size
-        )
+        return cameraPhotoPage(captures, offset)
     }
 
     suspend fun revalidate(handle: Long): SonyImageInfo {
@@ -195,7 +192,7 @@ internal class SonyContentCatalog(
         requested = false
         enabled = false
         files.clear()
-        orderedFiles = emptyList()
+        captures = emptyList()
     }
 
     private suspend fun control(down: Boolean) = coroutineScope {

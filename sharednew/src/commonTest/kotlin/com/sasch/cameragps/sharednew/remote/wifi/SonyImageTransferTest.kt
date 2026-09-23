@@ -23,9 +23,11 @@ class SonyImageTransferTest {
                 )
             } + byteArrayOf(0, 0)
 
-    private fun info(size: Long, name: String = "DSC01234.JPG", format: Int = 0x3801): ByteArray =
-        number(1, 4) + number(format.toLong(), 2) + number(0, 2) + number(size, 4) +
-                ByteArray(40) + string(name) + byteArrayOf(0, 0, 0)
+    private fun info(size: Long, name: String = "DSC01234.JPG", format: Int = 0x3801,
+                     storage: Long = 1, parent: Long = 0): ByteArray =
+        (number(storage, 4) + number(format.toLong(), 2) + number(0, 2) + number(size, 4) +
+                ByteArray(40) + string(name) + byteArrayOf(0, 0, 0))
+            .also { number(parent, 4).copyInto(it, 38) }
 
     private fun properties(prepared: Boolean): ByteArray = number(1, 8) + number(0xd295, 2) +
             number(4, 2) + byteArrayOf(0, 1) + number(0, 2) + number(
@@ -43,6 +45,7 @@ class SonyImageTransferTest {
         val replies = Channel<PtpIpPacket>(Channel.UNLIMITED)
         val operations = mutableListOf<Pair<Int, List<Long>>>()
         var objectCount = 1
+        var metadata = emptyMap<Long, ByteArray>()
         var readyAfterPolls = 0
         var polls = 0
         var shortChunk = false
@@ -72,7 +75,7 @@ class SonyImageTransferTest {
                     )
                 }
 
-                0x1008 -> info(size.toLong())
+                0x1008 -> metadata[params.first()] ?: info(size.toLong(), "DSC${params.first()}.JPG")
                 0x101b, 0x9211 -> {
                     val count = params.last()
                         .toInt() - (if (shortChunk) 1 else 0) + (if (oversizedChunk) 1 else 0)
@@ -124,15 +127,15 @@ class SonyImageTransferTest {
 
     @Test
     fun browsesPagesAndDownloadsSelectedOriginalInBoundedChunks() = runTest {
-        val transport = Transport().apply { objectCount = 25; readyAfterPolls = 2 }
+        val transport = Transport().apply { objectCount = SonyImageTransfer.PAGE_SIZE + 5; readyAfterPolls = 2 }
         val queue = PtpIpCommandQueue(transport, backgroundScope)
         val outputs = mutableListOf<Destination>()
         val progress = mutableListOf<WifiImageTransferState>()
         val transfer = SonyImageTransfer(queue, ready()) { Destination().also { outputs += it } }
         val first = transfer.openBrowser()
-        assertEquals(25, first.totalObjects)
-        assertEquals((25L downTo 6L).toList(), first.photos.map { it.handle })
-        val second = transfer.page(20)
+        assertEquals(transport.objectCount, first.totalObjects)
+        assertEquals((transport.objectCount.toLong() downTo 6L).toList(), first.photos.map { it.handle })
+        val second = transfer.page(SonyImageTransfer.PAGE_SIZE)
         assertEquals((5L downTo 1L).toList(), second.photos.map { it.handle })
         val result = transfer.download(4L) { progress += it }
         assertEquals(WifiImageTransferStatus.Saved, result.status)
@@ -149,6 +152,35 @@ class SonyImageTransferTest {
         assertEquals(600_000L, progress.last().bytesReceived)
         transfer.closeBrowser()
         assertEquals(0x9212 to listOf(2L, 0L, 0L), transport.operations.last())
+        queue.close()
+    }
+
+    @Test
+    fun legacyPairsStayTogetherAcrossPagesAndIdenticalNamesInOtherFoldersStaySeparate() = runTest {
+        val transport = Transport().apply {
+            objectCount = (SonyImageTransfer.PAGE_SIZE + 1) * 2
+            metadata = (1L..objectCount.toLong()).associateWith { handle ->
+                val name = "DSC${(handle + 1) / 2}"
+                if (handle % 2 == 0L) info(size.toLong(), "$name.ARW", 0xb101)
+                else info(size.toLong(), "$name.JPG")
+            }
+        }
+        val queue = PtpIpCommandQueue(transport, backgroundScope)
+        val transfer = SonyImageTransfer(queue, ready()) { Destination() }
+        val first = transfer.openBrowser()
+        assertEquals(SonyImageTransfer.PAGE_SIZE + 1, first.totalObjects)
+        assertEquals(SonyImageTransfer.PAGE_SIZE * 2, first.photos.size)
+        val last = transfer.page(SonyImageTransfer.PAGE_SIZE)
+        assertEquals(listOf(2L, 1L), last.photos.map { it.handle })
+        assertEquals(WifiImageTransferStatus.Saved, transfer.download(1) {}.status)
+        assertEquals(WifiImageTransferStatus.Saved, transfer.download(2) {}.status)
+        val jpg = SonyImageInfo.parse(info(1, "DSC.JPG", parent = 10))
+        val raw = SonyImageInfo.parse(info(1, "DSC.ARW", 0xb101, parent = 10))
+        val otherFolder = SonyImageInfo.parse(info(1, "DSC.ARW", 0xb101, parent = 11))
+        val otherCard = SonyImageInfo.parse(info(1, "DSC.ARW", 0xb101, storage = 2, parent = 10))
+        assertEquals(jpg.captureId, raw.captureId)
+        assertTrue(jpg.captureId != otherFolder.captureId)
+        assertTrue(jpg.captureId != otherCard.captureId)
         queue.close()
     }
 
@@ -267,7 +299,7 @@ class SonyImageTransferTest {
 
     @Test
     fun parsesSupportedImageMetadataAndRejectsUnsafeOrTruncatedNames() {
-        assertEquals(SonyImageInfo(42, "DSC01234.JPG", "image/jpeg"), SonyImageInfo.parse(info(42)))
+        assertEquals(SonyImageInfo(42, "DSC01234.JPG", "image/jpeg", captureId = "object:1:0:DSC01234:"), SonyImageInfo.parse(info(42)))
         assertEquals("image/x-sony-arw", SonyImageInfo.parse(info(42, "DSC.ARW", 0xb101)).mimeType)
         assertEquals("image/heif", SonyImageInfo.parse(info(42, "DSC.HIF", 0xb110)).mimeType)
         for (name in listOf("../a.jpg", "a/b.jpg", "a\\b.jpg", "", "\u0000x.jpg")) {

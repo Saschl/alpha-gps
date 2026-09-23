@@ -25,16 +25,24 @@ class WifiRemoteControllerTest {
         override val canTransferImages = true
         var browsing = false
         var downloads = 0
+        var photos = listOf(WifiCameraPhoto(42L, "DSC.JPG", 100L, "image/jpeg", ""))
+        val thumbnailRequests = mutableListOf<Long>()
+        val downloadedHandles = mutableListOf<Long>()
         var failBrowserExit = false
         val downloadResult = CompletableDeferred<WifiImageTransferState>()
         override suspend fun openPhotoBrowser(): CameraPhotoPage {
             browsing = true
             cleanup += "browse"
             return CameraPhotoPage(
-                listOf(WifiCameraPhoto(42L, "DSC.JPG", 100L, "image/jpeg", "")),
+                photos,
                 0,
                 1
             )
+        }
+
+        override suspend fun photoThumbnail(handle: Long): ImageBitmap? {
+            thumbnailRequests += handle
+            return null
         }
 
         override suspend fun downloadPhoto(
@@ -42,8 +50,9 @@ class WifiRemoteControllerTest {
             onProgress: (WifiImageTransferState) -> Unit
         ): WifiImageTransferState {
             downloads++
+            downloadedHandles += handle
             return try {
-                downloadResult.await()
+                downloadResult.await().copy(filename = photos.first { it.handle == handle }.filename)
             } finally {
                 cleanup += "download"
             }
@@ -244,6 +253,35 @@ class WifiRemoteControllerTest {
             listOf("browse-close", "preview", "connection"),
             connection.cleanup.takeLast(3)
         )
+    }
+
+    @Test
+    fun pairedCapturesRequestOnlyRawPreviewsAndDownloadEachSelectedFormatIndependently() = runTest {
+        val registry = CameraSessionRegistry()
+        val connection = Connection().apply {
+            photos = listOf(
+                WifiCameraPhoto(42, "ONE.HIF", 100, "image/heif", "", captureId = "one"),
+                WifiCameraPhoto(43, "ONE.ARW", 100, "image/x-sony-arw", "", captureId = "one"),
+                WifiCameraPhoto(44, "TWO.JPG", 100, "image/jpeg", "", captureId = "two"),
+                WifiCameraPhoto(45, "TWO.ARW", 100, "image/x-sony-arw", "", captureId = "two"),
+                WifiCameraPhoto(46, "THREE.HIF", 100, "image/heif", "", captureId = "three"),
+            )
+        }
+        val controller = WifiRemoteController(backgroundScope, registry, { _, _ -> connection }, {}, {})
+        controller.connect("camera", "127.0.0.1")
+        runCurrent()
+        controller.browsePhotos("camera")
+        runCurrent()
+        assertEquals(listOf(43L, 45L, 46L), connection.thumbnailRequests)
+        connection.downloadResult.complete(WifiImageTransferState(WifiImageTransferStatus.Saved))
+        controller.downloadPhoto("camera", 42)
+        runCurrent()
+        assertEquals(setOf(42L), registry.get("camera")!!.wifiRemote.photoBrowser.savedHandles)
+        controller.downloadPhoto("camera", 43)
+        runCurrent()
+        assertEquals(listOf(42L, 43L), connection.downloadedHandles)
+        assertEquals(setOf(42L, 43L), registry.get("camera")!!.wifiRemote.photoBrowser.savedHandles)
+        controller.closeAndJoin()
     }
 
     @Test

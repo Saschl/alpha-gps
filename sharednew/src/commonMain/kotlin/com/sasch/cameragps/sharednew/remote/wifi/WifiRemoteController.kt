@@ -161,7 +161,8 @@ class WifiRemoteController internal constructor(
                     )
                 )
             }
-            for (photo in page.photos) {
+            for (capture in groupCameraPhotos(page.photos)) {
+                val photo = capture.preview
                 connection.photoThumbnail(photo.handle)
                     ?.let { _thumbnails.value += photo.handle to it }
             }

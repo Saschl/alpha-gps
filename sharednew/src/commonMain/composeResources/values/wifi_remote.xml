@@ -39,6 +39,14 @@
     <string name="wifi_remote_wifi_disabled">Turn on phone Wi-Fi, then try again.</string>
     <string name="wifi_remote_location_required">This Android version requires phone Location to be turned on for automatic Wi-Fi joining.</string>
     <string name="wifi_remote_browse">Browse camera photos</string>
+    <string name="wifi_remote_browser_title">Camera photos</string>
+    <string name="wifi_remote_browser_tap_hint">Tap a photo for details and download options.</string>
+    <string name="wifi_remote_preview_unavailable">Preview unavailable</string>
+    <string name="wifi_remote_photo_captured">Captured: %1$s</string>
+    <string name="wifi_remote_photo_format">Choose a format to download</string>
+    <string name="wifi_remote_download_format">Download %1$s</string>
+    <string name="wifi_remote_photo_download_hint">Originals are saved to Pictures/Alpha GPS and stay on the camera. Keep this screen open until the download finishes.</string>
+    <string name="wifi_remote_photo_close">Close</string>
     <string name="wifi_remote_browser_hint">Download original JPEG, RAW and HEIF files to Pictures/Alpha GPS. Browses card slot 1 on newer cameras. Files stay on the camera. Keep this screen open until the download finishes.</string>
     <string name="wifi_remote_browser_loading">Reading camera photos…</string>
     <string name="wifi_remote_browser_failed">Could not read camera photos or change transfer mode. Retry, or disconnect and reconnect if the camera is busy.</string>
