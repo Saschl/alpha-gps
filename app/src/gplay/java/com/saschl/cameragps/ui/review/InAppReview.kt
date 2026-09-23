@@ -4,7 +4,6 @@ import android.app.Activity
 import android.content.Context
 import com.google.android.play.core.review.ReviewException
 import com.google.android.play.core.review.ReviewManagerFactory
-import com.google.android.play.core.review.model.ReviewErrorCode
 import com.saschl.cameragps.utils.PreferencesManager
 import timber.log.Timber
 
@@ -39,11 +38,20 @@ fun launchInAppReviewIfDue(
                 onFlowActiveChange(false)
             }
         } else {
-            @ReviewErrorCode val reviewErrorCode =
-                (task.exception as ReviewException).errorCode
-            Timber.e("Review flow failed with error code: $reviewErrorCode")
-            PreferencesManager.resetReviewHintShown(appContext)
-            PreferencesManager.decreaseReviewHintShownTimes(appContext)
+            handleReviewRequestFailure(task.exception) {
+                PreferencesManager.resetReviewHintShown(appContext)
+                PreferencesManager.decreaseReviewHintShownTimes(appContext)
+            }
         }
     }
+}
+
+internal fun handleReviewRequestFailure(error: Exception?, resetReviewAttempt: () -> Unit) {
+    val reviewErrorCode = (error as? ReviewException)?.errorCode
+    Timber.e(
+        error,
+        "Review request failed (review error code: %s)",
+        reviewErrorCode ?: "unavailable"
+    )
+    resetReviewAttempt()
 }
