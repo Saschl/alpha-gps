@@ -37,6 +37,12 @@ internal object IosAppPreferences {
     private val defaults: NSUserDefaults
         get() = NSUserDefaults.standardUserDefaults
 
+    fun lastSeenReleaseVersion(): String? = defaults.stringForKey("ios.lastSeenReleaseVersion")
+
+    fun setLastSeenReleaseVersion(version: String) {
+        defaults.setObject(version, forKey = "ios.lastSeenReleaseVersion")
+    }
+
     fun showWelcomeOnLaunch(): Boolean = defaults.objectForKey(keyShowWelcome)?.let {
         defaults.boolForKey(keyShowWelcome)
     } ?: true

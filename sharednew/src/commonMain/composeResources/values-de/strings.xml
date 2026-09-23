@@ -318,4 +318,13 @@
     <string name="camera_setting_unsupported">Diese Kamera unterstützt das Ändern dieser Einstellung über die App nicht.</string>
     <string name="camera_setting_failed">Die Kameraeinstellung konnte nicht bestätigt werden. Aktualisiere die Anzeige, um den aktuellen Wert zu prüfen.</string>
     <string name="camera_setting_retry">Kameraeinstellungen aktualisieren</string>
+
+    <!-- In-app release notes. -->
+    <string name="whats_new_title">Was ist neu?</string>
+    <string name="whats_new_version">Version %1$s</string>
+    <string name="whats_new_close">Verstanden</string>
+    <string name="whats_new_open">Versionshinweise anzeigen</string>
+    <string name="whats_new_162_time">Du kannst die automatische Zeitkorrektur jetzt in den Kameradetails ansehen und ändern. Diese Einstellung steuert, ob die Kamera Datum und Uhrzeit anhand deines Smartphones anpasst.</string>
+    <string name="whats_new_162_notifications">Benachrichtigungen zur Standortübertragung werden jetzt zuverlässiger aktualisiert.</string>
+    <string name="whats_new_162_pairing">Die Kamera-Kopplung unter iOS nutzt jetzt die Zubehörauswahl des Systems. Bereits gekoppelte Kameras müssen möglicherweise erneut autorisiert werden. Die App führt dich durch die Schritte.</string>
 </resources>

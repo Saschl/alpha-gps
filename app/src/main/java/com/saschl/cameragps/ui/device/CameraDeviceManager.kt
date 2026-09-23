@@ -55,6 +55,8 @@ import cameragps.sharednew.generated.resources.pairing_failed_title
 import com.sasch.cameragps.sharednew.database.LogDatabase
 import com.sasch.cameragps.sharednew.database.devices.CameraDevice
 import com.sasch.cameragps.sharednew.database.getDatabaseBuilder
+import com.sasch.cameragps.sharednew.whatsnew.WhatsNewDialog
+import com.sasch.cameragps.sharednew.whatsnew.WhatsNewState
 import com.saschl.cameragps.AppServices
 import com.saschl.cameragps.service.AssociatedDeviceCompat
 import com.saschl.cameragps.service.BluetoothStateBroadcastReceiver
@@ -72,6 +74,8 @@ import timber.log.Timber
 @SuppressLint("MissingPermission")
 @Composable
 fun CameraDeviceManager(
+    whatsNew: WhatsNewState? = null,
+    startupPromptActive: Boolean = false,
     forceShowDonationDialogOnEnter: Boolean = false,
     onForceDonationDialogConsumed: () -> Unit = {},
     onSettingsClick: () -> Unit = {},
@@ -145,16 +149,22 @@ fun CameraDeviceManager(
         }
     }
 
-    LaunchedEffect(lifecycleState) {
-        if (SCREENSHOT_MODE) return@LaunchedEffect
+    LaunchedEffect(lifecycleState, startupPromptActive, whatsNew?.pending) {
+        if (SCREENSHOT_MODE || startupPromptActive || whatsNew?.pending == true) return@LaunchedEffect
         if (associatedDevices.isNotEmpty() && lifecycleState == Lifecycle.State.RESUMED) {
             // Due-date/count checks live in the flavor hook; no-op in foss.
             launchInAppReviewIfDue(context, activity) { isReviewFlowActive = it }
         }
     }
 
-    LaunchedEffect(lifecycleState, associatedDevices, isReviewFlowActive) {
-        if (SCREENSHOT_MODE) return@LaunchedEffect
+    LaunchedEffect(
+        lifecycleState,
+        associatedDevices,
+        isReviewFlowActive,
+        startupPromptActive,
+        whatsNew?.pending
+    ) {
+        if (SCREENSHOT_MODE || startupPromptActive || whatsNew?.pending == true) return@LaunchedEffect
         if (!isReviewFlowActive &&
             associatedDevices.isNotEmpty() &&
             PreferencesManager.donationHintLastShownDaysAgo(
@@ -170,8 +180,14 @@ fun CameraDeviceManager(
         }
     }
 
-    LaunchedEffect(forceShowDonationDialogOnEnter, lifecycleState, showDonationDialog) {
-        if (SCREENSHOT_MODE) return@LaunchedEffect
+    LaunchedEffect(
+        forceShowDonationDialogOnEnter,
+        lifecycleState,
+        showDonationDialog,
+        startupPromptActive,
+        whatsNew?.pending
+    ) {
+        if (SCREENSHOT_MODE || startupPromptActive || whatsNew?.pending == true) return@LaunchedEffect
         if (!forceShowDonationDialogOnEnter || showDonationDialog) return@LaunchedEffect
         if (lifecycleState == Lifecycle.State.RESUMED) {
             showDonationDialog = true
@@ -211,6 +227,14 @@ fun CameraDeviceManager(
             else -> { /* No action needed */
             }
         }
+    }
+
+    if (!SCREENSHOT_MODE && whatsNew?.pending == true && !startupPromptActive &&
+        lifecycleState == Lifecycle.State.RESUMED && !isReviewFlowActive &&
+        !showDonationDialog && selectedDevice == null &&
+        (pairingFailedAddress == null || pairingFailedAddress == dismissedPairingFailedAddress)
+    ) {
+        whatsNew.release?.let { WhatsNewDialog(it, onDismiss = whatsNew::dismiss) }
     }
 
     if (deviceManager == null || adapter == null) {
