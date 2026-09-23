@@ -56,6 +56,9 @@ internal class QueuedBleGattPort(
     override fun hasCharacteristic(identifier: String, characteristicUuid: String): Boolean =
         transport.hasCharacteristic(identifier.uppercase(), characteristicUuid)
 
+    fun supportsWriteWithResponse(identifier: String, characteristicUuid: String): Boolean =
+        transport.supportsWriteWithResponse(identifier.uppercase(), characteristicUuid)
+
     override fun hasRemoteControlCharacteristic(identifier: String): Boolean =
         transport.hasCharacteristic(
             identifier.uppercase(),

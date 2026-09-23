@@ -157,6 +157,15 @@ class AndroidBleTransport(
         return findCharacteristic(connection.gatt, characteristicUuid) != null
     }
 
+    override fun supportsWriteWithResponse(
+        identifier: String,
+        characteristicUuid: String
+    ): Boolean {
+        val connection = connections[identifier.uppercase()] ?: return false
+        val characteristic = findCharacteristic(connection.gatt, characteristicUuid) ?: return false
+        return characteristic.properties and BluetoothGattCharacteristic.PROPERTY_WRITE != 0
+    }
+
     override fun initiateWrite(
         identifier: String,
         characteristicUuid: String,

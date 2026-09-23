@@ -105,6 +105,9 @@ interface BlePeripheralTransport {
     /** Returns `true` if a characteristic with [characteristicUuid] was discovered on the device. */
     fun hasCharacteristic(identifier: String, characteristicUuid: String): Boolean
 
+    /** Whether the discovered characteristic advertises writes with a response. No BLE I/O. */
+    fun supportsWriteWithResponse(identifier: String, characteristicUuid: String): Boolean
+
     /** Clear read/notification bookkeeping after success, timeout or cancellation. No BLE I/O. */
     fun finishRead(identifier: String, characteristicUuid: String) = Unit
 

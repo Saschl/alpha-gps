@@ -20,6 +20,7 @@ import platform.CoreBluetooth.CBATTErrorDomain
 import platform.CoreBluetooth.CBCharacteristic
 import platform.CoreBluetooth.CBCharacteristicPropertyIndicate
 import platform.CoreBluetooth.CBCharacteristicPropertyNotify
+import platform.CoreBluetooth.CBCharacteristicPropertyWrite
 import platform.CoreBluetooth.CBCharacteristicWriteWithResponse
 import platform.CoreBluetooth.CBPeripheral
 import platform.CoreBluetooth.CBPeripheralDelegateProtocol
@@ -128,6 +129,15 @@ internal class IosBleTransport(
     override fun hasCharacteristic(identifier: String, characteristicUuid: String): Boolean =
         handles[identifier.uppercase()]
             ?.characteristicsByUuid?.containsKey(characteristicUuid.lowercase()) == true
+
+    override fun supportsWriteWithResponse(
+        identifier: String,
+        characteristicUuid: String
+    ): Boolean {
+        val characteristic = handles[identifier.uppercase()]
+            ?.characteristicsByUuid?.get(characteristicUuid.lowercase()) ?: return false
+        return characteristic.properties and CBCharacteristicPropertyWrite != 0uL
+    }
 
     override fun finishRead(identifier: String, characteristicUuid: String) {
         handles[identifier.uppercase()]?.pendingReads?.remove(characteristicUuid.lowercase())

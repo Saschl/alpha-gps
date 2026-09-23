@@ -30,11 +30,14 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import cameragps.sharednew.generated.resources.Res
 import cameragps.sharednew.generated.resources.always_on_description
+import cameragps.sharednew.generated.resources.auto_area_adjustment
+import cameragps.sharednew.generated.resources.auto_area_adjustment_hint
+import cameragps.sharednew.generated.resources.auto_time_correction
+import cameragps.sharednew.generated.resources.auto_time_correction_hint
 import cameragps.sharednew.generated.resources.camera_setting_connect
 import cameragps.sharednew.generated.resources.camera_setting_failed
 import cameragps.sharednew.generated.resources.camera_setting_pending
 import cameragps.sharednew.generated.resources.camera_setting_retry
-import cameragps.sharednew.generated.resources.camera_setting_unsupported
 import cameragps.sharednew.generated.resources.cancel_button
 import cameragps.sharednew.generated.resources.dialog_ok
 import cameragps.sharednew.generated.resources.enableConstantly
@@ -53,6 +56,7 @@ import cameragps.sharednew.generated.resources.rename_camera_save
 import cameragps.sharednew.generated.resources.rename_camera_title
 import cameragps.sharednew.generated.resources.setting_info
 import com.sasch.cameragps.sharednew.bluetooth.BleSessionPhase
+import com.sasch.cameragps.sharednew.bluetooth.session.CameraAutoCorrectionSetting
 import com.sasch.cameragps.sharednew.bluetooth.session.CameraSettingState
 import com.sasch.cameragps.sharednew.ui.components.ScrollbarLazyColumn
 import com.sasch.cameragps.sharednew.util.KotlinPlatform
@@ -162,19 +166,21 @@ fun DeviceDetailContent(
             )
         }
 
-        /*for (setting in CameraAutoCorrectionSetting.entries) {
+        for (setting in CameraAutoCorrectionSetting.entries) {
+            val settingState = session?.autoCorrectionSetting(setting) ?: continue
+            if (settingState.supported != true) continue
             item(key = setting.name) {
                 val isTime = setting == CameraAutoCorrectionSetting.Time
                 CameraSettingRow(
                     title = stringResource(if (isTime) Res.string.auto_time_correction else Res.string.auto_area_adjustment),
                     infoText = stringResource(if (isTime) Res.string.auto_time_correction_hint else Res.string.auto_area_adjustment_hint),
-                    state = session?.autoCorrectionSetting(setting) ?: CameraSettingState(),
+                    state = settingState,
                     cameraReady = cameraReady,
                     onCheckedChange = { viewModel.setAutoCorrectionSetting(deviceId, setting, it) },
                     onRetry = { viewModel.refreshCameraSettings(deviceId) },
                 )
             }
-        }*/
+        }
     }
 }
 
@@ -198,7 +204,6 @@ private fun CameraSettingRow(
         val status = when {
             !cameraReady -> Res.string.camera_setting_connect
             state.pending -> Res.string.camera_setting_pending
-            state.supported == false -> Res.string.camera_setting_unsupported
             state.failed -> Res.string.camera_setting_failed
             state.enabled == null -> Res.string.camera_setting_pending
             else -> null

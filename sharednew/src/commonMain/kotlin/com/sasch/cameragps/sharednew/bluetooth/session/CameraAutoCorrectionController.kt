@@ -22,14 +22,14 @@ internal class CameraAutoCorrectionController(
         for (setting in CameraAutoCorrectionSetting.entries) {
             val old = registry.get(id)?.autoCorrectionSetting(setting) ?: continue
             if (old.pending) continue
-            if (!port.hasCharacteristic(id, setting.characteristicUuid)) {
+            if (!port.supportsWriteWithResponse(id, setting.characteristicUuid)) {
                 port.setAutoCorrectionState(id, setting, CameraSettingState(supported = false))
                 continue
             }
             port.setAutoCorrectionState(
                 id,
                 setting,
-                old.copy(supported = true, pending = true, failed = false)
+                old.copy(pending = true, failed = false)
             )
             jobs[id to setting] = scope.launch {
                 val result = port.execute(id, BleOperation.Read(setting.characteristicUuid))
@@ -42,7 +42,9 @@ internal class CameraAutoCorrectionController(
                 } else null
                 port.setAutoCorrectionState(
                     id, setting, CameraSettingState(
-                        supported = true, enabled = value, failed = value == null,
+                        supported = if (value != null) true else old.supported,
+                        enabled = value ?: old.enabled,
+                        failed = value == null,
                     )
                 )
             }
