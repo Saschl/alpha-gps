@@ -337,4 +337,13 @@
     <string name="camera_setting_unsupported">This camera does not support changing this setting from the app.</string>
     <string name="camera_setting_failed">The camera setting could not be confirmed. Refresh to check its current value.</string>
     <string name="camera_setting_retry">Refresh camera settings</string>
+
+    <!-- In-app release notes. -->
+    <string name="whats_new_title">What’s new</string>
+    <string name="whats_new_version">Version %1$s</string>
+    <string name="whats_new_close">Got it</string>
+    <string name="whats_new_open">View release notes</string>
+    <string name="whats_new_162_time">View and change automatic time correction in your camera’s details. This setting controls whether the camera adjusts its date and time using your phone.</string>
+    <string name="whats_new_162_notifications">Location transmission notifications now update more reliably.</string>
+    <string name="whats_new_162_pairing">Updated camera pairing on iOS uses the system accessory picker. Previously paired cameras may need to be authorized again; the app will guide you through it.</string>
 </resources>

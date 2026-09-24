@@ -1,3 +1,6 @@
+import io.sentry.android.gradle.sourcecontext.UploadSourceBundleTask
+import io.sentry.android.gradle.tasks.SentryUploadNativeSymbolsTask
+import io.sentry.android.gradle.tasks.SentryUploadProguardMappingsTask
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -42,22 +45,23 @@ android {
         applicationId = "com.saschl.cameragps"
         minSdk = 26
         targetSdk = 37
-        versionCode = 161
-        versionName = "v1.6.1"
+        versionCode = 162
+        versionName = "v1.6.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     // F-Droid builds from source without the keystore or signing secrets — release
     // must fall back to an unsigned APK instead of failing.
+    val releaseKeystore = file(System.getenv("SIGNING_KEYSTORE_PATH") ?: "keystore.jks")
     val releaseSigningAvailable =
-        file("keystore.jks").exists() && System.getenv("SIGNING_KEY_ALIAS") != null
+        releaseKeystore.exists() && System.getenv("SIGNING_KEY_ALIAS") != null
 
     signingConfigs {
         create("release") {
             keyAlias = System.getenv("SIGNING_KEY_ALIAS")
             keyPassword = System.getenv("SIGNING_KEY_PASSWORD")
-            storeFile = file("keystore.jks")
+            storeFile = releaseKeystore
             storePassword = System.getenv("SIGNING_STORE_PASSWORD")
         }
     }
@@ -173,6 +177,20 @@ dependencies {
 
 }
 
+
+val sentryUploadsEnabled = providers.gradleProperty("disableSentryUpload")
+    .map { !it.toBoolean() }
+    .orElse(true)
+
+// Sentry's --no-upload source task still requires authentication; skip the tasks entirely.
+tasks.configureEach {
+    if (this is SentryUploadProguardMappingsTask ||
+        this is UploadSourceBundleTask ||
+        this is SentryUploadNativeSymbolsTask
+    ) {
+        onlyIf("Sentry uploads are enabled") { sentryUploadsEnabled.get() }
+    }
+}
 
 sentry {
     org.set("sascha-ni")

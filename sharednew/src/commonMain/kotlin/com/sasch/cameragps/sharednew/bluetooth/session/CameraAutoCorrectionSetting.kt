@@ -15,6 +15,7 @@ enum class CameraAutoCorrectionSetting(val characteristicUuid: String) {
 
 /** A camera-owned setting. Null means unknown, never an assumed off value. */
 data class CameraSettingState(
+    /** True after reading a valid value from a characteristic supporting writes with a response. */
     val supported: Boolean? = null,
     val enabled: Boolean? = null,
     val pending: Boolean = false,

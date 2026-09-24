@@ -38,6 +38,8 @@ import cameragps.sharednew.generated.resources.settings
 import com.sasch.cameragps.sharednew.ui.settings.SharedLanguageSettingsCard
 import com.sasch.cameragps.sharednew.ui.settings.SharedSettingsColumn
 import com.sasch.cameragps.sharednew.ui.settings.SharedSettingsScreen
+import com.sasch.cameragps.sharednew.whatsnew.WhatsNewSettingsCard
+import com.sasch.cameragps.sharednew.whatsnew.WhatsNewState
 import com.saschl.cameragps.R
 import com.saschl.cameragps.service.location.LOCATION_PROVIDER_SELECTABLE
 import com.saschl.cameragps.ui.ReviewHintDebugPanel
@@ -50,6 +52,7 @@ import org.jetbrains.compose.resources.stringResource
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
+    whatsNew: WhatsNewState,
     onBackClick: () -> Unit,
 ) {
     val settingsBackStack = rememberNavBackStack(SettingsDestination.Overview)
@@ -70,6 +73,7 @@ fun SettingsScreen(
             SettingsDestination.Overview -> {
                 NavEntry(SettingsDestination.Overview) {
                     SettingsOverviewScreen(
+                        whatsNew = whatsNew,
                         onBackClick = { navigateBack() },
                         onOpenDestination = { nextDestination ->
                             settingsBackStack.add(nextDestination)
@@ -118,6 +122,7 @@ fun SettingsScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SettingsOverviewScreen(
+    whatsNew: WhatsNewState,
     onBackClick: () -> Unit,
     onOpenDestination: (SettingsDestination) -> Unit,
 ) {
@@ -158,6 +163,7 @@ private fun SettingsOverviewScreen(
                 onClick = { onOpenDestination(SettingsDestination.BatteryOptimization) }
             )
             SharedLanguageSettingsCard()
+            WhatsNewSettingsCard(whatsNew)
             if (CrashReporting.AVAILABLE) {
                 SettingsSectionNavigation(
                     title = stringResource(Res.string.sentry_settings),

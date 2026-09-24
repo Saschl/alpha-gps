@@ -243,7 +243,7 @@
     <string name="remote_feature_inactive">Conectado. Desactivado de forma remota desde la cámara o la aplicación</string>
     <string name="enable_remote_control">Habilitar control remoto</string>
     <string name="guide_title">Guía de Solución de Problemas</string>
-    <string name="guide_intro">Reparaciones paso a paso para las incidencias más comunes.</string>
+    <string name="guide_intro">Pulsa aquí para reparaciones paso a paso para las incidencias más comunes.</string>
     <string name="guide_open_button">Abre la guía de solución de problemas</string>
     <string name="guide_location_link_title">Habilita enlazado del lugar y zona horaria (cámaras más antiguas)</string>
     <string name="guide_location_link_step_enable">En la cámara, encienda el enlace de localización:</string>
@@ -283,4 +283,7 @@
     <string name="pairing_failed_hint_phone_pairing">* Retire la cámara de sus ajustes del Bluetooth del teléfono (Ajustes → Bluetooth), después inténtelo otra vez.</string>
     <string name="scan_timeout_creators_app_hint">¿Cámara no encontrada? Asegúrese que esté en modo emparejado. Si fue configurado con la App Sony Creators o Imaging Edge Mobile antes, retire el emparejado anterior desde la cámara y desde sus ajustes de Bluetooth del teléfono; la guía de solución de problemas le camina para esto.</string>
     <string name="remote_control_hint">En algunos modelos de cámara, el control remoto no puede ser utilizado mientras enlace la localización está activada. Si la conexión o la transferencia GPS se detiene, apáguelo.</string>
+    <string name="haptic_feedback">Respuesta háptica</string>
+    <string name="haptic_feedback_description">Vibrar al pulsar el disparador remoto y al tomar la foto</string>
+    <string name="handshake_delay_title">Configuración de el retraso de conexión</string>
 </resources>

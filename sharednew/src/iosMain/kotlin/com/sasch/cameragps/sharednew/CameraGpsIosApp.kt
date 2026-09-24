@@ -87,9 +87,13 @@ import com.sasch.cameragps.sharednew.ui.pairing.PairingPreparationState
 import com.sasch.cameragps.sharednew.ui.pairing.SharedPairingPreparationScreen
 import com.sasch.cameragps.sharednew.ui.settings.SharedSentryConsentDialog
 import com.sasch.cameragps.sharednew.ui.welcome.SharedWelcomeScreen
+import com.sasch.cameragps.sharednew.whatsnew.ReleasePlatform
+import com.sasch.cameragps.sharednew.whatsnew.WhatsNewDialog
+import com.sasch.cameragps.sharednew.whatsnew.rememberWhatsNewState
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
+import platform.Foundation.NSBundle
 import platform.Foundation.NSNotificationCenter
 import platform.Foundation.NSURL
 import platform.UIKit.UIApplication
@@ -136,6 +140,14 @@ internal fun CameraGpsIosApp(
             if (IosAppPreferences.showWelcomeOnLaunch()) IosScreen.Welcome else IosScreen.Devices
         )
     }
+    val whatsNew = rememberWhatsNewState(
+        version = NSBundle.mainBundle.objectForInfoDictionaryKey("CFBundleShortVersionString") as? String
+            ?: "",
+        platform = ReleasePlatform.Ios,
+        previousVersion = IosAppPreferences.lastSeenReleaseVersion(),
+        firstLaunch = IosAppPreferences.showWelcomeOnLaunch(),
+        saveVersion = IosAppPreferences::setLastSeenReleaseVersion,
+    )
     var isAppEnabled by remember { mutableStateOf(IosAppPreferences.isAppEnabled()) }
     var hapticsEnabled by remember { mutableStateOf(IosAppPreferences.isHapticsEnabled()) }
     var sentryEnabled by remember { mutableStateOf(IosAppPreferences.isSentryEnabled()) }
@@ -311,8 +323,14 @@ internal fun CameraGpsIosApp(
         )
     }
 
-    LaunchedEffect(currentScreen, isAppInForeground, devices, showDonationDialog) {
-        if (SCREENSHOT_MODE || showDonationDialog) return@LaunchedEffect
+    LaunchedEffect(
+        currentScreen,
+        isAppInForeground,
+        devices,
+        showDonationDialog,
+        whatsNew.pending
+    ) {
+        if (SCREENSHOT_MODE || showDonationDialog || whatsNew.pending) return@LaunchedEffect
         if (
             currentScreen == IosScreen.Devices &&
             isAppInForeground &&
@@ -330,9 +348,10 @@ internal fun CameraGpsIosApp(
         currentScreen,
         isAppInForeground,
         showDonationDialog,
-        forceDonationDialogThisLaunch
+        forceDonationDialogThisLaunch,
+        whatsNew.pending,
     ) {
-        if (SCREENSHOT_MODE || showDonationDialog || !forceDonationDialogThisLaunch) return@LaunchedEffect
+        if (SCREENSHOT_MODE || showDonationDialog || whatsNew.pending || !forceDonationDialogThisLaunch) return@LaunchedEffect
         if (currentScreen == IosScreen.Devices && isAppInForeground) {
             showDonationDialog = true
             forceDonationDialogThisLaunch = false
@@ -345,7 +364,7 @@ internal fun CameraGpsIosApp(
         hasSavedCamera = devices.any { it.isSaved },
         canPresent = currentScreen == IosScreen.Devices &&
                 lifecycleState == Lifecycle.State.RESUMED && isAppEnabled,
-        hasCompetingPrompt = showDonationDialog || forceDonationDialogThisLaunch ||
+        hasCompetingPrompt = whatsNew.pending || showDonationDialog || forceDonationDialogThisLaunch ||
                 showSentryConsentDialog ||
                 CrashReportPolicy.shouldShowConsentDialog(
                     available = IosCrashReporting.AVAILABLE,
@@ -480,6 +499,7 @@ internal fun CameraGpsIosApp(
 
             IosScreen.Settings -> {
                 IosSettingsScreen(
+                    whatsNew = whatsNew,
                     isAppEnabled = isAppEnabled,
                     transmissionNotificationsEnabled = transmissionNotificationsEnabled,
                     transmissionNotificationsPermissionDenied = transmissionNotificationsPermissionDenied,
@@ -546,6 +566,19 @@ internal fun CameraGpsIosApp(
                 )
             }
         }
+    }
+
+    if (!SCREENSHOT_MODE && whatsNew.pending && currentScreen == IosScreen.Devices &&
+        isAppInForeground && lifecycleState == Lifecycle.State.RESUMED &&
+        !showSentryConsentDialog && !CrashReportPolicy.shouldShowConsentDialog(
+            available = IosCrashReporting.AVAILABLE,
+            consentDialogDismissed = IosAppPreferences.isSentryConsentDialogDismissed(),
+        ) && !showMigrationExplainer && !migrationError && !migrationInProgress &&
+        !isCameraPickerActive && !showDonationDialog && pairingFailedDeviceName == null &&
+        !showRequestPreciseAccuracyPermissionDialog &&
+        !(needsAlwaysLocationAuthorization && !alwaysLocationHintDismissed)
+    ) {
+        whatsNew.release?.let { WhatsNewDialog(it, onDismiss = whatsNew::dismiss) }
     }
 
     if (showSentryConsentDialog) {

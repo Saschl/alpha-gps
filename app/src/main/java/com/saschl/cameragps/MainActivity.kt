@@ -31,6 +31,8 @@ import com.sasch.cameragps.sharednew.database.getDatabaseBuilder
 import com.sasch.cameragps.sharednew.database.logging.LogRepository
 import com.sasch.cameragps.sharednew.ui.logs.SharedLogViewerScreen
 import com.sasch.cameragps.sharednew.ui.theme.CameraGpsTheme
+import com.sasch.cameragps.sharednew.whatsnew.ReleasePlatform
+import com.sasch.cameragps.sharednew.whatsnew.rememberWhatsNewState
 import com.saschl.cameragps.service.LocationSenderService
 import com.saschl.cameragps.ui.EnhancedLocationPermissionBox
 import com.saschl.cameragps.ui.HelpScreen
@@ -76,6 +78,16 @@ class MainActivity : AppCompatActivity() {
             }
         }
         val backStack = rememberNavBackStack(startDestination)
+        val appVersion = remember(context) {
+            context.packageManager.getPackageInfo(context.packageName, 0).versionName.orEmpty()
+        }
+        val whatsNew = rememberWhatsNewState(
+            version = appVersion,
+            platform = ReleasePlatform.Android,
+            previousVersion = PreferencesManager.getLastSeenReleaseVersion(context),
+            firstLaunch = PreferencesManager.isFirstLaunch(context),
+            saveVersion = { PreferencesManager.setLastSeenReleaseVersion(context, it) },
+        )
 
 
         val view = LocalView.current
@@ -177,6 +189,7 @@ class MainActivity : AppCompatActivity() {
                 AppDestination.Settings -> {
                     NavEntry(AppDestination.Settings) {
                         SettingsScreen(
+                            whatsNew = whatsNew,
                             onBackClick = {
                                 popBackStackIfPossible()
                             }
@@ -221,6 +234,8 @@ class MainActivity : AppCompatActivity() {
 
                         EnhancedLocationPermissionBox {
                             CameraDeviceManager(
+                                whatsNew = whatsNew,
+                                startupPromptActive = showSentryDialog,
                                 forceShowDonationDialogOnEnter = forceDonationDialogThisLaunch,
                                 onForceDonationDialogConsumed = {
                                     forceDonationDialogThisLaunch = false

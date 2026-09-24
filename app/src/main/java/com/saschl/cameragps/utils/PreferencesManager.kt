@@ -51,6 +51,13 @@ object PreferencesManager {
         return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     }
 
+    fun getLastSeenReleaseVersion(context: Context): String? =
+        getPreferences(context).getString("last_seen_release_version", null)
+
+    fun setLastSeenReleaseVersion(context: Context, version: String) {
+        getPreferences(context).edit { putString("last_seen_release_version", version) }
+    }
+
     fun isFirstLaunch(context: Context): Boolean {
         return getPreferences(context).getBoolean(KEY_FIRST_LAUNCH, true)
     }

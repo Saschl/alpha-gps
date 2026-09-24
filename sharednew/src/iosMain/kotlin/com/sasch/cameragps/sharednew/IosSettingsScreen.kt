@@ -70,6 +70,8 @@ import com.sasch.cameragps.sharednew.ui.settings.SharedSettingsCard
 import com.sasch.cameragps.sharednew.ui.settings.SharedSettingsColumn
 import com.sasch.cameragps.sharednew.ui.settings.SharedSettingsScreen
 import com.sasch.cameragps.sharednew.ui.settings.SharedToggleRow
+import com.sasch.cameragps.sharednew.whatsnew.WhatsNewSettingsCard
+import com.sasch.cameragps.sharednew.whatsnew.WhatsNewState
 import kotlinx.coroutines.flow.first
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
@@ -99,6 +101,7 @@ internal fun IosSettingsScreen(
     onSentryEnabledChange: (Boolean) -> Unit,
     onChangeLogLevel: (LogLevel) -> Unit,
     onTipJarScrollConsumed: () -> Unit = {},
+    whatsNew: WhatsNewState? = null,
 ) {
     var selectedLogLevel by remember { mutableStateOf(LogLevel.valueOf(IosAppPreferences.getLogLevel())) }
     var debugTapCounter by remember { mutableIntStateOf(0) }
@@ -179,6 +182,7 @@ internal fun IosSettingsScreen(
             )
 
             SharedLanguageSettingsCard()
+            whatsNew?.let { WhatsNewSettingsCard(it) }
 
             IosLogLevelPlaceholderCard(
                 selectedLevel = selectedLogLevel,
