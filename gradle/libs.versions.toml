@@ -19,7 +19,7 @@ material = "1.14.0"
 navigationeventVersion = "1.1.2"
 review = "2.0.2"
 reviewKtx = "2.0.2"
-sentry = "8.54.0"
+sentry = "8.58.0"
 # iOS crash reporting. sentryKotlinMultiplatform is added to the iosMain source
 # set ONLY, so the Android foss (F-Droid) flavor never sees Sentry. The Cocoa
 # version is pinned by the KMP SDK release notes and MUST match the Swift
