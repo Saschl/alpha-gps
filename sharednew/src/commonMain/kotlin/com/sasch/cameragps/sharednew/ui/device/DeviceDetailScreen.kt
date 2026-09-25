@@ -25,6 +25,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
@@ -38,6 +39,7 @@ import cameragps.sharednew.generated.resources.camera_setting_connect
 import cameragps.sharednew.generated.resources.camera_setting_failed
 import cameragps.sharednew.generated.resources.camera_setting_pending
 import cameragps.sharednew.generated.resources.camera_setting_retry
+import cameragps.sharednew.generated.resources.camera_setting_unsupported
 import cameragps.sharednew.generated.resources.cancel_button
 import cameragps.sharednew.generated.resources.dialog_ok
 import cameragps.sharednew.generated.resources.enableConstantly
@@ -167,8 +169,7 @@ fun DeviceDetailContent(
         }
 
         for (setting in CameraAutoCorrectionSetting.entries) {
-            val settingState = session?.autoCorrectionSetting(setting) ?: continue
-            if (settingState.supported != true) continue
+            val settingState = session?.autoCorrectionSetting(setting) ?: CameraSettingState()
             item(key = setting.name) {
                 val isTime = setting == CameraAutoCorrectionSetting.Time
                 CameraSettingRow(
@@ -193,17 +194,21 @@ private fun CameraSettingRow(
     onCheckedChange: (Boolean) -> Unit,
     onRetry: () -> Unit,
 ) {
+    val enabled = cameraReady && state.supported == true && state.enabled != null && !state.pending
     Column {
         DeviceToggleRow(
             title = title,
             checked = state.enabled == true,
-            enabled = cameraReady && state.supported == true && state.enabled != null && !state.pending,
+            enabled = enabled,
             onCheckedChange = onCheckedChange,
             infoText = infoText,
+            titleColor = if (enabled) MaterialTheme.colorScheme.onSurface
+            else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
         )
         val status = when {
             !cameraReady -> Res.string.camera_setting_connect
             state.pending -> Res.string.camera_setting_pending
+            state.supported == false -> Res.string.camera_setting_unsupported
             state.failed -> Res.string.camera_setting_failed
             state.enabled == null -> Res.string.camera_setting_pending
             else -> null
@@ -401,6 +406,7 @@ private fun DeviceToggleRow(
     enabled: Boolean,
     onCheckedChange: (Boolean) -> Unit,
     infoText: String? = null,
+    titleColor: Color = Color.Unspecified,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -410,6 +416,7 @@ private fun DeviceToggleRow(
         Text(
             text = title,
             style = MaterialTheme.typography.bodyLarge,
+            color = titleColor,
             modifier = Modifier.weight(1f),
         )
         if (infoText != null) {
