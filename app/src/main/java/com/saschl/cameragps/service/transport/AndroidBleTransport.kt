@@ -40,6 +40,11 @@ class AndroidBleTransport(
     private val bluetoothManager: BluetoothManager,
 ) : BlePeripheralTransport {
 
+    private companion object {
+        // BluetoothStatusCodes.ERROR_DEVICE_NOT_CONNECTED is hidden from the public SDK.
+        const val ERROR_DEVICE_NOT_CONNECTED = 4
+    }
+
     private val eventChannel = Channel<BleTransportEvent>(Channel.UNLIMITED)
     override val events: Flow<BleTransportEvent> = eventChannel.receiveAsFlow()
 
@@ -140,6 +145,7 @@ class AndroidBleTransport(
     @SuppressLint("MissingPermission")
     fun relaxConnection(mac: String) {
         val connection = connections[mac.uppercase()] ?: return
+        if (!connection.isActive) return
         if (!connection.gatt.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_BALANCED)) {
             Timber.w("Could not relax connection priority for %s", mac)
         }
@@ -172,6 +178,8 @@ class AndroidBleTransport(
         value: ByteArray,
     ): Boolean {
         val connection = connections[identifier.uppercase()] ?: return false
+        // The GATT handle survives disconnects for autoConnect; it is not proof of a live link.
+        if (!connection.isActive) return false
         val characteristic = findCharacteristic(connection.gatt, characteristicUuid) ?: return false
         return writeCharacteristicCompat(connection.gatt, characteristic, value)
     }
@@ -179,6 +187,7 @@ class AndroidBleTransport(
     @SuppressLint("MissingPermission")
     override fun initiateRead(identifier: String, characteristicUuid: String): Boolean {
         val connection = connections[identifier.uppercase()] ?: return false
+        if (!connection.isActive) return false
         val characteristic = findCharacteristic(connection.gatt, characteristicUuid) ?: return false
         // The read forces link re-encryption on a fresh reconnect: a long gap
         // until the read response is the stack encrypting, not the queue
@@ -194,6 +203,7 @@ class AndroidBleTransport(
     ): Boolean {
         val address = identifier.uppercase()
         val connection = connections[address] ?: return false
+        if (!connection.isActive) return false
         val characteristic = findCharacteristic(connection.gatt, characteristicUuid) ?: return false
         val descriptor =
             characteristic.getDescriptor(UUID.fromString(SonyBluetoothConstants.CCCD_UUID))
@@ -213,6 +223,7 @@ class AndroidBleTransport(
     @SuppressLint("MissingPermission")
     override fun initiateDiscoverServices(identifier: String): Boolean {
         val connection = connections[identifier.uppercase()] ?: return false
+        if (!connection.isActive) return false
         return connection.gatt.discoverServices()
     }
 
@@ -252,12 +263,12 @@ class AndroidBleTransport(
             }
 
             if (newState == BluetoothProfile.STATE_DISCONNECTED || status != BluetoothGatt.GATT_SUCCESS) {
+                connections[address]?.isActive = false
                 if (status == 19 || status == 8 || status == 0) {
-                    Timber.i("Device disconnected in callback due to device turned off or out of range: $status")
+                    Timber.i("Device disconnected in callback with status: $status")
                 } else {
                     Timber.e("An error happened: $status")
                 }
-                connections[address]?.isActive = false
                 eventChannel.trySend(BleTransportEvent.Disconnected(address, status))
                 return
             }
@@ -424,6 +435,11 @@ class AndroidBleTransport(
     ): Boolean {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             val result = gatt.writeCharacteristic(characteristic, value, writeType)
+            // The link can drop after the active check but before Android accepts the write.
+            if (result == ERROR_DEVICE_NOT_CONNECTED) {
+                Timber.d("Characteristic write not initiated because device disconnected")
+                return false
+            }
             // 201 == device busy, spams sentry, but I do not know the cause yet
             if (result != 0 && result != 201) {
                 Timber.e("Writing characteristic failed. Result: $result")
@@ -452,6 +468,10 @@ class AndroidBleTransport(
     ): Boolean {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             val result = gatt.writeDescriptor(descriptor, value)
+            if (result == ERROR_DEVICE_NOT_CONNECTED) {
+                Timber.d("Descriptor write not initiated because device disconnected")
+                return false
+            }
             if (result != 0 && result != 201) {
                 Timber.e("Writing descriptor failed. Result: $result")
                 false
