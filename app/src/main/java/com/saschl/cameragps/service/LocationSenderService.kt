@@ -35,7 +35,7 @@ import timber.log.Timber
  */
 class LocationSenderService : LifecycleService() {
 
-    private var isInitialized = true
+    private var hasForegroundSession = false
     private lateinit var eventSoundPlayer: EventSoundPlayer
     private lateinit var bluetoothStateReceiver: BluetoothStateBroadcastReceiver
     private val commandMutex = Mutex()
@@ -66,10 +66,15 @@ class LocationSenderService : LifecycleService() {
     override fun onCreate() {
         super.onCreate()
         isRunning = true
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun startForegroundSession(): Boolean {
         eventSoundPlayer = EventSoundPlayer(this)
         NotificationsHelper.createNotificationChannel(this)
 
-        if (!startAsForegroundService()) return
+        if (!startAsForegroundService()) return false
+        hasForegroundSession = true
 
         lifecycleScope.launch {
             orchestrator.events.collect { event -> handleEvent(event) }
@@ -80,6 +85,7 @@ class LocationSenderService : LifecycleService() {
             transmitting = orchestrator.locationManager.isTransmitting,
             publisher = AndroidTransmissionNotificationPublisher(this),
         ).start()
+        return true
     }
 
     @SuppressLint("MissingPermission")
@@ -93,8 +99,10 @@ class LocationSenderService : LifecycleService() {
         }.onFailure { e ->
             Timber.e(e, "Failed to unregister Bluetooth state receiver")
         }
-        orchestrator.shutdownAll()
-        transport.disconnectAll()
+        if (hasForegroundSession) {
+            orchestrator.shutdownAll()
+            transport.disconnectAll()
+        }
         if (::eventSoundPlayer.isInitialized) eventSoundPlayer.release()
         Timber.i("Destroyed service")
     }
@@ -103,16 +111,28 @@ class LocationSenderService : LifecycleService() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
 
+        val command = commandRouter.route(intent)
+        // startService(shutdownIntent) can create a new instance. There is no
+        // foreground session to shut down in that case, so don't promote it.
+        if (command is ServiceCommand.Shutdown && !hasForegroundSession) {
+            Timber.i("Ignoring shutdown request because no foreground session is running")
+            stopSelf(startId)
+            return START_NOT_STICKY
+        }
+
+        if (!hasForegroundSession && !startForegroundSession()) {
+            return START_NOT_STICKY
+        }
+
         if (!bluetoothManager.adapter.isEnabled) {
             Timber.w("Bluetooth is disabled, will shutdown service")
-            startAsForegroundService()
             requestShutdown(startId)
             return START_NOT_STICKY
         }
 
         lifecycleScope.launch {
             commandMutex.withLock {
-                handleStartCommand(intent, startId)
+                handleStartCommand(command, startId)
                 Timber.i(
                     "processed start command $startId with intent action ${intent?.action} and address ${
                         intent?.getStringExtra(
@@ -160,8 +180,8 @@ class LocationSenderService : LifecycleService() {
     // ==================== Command handling ====================
 
     @SuppressLint("MissingPermission")
-    private suspend fun handleStartCommand(intent: Intent?, startId: Int) {
-        when (val command = commandRouter.route(intent)) {
+    private suspend fun handleStartCommand(command: ServiceCommand, startId: Int) {
+        when (command) {
             is ServiceCommand.Ignore -> {
                 Timber.w(command.reason)
             }
@@ -243,7 +263,6 @@ class LocationSenderService : LifecycleService() {
             )
         } catch (e: SecurityException) {
             Timber.e("Failed to start foreground service due to missing permissions: ${e.message}")
-            isInitialized = false
             stopSelf()
             return false
         }
@@ -252,7 +271,6 @@ class LocationSenderService : LifecycleService() {
 
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     private fun requestShutdown(startId: Int? = null) {
-        isInitialized = false
         if (startId != null) stopSelf(startId) else stopSelf()
     }
 }
