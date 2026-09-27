@@ -86,10 +86,6 @@
         </service>
 
         <receiver
-            android:name=".service.RestartReceiver"
-            android:enabled="true" />
-
-        <receiver
             android:name=".service.RebootReceiver"
             android:enabled="true"
             android:exported="true">
@@ -127,9 +123,9 @@
             android:value="true" />
 
         <!-- enable the performance API by setting a sample-rate, adjust in production env -->
-        <meta-data
+        <!--<meta-data
             android:name="io.sentry.traces.sample-rate"
-            android:value="0.8" />
+            android:value="0.8" />-->
     </application>
 
 </manifest>
