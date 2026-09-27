@@ -23,6 +23,10 @@ class CameraDeviceCompanionService : CompanionDeviceService() {
 
     private fun startLocationSenderService(address: String?) {
         if (PreferencesManager.isAppEnabled(this)) {
+            if (!LocationSenderService.hasLocationPermission(this)) {
+                Timber.e("Location permission missing, not starting LocationSenderService for $address")
+                return
+            }
 
             val serviceIntent = Intent(this, LocationSenderService::class.java)
             serviceIntent.putExtra("address", address?.uppercase(Locale.getDefault()))

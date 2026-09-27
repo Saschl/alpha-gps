@@ -134,6 +134,10 @@ class MainActivity : AppCompatActivity() {
             when (lifecycleState) {
                 Lifecycle.State.RESUMED -> {
                     Timber.d("App started, will resume transmission for configured devices")
+                    if (!LocationSenderService.hasLocationPermission(context)) {
+                        Timber.w("Location permission missing, not resuming transmission")
+                        return@LaunchedEffect
+                    }
                     cameraDeviceDAO.getAllCameraDevices().forEach {
                         val shouldTransmissionStart =
                             it.deviceEnabled

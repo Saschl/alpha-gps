@@ -3,8 +3,10 @@ package com.saschl.cameragps.service
 import android.Manifest
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothAdapter
+import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
 import androidx.annotation.RequiresPermission
 import androidx.core.app.ServiceCompat
@@ -58,6 +60,21 @@ class LocationSenderService : LifecycleService() {
     companion object {
         @Volatile
         var isRunning: Boolean = false
+
+        /**
+         * Check before every startForegroundService(): without a location grant,
+         * startForeground() throws SecurityException, and stopping the service
+         * then crashes with ForegroundServiceDidNotStartInTimeException.
+         */
+        fun hasLocationPermission(context: Context): Boolean =
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.ACCESS_FINE_LOCATION,
+            ) == PackageManager.PERMISSION_GRANTED ||
+                    ContextCompat.checkSelfPermission(
+                        context,
+                        Manifest.permission.ACCESS_COARSE_LOCATION,
+                    ) == PackageManager.PERMISSION_GRANTED
     }
 
     // ==================== Lifecycle ====================
