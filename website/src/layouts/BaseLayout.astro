@@ -7,6 +7,8 @@ interface Props {
   image?: string;
   jsonLd?: Record<string, unknown> | Array<Record<string, unknown>>;
   noindex?: boolean;
+  /** App Store id; shows Safari's Smart App Banner on iPhone. */
+  appleAppId?: string;
   nav?: {
     brand: string;
     homeUrl?: string;
@@ -24,6 +26,7 @@ const {
   image = "/seo/og-image.svg",
   jsonLd,
   noindex = false,
+  appleAppId,
   nav
 } = Astro.props;
 
@@ -42,6 +45,7 @@ const ogImageUrl = new URL(image, Astro.site ?? Astro.url).toString();
     <link rel="canonical" href={canonicalUrl} />
     <meta name="robots" content={noindex ? "noindex, nofollow" : "index, follow"} />
     <meta name="theme-color" content="#0d1117" />
+    {appleAppId && <meta name="apple-itunes-app" content={`app-id=${appleAppId}`} />}
 
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />

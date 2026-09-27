@@ -3,7 +3,8 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 
 const repoUrl = "https://github.com/Saschl/alpha-gps";
 const playStoreUrl = "https://play.google.com/store/apps/details?id=com.saschl.cameragps";
-const appStoreUrl = "https://apps.apple.com/us/app/alpha-gps-geotagging/id6760982303";
+const appStoreId = "6760982303";
+const appStoreUrl = `https://apps.apple.com/us/app/alpha-gps-camera-geotagging/id${appStoreId}`;
 const releasesUrl = "https://github.com/Saschl/alpha-gps/releases";
 const issuesUrl = "https://github.com/Saschl/alpha-gps/issues";
 const weblateUrl = "https://hosted.weblate.org/engage/alpha-gps/";
@@ -19,12 +20,13 @@ const topNav = {
   forksBadgeUrl: "https://img.shields.io/github/forks/Saschl/alpha-gps?style=for-the-badge&logo=github"
 };
 
-const jsonLd = {
+// One entry per store: a combined "Android, iOS" entry with two download URLs
+// can't say which listing belongs to which platform.
+const appJsonLd = {
   "@context": "https://schema.org",
-  "@type": "SoftwareApplication",
+  "@type": "MobileApplication",
   name: "Alpha GPS for Geotagging",
   applicationCategory: "PhotographyApplication",
-  operatingSystem: "Android, iOS",
   description:
     "Open-source Sony camera geotagging app that transmits GPS coordinates from your phone to your camera.",
   url: "https://alphagps.app/",
@@ -34,18 +36,22 @@ const jsonLd = {
     price: "0",
     priceCurrency: "USD"
   },
-  downloadUrl: [playStoreUrl, appStoreUrl],
   publisher: {
     "@type": "Person",
     name: "Saschl"
   }
 };
+const jsonLd = [
+  { ...appJsonLd, operatingSystem: "Android", downloadUrl: playStoreUrl, installUrl: playStoreUrl },
+  { ...appJsonLd, operatingSystem: "iOS", downloadUrl: appStoreUrl, installUrl: appStoreUrl }
+];
 ---
 
 <BaseLayout
   title="Alpha GPS for Geotagging"
   description="Open-source geotagging app that transmits GPS coordinates from your phone to Sony cameras on Android and iOS."
   jsonLd={jsonLd}
+  appleAppId={appStoreId}
   nav={topNav}
 >
   <section class="hero">
