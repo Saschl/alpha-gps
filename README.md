@@ -61,7 +61,9 @@ until the device is connected again (this will happen automatically once the cam
 
 ## Which cameras are supported?
 
-- All cameras that are supported by the Imaging Edge and Creators' app should also be supported. Reports are welcome, as I do not own all cameras ;) A6400 and ZV-E10 are confirmed working.
+- All cameras that are supported by the Imaging Edge and Creators' app should also be supported.
+  Reports are welcome, as I do not own all cameras ;) Confirmed working: A1, A7 V, A6400, A6700 and
+  ZV-E10.
 
 
 <img width="242" height="512" alt="unnamed (1)" src="https://github.com/user-attachments/assets/0ee0e403-70a1-431c-bb68-99ddf03b95c3" />
