@@ -6,12 +6,17 @@ import com.sasch.cameragps.sharednew.bluetooth.SonyBluetoothConstants
 import com.sasch.cameragps.sharednew.ui.device.DeviceDetailServiceActions
 import com.saschl.cameragps.service.LocationSenderService
 import com.saschl.cameragps.service.ServiceCommandRouter
+import timber.log.Timber
 
 class AndroidDeviceDetailServiceActions(
     private val context: Context,
 ) : DeviceDetailServiceActions {
 
     override fun startAlwaysOn(deviceAddress: String) {
+        if (!LocationSenderService.hasLocationPermission(context)) {
+            Timber.w("Location permission missing, not starting always-on for $deviceAddress")
+            return
+        }
         val normalized = deviceAddress.uppercase()
         val intent = Intent(context, LocationSenderService::class.java).apply {
             putExtra("address", normalized)

@@ -1,20 +1,11 @@
 package com.sasch.cameragps.sharednew
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -25,43 +16,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import cameragps.sharednew.generated.resources.Res
-import cameragps.sharednew.generated.resources.always_location
 import cameragps.sharednew.generated.resources.baseline_view_list_24
-import cameragps.sharednew.generated.resources.cancel_button
-import cameragps.sharednew.generated.resources.donation_dialog_confirm
-import cameragps.sharednew.generated.resources.donation_dialog_dismiss
-import cameragps.sharednew.generated.resources.donation_dialog_message
-import cameragps.sharednew.generated.resources.donation_dialog_title
-import cameragps.sharednew.generated.resources.further_help
 import cameragps.sharednew.generated.resources.header_device_list
 import cameragps.sharednew.generated.resources.info_24px
-import cameragps.sharednew.generated.resources.ios_accessory_migration_busy
-import cameragps.sharednew.generated.resources.ios_accessory_migration_dialog_confirm
-import cameragps.sharednew.generated.resources.ios_accessory_migration_dialog_later
-import cameragps.sharednew.generated.resources.ios_accessory_migration_dialog_message
-import cameragps.sharednew.generated.resources.ios_accessory_migration_dialog_title
-import cameragps.sharednew.generated.resources.ios_accessory_migration_error_message
-import cameragps.sharednew.generated.resources.ios_accessory_migration_error_retry
-import cameragps.sharednew.generated.resources.ios_accessory_migration_error_title
-import cameragps.sharednew.generated.resources.ios_accessory_migration_success
-import cameragps.sharednew.generated.resources.ios_troubleshooting_got_it
-import cameragps.sharednew.generated.resources.open_location_settings
-import cameragps.sharednew.generated.resources.open_settings_for_always_location
-import cameragps.sharednew.generated.resources.open_settings_for_precise_location
-import cameragps.sharednew.generated.resources.pairing_failed_device_message
-import cameragps.sharednew.generated.resources.pairing_failed_hint_camera_pairing
-import cameragps.sharednew.generated.resources.pairing_failed_hint_intro
-import cameragps.sharednew.generated.resources.pairing_failed_hint_pairing_mode
-import cameragps.sharednew.generated.resources.pairing_failed_hint_phone_pairing
-import cameragps.sharednew.generated.resources.pairing_failed_title
-import cameragps.sharednew.generated.resources.precise_location
 import cameragps.sharednew.generated.resources.settings
 import cameragps.sharednew.generated.resources.settings_24px
 import cameragps.sharednew.generated.resources.view_logs
@@ -71,7 +32,6 @@ import cameragps.sharednew.generated.resources.welcome_subtitle
 import cameragps.sharednew.generated.resources.welcome_title
 import com.diamondedge.logging.LogLevel
 import com.sasch.cameragps.sharednew.bluetooth.IosBluetoothController
-import com.sasch.cameragps.sharednew.crash.CrashReportPolicy
 import com.sasch.cameragps.sharednew.crash.IosCrashReporting
 import com.sasch.cameragps.sharednew.database.getDatabaseBuilder
 import com.sasch.cameragps.sharednew.database.logging.LogRepository
@@ -85,21 +45,17 @@ import com.sasch.cameragps.sharednew.ui.devicelist.IosDeviceListDataSource
 import com.sasch.cameragps.sharednew.ui.logs.SharedLogViewerScreen
 import com.sasch.cameragps.sharednew.ui.pairing.PairingPreparationState
 import com.sasch.cameragps.sharednew.ui.pairing.SharedPairingPreparationScreen
-import com.sasch.cameragps.sharednew.ui.settings.SharedSentryConsentDialog
 import com.sasch.cameragps.sharednew.ui.welcome.SharedWelcomeScreen
 import com.sasch.cameragps.sharednew.whatsnew.ReleasePlatform
-import com.sasch.cameragps.sharednew.whatsnew.WhatsNewDialog
 import com.sasch.cameragps.sharednew.whatsnew.rememberWhatsNewState
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import platform.Foundation.NSBundle
 import platform.Foundation.NSNotificationCenter
-import platform.Foundation.NSURL
 import platform.UIKit.UIApplication
 import platform.UIKit.UIApplicationDidBecomeActiveNotification
 import platform.UIKit.UIApplicationDidEnterBackgroundNotification
-import platform.UIKit.UIApplicationOpenSettingsURLString
 import platform.UIKit.UIApplicationState.UIApplicationStateActive
 import platform.UIKit.UIViewController
 
@@ -126,11 +82,12 @@ internal fun CameraGpsIosApp(
     val listViewModel: DeviceListViewModel = viewModel {
         DeviceListViewModel(IosDeviceListDataSource)
     }
+
     val realListItems by listViewModel.items.collectAsState()
     val listItems = if (SCREENSHOT_MODE) mockDeviceListItems else realListItems
     val scope = rememberCoroutineScope()
+
     val migrationSnackbarHostState = remember { SnackbarHostState() }
-    val migrationSuccessMessage = stringResource(Res.string.ios_accessory_migration_success)
     val pairingPreparation = remember { PairingPreparationState() }
     val isCameraPickerActive by pairingPreparation.isSearching.collectAsState()
     val lifecycleState by LocalLifecycleOwner.current.lifecycle.currentStateFlow.collectAsState()
@@ -156,21 +113,16 @@ internal fun CameraGpsIosApp(
             UIApplication.sharedApplication.applicationState == UIApplicationStateActive
         )
     }
-    var showDonationDialog by remember { mutableStateOf(false) }
 
-    var showSentryConsentDialog by remember { mutableStateOf(false) }
-    val pairingFailedDeviceName by bluetoothController.pairingFailedDevice.collectAsState()
-    var showRequestPreciseAccuracyPermissionDialog by remember { mutableStateOf(false) }
-    val needsAlwaysLocationAuthorization by
-        bluetoothController.needsAlwaysLocationAuthorization.collectAsState()
-    // Dismissal only lasts until the app comes back to the foreground.
-    var alwaysLocationHintDismissed by remember { mutableStateOf(false) }
     var scrollToTipJarOnSettingsOpen by remember { mutableStateOf(false) }
-    var forceDonationDialogThisLaunch by remember { mutableStateOf(false) }
     var selectedDeviceIdentifier by remember { mutableStateOf<String?>(null) }
     // Where the back button of the troubleshooting guide returns to (it can be opened
     // from the help screen as well as from the device-list dialogs).
     var troubleshootingReturnScreen by remember { mutableStateOf(IosScreen.Devices) }
+
+    // Keep requests queued while another screen or a system picker is open.
+    val canShowDialogs = !SCREENSHOT_MODE && currentScreen == IosScreen.Devices &&
+            isAppInForeground && lifecycleState == Lifecycle.State.RESUMED && !isCameraPickerActive
 
     DisposableEffect(Unit) {
         val center = NSNotificationCenter.defaultCenter
@@ -197,165 +149,31 @@ internal fun CameraGpsIosApp(
 
     LaunchedEffect(Unit) {
         IosLogging.install(logRepository, LogLevel.valueOf(IosAppPreferences.getLogLevel()))
-        forceDonationDialogThisLaunch = IosAppPreferences.consumeForceDonationDialogOnNextAppStart()
     }
 
     LaunchedEffect(lifecycleState) {
-        when (lifecycleState) {
-            Lifecycle.State.RESUMED -> {
-                appLanguagePreference.refresh()
-                alwaysLocationHintDismissed = false
-                if (!bluetoothController.hasPreciseAccuracyAuthorization()) {
-                    showRequestPreciseAccuracyPermissionDialog = true
-                }
-            }
-
-            else -> {}
-        }
-
+        if (lifecycleState == Lifecycle.State.RESUMED) appLanguagePreference.refresh()
     }
     val migrationCandidates by bluetoothController.migrationCandidates.collectAsState()
-    val migrationError by bluetoothController.migrationError.collectAsState()
     val migrationInProgress by bluetoothController.migrationInProgress.collectAsState()
     val transmissionNotificationsEnabled by bluetoothController.transmissionNotificationsEnabled.collectAsState()
     val transmissionNotificationsPermissionDenied by bluetoothController.transmissionNotificationsPermissionDenied.collectAsState()
 
-
-    var showMigrationExplainer by remember { mutableStateOf(false) }
-    LaunchedEffect(migrationCandidates, isAppInForeground) {
-        if (SCREENSHOT_MODE) return@LaunchedEffect
-        if (migrationCandidates.isEmpty()) {
-            showMigrationExplainer = false
-        }
-        if (!isAppInForeground) return@LaunchedEffect
-        // Explain before the system sheet appears, rather than letting it show
-        // up unannounced. Continue then opens the picker as a user action.
-        if (bluetoothController.consumeAutoMigrationPrompt()) {
-            showMigrationExplainer = true
-        }
-    }
-
-    // Asked once, and last in line: migration and the donation prompt also live
-    // on the device list, and stacked alerts are unusable. Updating from a
-    // version without crash reporting is exactly when all three can come due.
-    LaunchedEffect(currentScreen, showMigrationExplainer, migrationError, showDonationDialog) {
-        showSentryConsentDialog = !SCREENSHOT_MODE &&
-                currentScreen == IosScreen.Devices &&
-                !showMigrationExplainer &&
-                !migrationError &&
-                !showDonationDialog &&
-                CrashReportPolicy.shouldShowConsentDialog(
-                    available = IosCrashReporting.AVAILABLE,
-                    consentDialogDismissed = IosAppPreferences.isSentryConsentDialogDismissed(),
-                )
-    }
-
-    // The flow spends seconds releasing the central and retrying a restricted
-    // picker before iOS shows anything, so both dialogs stay up and go busy
-    // rather than vanishing into an apparently dead app.
-    if (migrationError) {
-        AlertDialog(
-            onDismissRequest = { if (!migrationInProgress) bluetoothController.clearMigrationError() },
-            title = { Text(stringResource(Res.string.ios_accessory_migration_error_title)) },
-            text = {
-                if (migrationInProgress) {
-                    MigrationBusyRow()
-                } else {
-                    Text(stringResource(Res.string.ios_accessory_migration_error_message))
-                }
-            },
-            confirmButton = {
-                if (!migrationInProgress) {
-                    TextButton(onClick = {
-                        scope.launch {
-                            if (bluetoothController.presentMigrationPicker()) {
-                                migrationSnackbarHostState.showSnackbar(migrationSuccessMessage)
-                            }
-                        }
-                    }) {
-                        Text(stringResource(Res.string.ios_accessory_migration_error_retry))
-                    }
-                }
-            },
-            dismissButton = {
-                if (!migrationInProgress) {
-                    TextButton(onClick = { bluetoothController.clearMigrationError() }) {
-                        Text(stringResource(Res.string.ios_accessory_migration_dialog_later))
-                    }
-                }
-            },
-        )
-    }
-
-    if (showMigrationExplainer) {
-        AlertDialog(
-            onDismissRequest = { if (!migrationInProgress) showMigrationExplainer = false },
-            title = { Text(stringResource(Res.string.ios_accessory_migration_dialog_title)) },
-            text = {
-                if (migrationInProgress) {
-                    MigrationBusyRow()
-                } else {
-                    Text(stringResource(Res.string.ios_accessory_migration_dialog_message))
-                }
-            },
-            confirmButton = {
-                if (!migrationInProgress) {
-                    TextButton(onClick = {
-                        scope.launch {
-                            val migrated = bluetoothController.presentMigrationPicker()
-                            showMigrationExplainer = false
-                            if (migrated) {
-                                migrationSnackbarHostState.showSnackbar(migrationSuccessMessage)
-                            }
-                        }
-                    }) {
-                        Text(stringResource(Res.string.ios_accessory_migration_dialog_confirm))
-                    }
-                }
-            },
-            dismissButton = {
-                if (!migrationInProgress) {
-                    TextButton(onClick = { showMigrationExplainer = false }) {
-                        Text(stringResource(Res.string.ios_accessory_migration_dialog_later))
-                    }
-                }
-            },
-        )
-    }
-
-    LaunchedEffect(
-        currentScreen,
-        isAppInForeground,
-        devices,
-        showDonationDialog,
-        whatsNew.pending
-    ) {
-        if (SCREENSHOT_MODE || showDonationDialog || whatsNew.pending) return@LaunchedEffect
-        if (
-            currentScreen == IosScreen.Devices &&
-            isAppInForeground &&
-            devices.isNotEmpty() &&
-            IosAppPreferences.donationHintLastShownDaysAgo(initialize = true) >= 30 &&
-            IosAppPreferences.donationHintShownTimes() < 1
-        ) {
-            IosAppPreferences.setDonationHintShownNow()
-            IosAppPreferences.increaseDonationHintShownTimes()
-            showDonationDialog = true
-        }
-    }
-
-    LaunchedEffect(
-        currentScreen,
-        isAppInForeground,
-        showDonationDialog,
-        forceDonationDialogThisLaunch,
-        whatsNew.pending,
-    ) {
-        if (SCREENSHOT_MODE || showDonationDialog || whatsNew.pending || !forceDonationDialogThisLaunch) return@LaunchedEffect
-        if (currentScreen == IosScreen.Devices && isAppInForeground) {
-            showDonationDialog = true
-            forceDonationDialogThisLaunch = false
-        }
+    val dialogs = rememberIosAppDialogState(
+        isDeviceScreen = currentScreen == IosScreen.Devices,
+        isAppInForeground = isAppInForeground,
+        lifecycleState = lifecycleState,
+        devices = devices,
+        whatsNewPending = whatsNew.pending,
+    )
+    val onSentryEnabledChange: (Boolean) -> Unit = { enabled ->
+        sentryEnabled = enabled
+        IosAppPreferences.setSentryEnabled(enabled)
+        // A choice in Settings also answers any pending consent prompt.
+        IosAppPreferences.setSentryConsentDialogDismissed(true)
+        dialogs.dismissSentryConsent()
+        // Enabling takes effect now; disabling requires the restart shown in Settings.
+        if (enabled) IosCrashReporting.start()
     }
 
     IosReviewPromptEffect(
@@ -364,14 +182,7 @@ internal fun CameraGpsIosApp(
         hasSavedCamera = devices.any { it.isSaved },
         canPresent = currentScreen == IosScreen.Devices &&
                 lifecycleState == Lifecycle.State.RESUMED && isAppEnabled,
-        hasCompetingPrompt = whatsNew.pending || showDonationDialog || forceDonationDialogThisLaunch ||
-                showSentryConsentDialog ||
-                CrashReportPolicy.shouldShowConsentDialog(
-                    available = IosCrashReporting.AVAILABLE,
-                    consentDialogDismissed = IosAppPreferences.isSentryConsentDialogDismissed(),
-                ) || showMigrationExplainer || migrationError || migrationInProgress ||
-                pairingFailedDeviceName != null || showRequestPreciseAccuracyPermissionDialog ||
-                (needsAlwaysLocationAuthorization && !alwaysLocationHintDismissed),
+        hasCompetingPrompt = dialogs.hasPendingDialogs || migrationInProgress || isCameraPickerActive,
         requestReview = requestReview,
     )
 
@@ -432,7 +243,7 @@ internal fun CameraGpsIosApp(
                         isAppEnabled = isAppEnabled,
                         hapticsEnabled = hapticsEnabled,
                         migrationCandidates = migrationCandidates,
-                        onMigrate = { showMigrationExplainer = true },
+                        onMigrate = dialogs::requestMigration,
                         onAddCamera = { currentScreen = IosScreen.PairingPreparation },
                         onOpenSettings = { currentScreen = IosScreen.Settings },
                         onOpenHelp = {
@@ -520,18 +331,7 @@ internal fun CameraGpsIosApp(
                         IosAppPreferences.setHapticsEnabled(enabled)
                     },
                     sentryEnabled = sentryEnabled,
-                    onSentryEnabledChange = { enabled ->
-                        sentryEnabled = enabled
-                        IosAppPreferences.setSentryEnabled(enabled)
-                        // Answering here counts as answering the consent question,
-                        // so the dialog does not turn up afterwards and overwrite
-                        // the choice that was just made.
-                        IosAppPreferences.setSentryConsentDialogDismissed(true)
-                        // Enabling takes effect immediately; disabling cannot (the
-                        // SDK has no clean mid-process shutdown), hence the restart
-                        // hint the shared card shows.
-                        if (enabled) IosCrashReporting.start()
-                    },
+                    onSentryEnabledChange = onSentryEnabledChange,
                     onChangeLogLevel = { level ->
                         IosLogging.install(logRepository, level)
                     },
@@ -568,161 +368,21 @@ internal fun CameraGpsIosApp(
         }
     }
 
-    if (!SCREENSHOT_MODE && whatsNew.pending && currentScreen == IosScreen.Devices &&
-        isAppInForeground && lifecycleState == Lifecycle.State.RESUMED &&
-        !showSentryConsentDialog && !CrashReportPolicy.shouldShowConsentDialog(
-            available = IosCrashReporting.AVAILABLE,
-            consentDialogDismissed = IosAppPreferences.isSentryConsentDialogDismissed(),
-        ) && !showMigrationExplainer && !migrationError && !migrationInProgress &&
-        !isCameraPickerActive && !showDonationDialog && pairingFailedDeviceName == null &&
-        !showRequestPreciseAccuracyPermissionDialog &&
-        !(needsAlwaysLocationAuthorization && !alwaysLocationHintDismissed)
-    ) {
-        whatsNew.release?.let { WhatsNewDialog(it, onDismiss = whatsNew::dismiss) }
-    }
-
-    if (showSentryConsentDialog) {
-        SharedSentryConsentDialog(
-            onAllow = {
-                IosAppPreferences.setSentryEnabled(true)
-                IosAppPreferences.setSentryConsentDialogDismissed(true)
-                sentryEnabled = true
-                IosCrashReporting.start()
-                showSentryConsentDialog = false
-            },
-            onDecline = {
-                IosAppPreferences.setSentryEnabled(false)
-                IosAppPreferences.setSentryConsentDialogDismissed(true)
-                sentryEnabled = false
-                showSentryConsentDialog = false
-            },
-            onDontShowAgain = {
-                IosAppPreferences.setSentryEnabled(false)
-                IosAppPreferences.setSentryConsentDialogDismissed(true)
-                sentryEnabled = false
-                showSentryConsentDialog = false
-            },
-        )
-    }
-
-    if (showDonationDialog) {
-        AlertDialog(
-            onDismissRequest = { showDonationDialog = false },
-            title = { Text(text = stringResource(Res.string.donation_dialog_title)) },
-            text = { Text(text = stringResource(Res.string.donation_dialog_message)) },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showDonationDialog = false
-                        scrollToTipJarOnSettingsOpen = true
-                        currentScreen = IosScreen.Settings
-                    }
-                ) {
-                    Text(text = stringResource(Res.string.donation_dialog_confirm))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDonationDialog = false }) {
-                    Text(text = stringResource(Res.string.donation_dialog_dismiss))
-                }
-            }
-        )
-    }
-    pairingFailedDeviceName?.let { failedDeviceName ->
-        AlertDialog(
-            onDismissRequest = { bluetoothController.clearPairingFailedDevice() },
-            title = { Text(text = stringResource(Res.string.pairing_failed_title)) },
-            text = {
-                Column(
-                    modifier = Modifier.verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    Text(
-                        stringResource(
-                            Res.string.pairing_failed_device_message,
-                            failedDeviceName
-                        )
-                    )
-                    Text(stringResource(Res.string.pairing_failed_hint_intro))
-                    Text(stringResource(Res.string.pairing_failed_hint_pairing_mode))
-                    Text(stringResource(Res.string.pairing_failed_hint_camera_pairing))
-                    Text(stringResource(Res.string.pairing_failed_hint_phone_pairing))
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { bluetoothController.clearPairingFailedDevice() }) {
-                    Text(stringResource(Res.string.ios_troubleshooting_got_it))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = {
-                    bluetoothController.clearPairingFailedDevice()
-                    troubleshootingReturnScreen = IosScreen.Devices
-                    currentScreen = IosScreen.Troubleshooting
-                }) {
-                    Text(stringResource(Res.string.further_help))
-                }
-            },
-        )
-    }
-    val showAlwaysLocationHint = needsAlwaysLocationAuthorization && !alwaysLocationHintDismissed
-    if (showAlwaysLocationHint) {
-        AlertDialog(
-            onDismissRequest = { alwaysLocationHintDismissed = true },
-            title = { Text(text = stringResource(Res.string.always_location)) },
-            text = { Text(text = stringResource(Res.string.open_settings_for_always_location)) },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        alwaysLocationHintDismissed = true
-                        openAppSettings()
-                    }
-                ) {
-                    Text(text = stringResource(Res.string.open_location_settings))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { alwaysLocationHintDismissed = true }) {
-                    Text(text = stringResource(Res.string.cancel_button))
-                }
-            }
-        )
-    }
-    // Both hints point at the same settings page — show only one at a time.
-    if (showRequestPreciseAccuracyPermissionDialog && !showAlwaysLocationHint) {
-        AlertDialog(
-            onDismissRequest = { showRequestPreciseAccuracyPermissionDialog = false },
-            title = { Text(text = stringResource(Res.string.precise_location)) },
-            text = { Text(text = stringResource(Res.string.open_settings_for_precise_location)) },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showRequestPreciseAccuracyPermissionDialog = false
-                        openAppSettings()
-                    }
-                ) {
-                    Text(text = stringResource(Res.string.open_location_settings))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showRequestPreciseAccuracyPermissionDialog = false }) {
-                    Text(text = stringResource(Res.string.cancel_button))
-                }
-
-            }
-        )
-    }
-}
-
-/**
- * Opens this app's page in the Settings app (one tap away from its Location
- * settings) — the deepest link Apple's public API allows.
- */
-private fun openAppSettings() {
-    val settingsUrl = NSURL.URLWithString(UIApplicationOpenSettingsURLString) ?: return
-    if (UIApplication.sharedApplication.canOpenURL(settingsUrl)) {
-        UIApplication.sharedApplication.openURL(settingsUrl, emptyMap<Any?, Any>(), {})
-    }
+    IosAppDialogHost(
+        state = dialogs,
+        canShow = canShowDialogs,
+        whatsNew = whatsNew,
+        migrationSnackbarHostState = migrationSnackbarHostState,
+        onSentryEnabledChange = onSentryEnabledChange,
+        onOpenTroubleshooting = {
+            troubleshootingReturnScreen = IosScreen.Devices
+            currentScreen = IosScreen.Troubleshooting
+        },
+        onOpenTipJar = {
+            scrollToTipJarOnSettingsOpen = true
+            currentScreen = IosScreen.Settings
+        },
+    )
 }
 
 /**
@@ -732,16 +392,4 @@ private fun openAppSettings() {
 private fun openNotificationSettings() {
     val settingsUrl = notificationSettingsUrl() ?: return
     UIApplication.sharedApplication.openURL(settingsUrl, emptyMap<Any?, Any>(), {})
-}
-
-/** Busy row shown inside the migration dialogs while an attempt is running. */
-@Composable
-private fun MigrationBusyRow() {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        CircularProgressIndicator(modifier = Modifier.size(20.dp))
-        Text(stringResource(Res.string.ios_accessory_migration_busy))
-    }
 }

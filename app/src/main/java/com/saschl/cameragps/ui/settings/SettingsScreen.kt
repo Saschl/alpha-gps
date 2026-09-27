@@ -174,7 +174,6 @@ private fun SettingsOverviewScreen(
 
             if (debugPanelCounter >= 5) {
                 ReviewHintDebugPanel()
-                DebugRestartReceiverCard()
                 DebugDonationDialogCard()
             }
         }

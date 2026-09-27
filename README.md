@@ -17,8 +17,7 @@ It makes use of the companion device manager APIs of Android which *should* prov
 
 ## How to install?
 
-
-<a href="https://apps.apple.com/us/app/alpha-gps-geotagging/id6760982303"><img width="200" alt="Download_on_the_App_Store_Badge_US" src="Download_on_the_App_Store_Badge_US-UK_RGB_blk_092917.svg"/></a>
+<a href="https://apps.apple.com/us/app/alpha-gps-camera-geotagging/id6760982303"><img width="200" alt="Download_on_the_App_Store_Badge_US" src="Download_on_the_App_Store_Badge_US-UK_RGB_blk_092917.svg"/></a>
 
 <a href="https://play.google.com/store/apps/details?id=com.saschl.cameragps"><img width="200" alt="GetItOnGooglePlay_Badge_Web_color_English" src="https://github.com/user-attachments/assets/775cb6fc-a297-4208-9249-43291c52d045" /></a>
 
@@ -62,7 +61,9 @@ until the device is connected again (this will happen automatically once the cam
 
 ## Which cameras are supported?
 
-- All cameras that are supported by the Imaging Edge and Creators' app should also be supported. Reports are welcome, as I do not own all cameras ;) A6400 and ZV-E10 are confirmed working.
+- All cameras that are supported by the Imaging Edge and Creators' app should also be supported.
+  Reports are welcome, as I do not own all cameras ;) Confirmed working: A1, A7 V, A6400, A6700 and
+  ZV-E10.
 
 
 <img width="242" height="512" alt="unnamed (1)" src="https://github.com/user-attachments/assets/0ee0e403-70a1-431c-bb68-99ddf03b95c3" />

@@ -332,7 +332,7 @@
     <string name="auto_time_correction_hint">Let the camera automatically correct its date and time using information from your phone. This changes the setting on the connected camera.</string>
     <string name="auto_area_adjustment">Automatic area adjustment</string>
     <string name="auto_area_adjustment_hint">Let the camera automatically adjust its area and time zone using information from your phone. This changes the setting on the connected camera.</string>
-    <string name="camera_setting_connect">Connect the camera to view or change this setting.</string>
+    <string name="camera_setting_connect">(Camera must be connected)</string>
     <string name="camera_setting_pending">Waiting for the camera…</string>
     <string name="camera_setting_unsupported">This camera does not support changing this setting from the app.</string>
     <string name="camera_setting_failed">The camera setting could not be confirmed. Refresh to check its current value.</string>

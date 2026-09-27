@@ -101,9 +101,6 @@ internal class IosAccessoryShell(
     private var pendingMigrations: Set<String> = emptySet()
     private var discoveryCustomizer: IosAccessoryDiscoveryCustomizer? = null
 
-    // ---------------------------------------------------------------------------
-    // Lifecycle
-    // ---------------------------------------------------------------------------
 
     /**
      * Activate the session. Must be called before [showDiscoveryPicker],
@@ -121,10 +118,6 @@ internal class IosAccessoryShell(
         activate()
         return withTimeoutOrNull(ACTIVATION_TIMEOUT_MS.milliseconds) { activated.await() } != null
     }
-
-    // ---------------------------------------------------------------------------
-    // Authorized accessories
-    // ---------------------------------------------------------------------------
 
     override fun authorizedIdentifiers(): Set<String> = authorized.keys.toSet()
 
@@ -174,11 +167,7 @@ internal class IosAccessoryShell(
      * Present the migration flow for cameras that were paired before
      * AccessorySetupKit.
      *
-     * The list must contain ONLY migration items. Maintainer testing observed
-     * no visible system picker for a single accessory, but nothing here relies on
-     * that: a presented picker ends the attempt on dismissal like discovery does.
-     * Mixing in a regular display item turns it back into a discovery picker and
-     * migrates nothing unless a brand-new accessory is set up.
+     * The list must contain ONLY migration items
      */
     override suspend fun showMigrationPicker(candidates: List<PendingMigration>): PickerOutcome {
         if (candidates.isEmpty()) return PickerOutcome.Completed
@@ -198,13 +187,6 @@ internal class IosAccessoryShell(
 
     /**
      * Present the system's rename sheet for an authorized accessory.
-     *
-     * There is no way to set the name programmatically — `renameAccessory` takes
-     * no string, it only displays Apple's own view — and its completion handler
-     * reports an error, not the chosen name. The new name arrives afterwards as
-     * an `accessoryChanged` event, which refreshes the authorized snapshot.
-     * Renaming here is what keeps the app and the system accessory record in
-     * step; an app-side text field would silently diverge from Settings.
      */
     suspend fun rename(identifier: String): Boolean {
         val accessory = authorized[identifier.uppercase()] ?: run {

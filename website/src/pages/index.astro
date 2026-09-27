@@ -3,7 +3,8 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 
 const repoUrl = "https://github.com/Saschl/alpha-gps";
 const playStoreUrl = "https://play.google.com/store/apps/details?id=com.saschl.cameragps";
-const appStoreUrl = "https://apps.apple.com/us/app/alpha-gps-geotagging/id6760982303";
+const appStoreId = "6760982303";
+const appStoreUrl = `https://apps.apple.com/us/app/alpha-gps-camera-geotagging/id${appStoreId}`;
 const releasesUrl = "https://github.com/Saschl/alpha-gps/releases";
 const issuesUrl = "https://github.com/Saschl/alpha-gps/issues";
 const weblateUrl = "https://hosted.weblate.org/engage/alpha-gps/";
@@ -19,40 +20,116 @@ const topNav = {
   forksBadgeUrl: "https://img.shields.io/github/forks/Saschl/alpha-gps?style=for-the-badge&logo=github"
 };
 
-const jsonLd = {
+// Confirmed by user reports. Keep in sync with "Which cameras are supported?"
+// in the repo README.
+const confirmedCameras = [
+  { name: "A1", code: "ILCE-1" },
+  { name: "A7 V", code: "ILCE-7M5" },
+  { name: "A6400", code: "ILCE-6400" },
+  { name: "A6700", code: "ILCE-6700" },
+  { name: "ZV-E10", code: "ZV-E10" }
+];
+const confirmedCameraNames = confirmedCameras.map((camera) => camera.name).join(", ");
+
+const minIos = "iOS 18.0";
+const minAndroid = "Android 8.0";
+const features = [
+  "Automatic GPS geotagging over Bluetooth",
+  "Automatic reconnect when the camera is switched on",
+  "Location updates in the background and with the phone locked",
+  "Camera date, time and time zone sync",
+  "Bluetooth remote shutter"
+];
+
+// Rendered on the page and as FAQPage JSON-LD, so both always say the same.
+const faq = [
+  {
+    question: "Does Alpha GPS work on iPhone?",
+    answer: `Yes. Alpha GPS is on the App Store for iPhone (${minIos} or later) and on Google Play for Android (${minAndroid} or later). Both versions are free.`
+  },
+  {
+    question: "Which Sony cameras are supported?",
+    answer: `Any Sony camera that can receive location information from Imaging Edge Mobile or Creators' App should work, because Alpha GPS uses the same Bluetooth location feature. Confirmed by users so far: ${confirmedCameraNames}.`
+  },
+  {
+    question: "Does it keep geotagging in the background?",
+    answer: "Yes. Pair the camera once, and Alpha GPS reconnects automatically whenever you switch the camera on. It keeps sending location while the app is in the background and the phone is locked."
+  },
+  {
+    question: "How is it different from Sony Creators' App or Imaging Edge Mobile?",
+    answer: "Alpha GPS is built around one job: keeping location data on your photos. It reconnects on its own, can sync the camera clock and trigger the shutter, and is open source with no ads and no account. Image transfer is planned as an addition, but reliable geotagging stays the focus. Until then, keep using Sony's app to copy photos to your phone."
+  },
+  {
+    question: "Can I use a camera that was set up with Creators' App before?",
+    answer: "Usually yes. Just pair it in Alpha GPS. If Alpha GPS connects but the camera doesn't receive location, remove the camera from your phone's Bluetooth settings and from the Sony app, then pair it again in Alpha GPS."
+  },
+  {
+    question: "Is Alpha GPS free?",
+    answer: "Yes. It is free, open source and has no ads. Your location is only used to geotag photos on your camera, and crash reports are only sent if you allow them."
+  }
+];
+
+// One entry per store: a combined "Android, iOS" entry with two download URLs
+// can't say which listing belongs to which platform.
+const appJsonLd = {
   "@context": "https://schema.org",
-  "@type": "SoftwareApplication",
+  "@type": "MobileApplication",
   name: "Alpha GPS for Geotagging",
   applicationCategory: "PhotographyApplication",
-  operatingSystem: "Android, iOS",
   description:
     "Open-source Sony camera geotagging app that transmits GPS coordinates from your phone to your camera.",
   url: "https://alphagps.app/",
   sameAs: [repoUrl, releasesUrl],
+  featureList: features,
   offers: {
     "@type": "Offer",
     price: "0",
     priceCurrency: "USD"
   },
-  downloadUrl: [playStoreUrl, appStoreUrl],
   publisher: {
     "@type": "Person",
     name: "Saschl"
   }
 };
+const jsonLd = [
+  {
+    ...appJsonLd,
+    operatingSystem: "Android",
+    softwareRequirements: `${minAndroid} or later`,
+    downloadUrl: playStoreUrl,
+    installUrl: playStoreUrl
+  },
+  {
+    ...appJsonLd,
+    operatingSystem: "iOS",
+    softwareRequirements: `${minIos} or later`,
+    downloadUrl: appStoreUrl,
+    installUrl: appStoreUrl
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: faq.map(({ question, answer }) => ({
+      "@type": "Question",
+      name: question,
+      acceptedAnswer: { "@type": "Answer", text: answer }
+    }))
+  }
+];
 ---
 
 <BaseLayout
   title="Alpha GPS for Geotagging"
   description="Open-source geotagging app that transmits GPS coordinates from your phone to Sony cameras on Android and iOS."
   jsonLd={jsonLd}
+  appleAppId={appStoreId}
   nav={topNav}
 >
   <section class="hero">
     <h1>Alpha GPS for Geotagging</h1>
     <p class="lead">
-      Open-source geotagging for Sony cameras. Pair once and automatically get
-      accurate GPS coordinates for your photos.
+      Open-source geotagging for Sony cameras, on iPhone and Android. Pair once
+      and automatically get accurate GPS coordinates for your photos.
     </p>
     <div class="actions">
       <a class="button" href={playStoreUrl}>Get it on Google Play</a>
@@ -74,7 +151,8 @@ const jsonLd = {
         <h3>Works with supported Sony models</h3>
         <p>
           Built for cameras that work with Imaging Edge or Sony Creators' app,
-          with confirmed reports including A6400, A6700, A7V, ZV-E10 and more.
+          with confirmed reports including {confirmedCameraNames}.
+          <a href="#cameras">See supported cameras</a>.
         </p>
       </article>
       <article class="card">
@@ -85,6 +163,47 @@ const jsonLd = {
         </p>
       </article>
     </div>
+  </section>
+
+  <section>
+    <h2>On iPhone and Android</h2>
+    <p>
+      Alpha GPS runs on iPhones with {minIos} or later and on Android phones
+      with {minAndroid} or later. Features on both:
+    </p>
+    <ul>
+      {features.map((feature) => <li>{feature}</li>)}
+    </ul>
+  </section>
+
+  <section id="cameras">
+    <h2>Supported cameras</h2>
+    <p>
+      Alpha GPS works with Sony Alpha, ILCE and ZV cameras that can receive
+      location information from Imaging Edge Mobile or Creators' App. It uses
+      the same Bluetooth location feature, so if Sony's app can geotag your
+      camera, Alpha GPS should too.
+    </p>
+    <p>Confirmed by users so far:</p>
+    <ul>
+      {confirmedCameras.map((camera) => (
+        <li>{camera.name}{camera.code !== camera.name && <span class="muted"> ({camera.code})</span>}</li>
+      ))}
+    </ul>
+    <p class="muted">
+      Using a camera that isn't listed? <a href={issuesUrl}>Let us know</a> whether
+      it works, so it can be added.
+    </p>
+  </section>
+
+  <section id="faq" class="faq">
+    <h2>Frequently asked questions</h2>
+    {faq.map(({ question, answer }) => (
+      <>
+        <h3>{question}</h3>
+        <p>{answer}</p>
+      </>
+    ))}
   </section>
 
   <section>
