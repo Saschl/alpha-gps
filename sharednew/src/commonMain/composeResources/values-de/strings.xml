@@ -2,7 +2,6 @@
 <resources>
     <string name="add_camera">Kamera hinzufügen</string>
     <string name="device_list_need_help">Brauchst du Hilfe?</string>
-
     <string name="location_linking_disabled_by_camera">Die Kamera hat die Standortverknüpfung deaktiviert. Aktiviere die Standortinformationen-Verknüpfung in den Kameraeinstellungen, um fortzufahren.</string>
     <!-- Hinweise vor der Kamera-Suche im Systemdialog. -->
     <string name="pairing_preparation_title">Kopplungsmodus aktivieren</string>
@@ -21,7 +20,7 @@
     <string name="app_name" translatable="false">AlphaGPS</string>
     <string name="app_name_ui" translatable="false">Alpha GPS</string>
     <string name="header_device_list">Meine Kameras</string>
-    <string name="foreground_service_notification">Übertrage Standortdaten zu %1$d Kameras</string>
+    <string name="foreground_service_notification">Übertrage Standortdaten zu %1$d Kamera(s)</string>
     <string name="scan_for_devices">Drücke Start um deine Kamera zu koppeln</string>
     <string name="permission_gps">Zugriff auf genauen Standort</string>
     <string name="permission_background_gps">Erlaube Zugriff auf Standort wenn die App im Hintergrund ist</string>
@@ -318,7 +317,6 @@
     <string name="camera_setting_unsupported">Diese Kamera unterstützt das Ändern dieser Einstellung über die App nicht.</string>
     <string name="camera_setting_failed">Die Kameraeinstellung konnte nicht bestätigt werden. Aktualisiere die Anzeige, um den aktuellen Wert zu prüfen.</string>
     <string name="camera_setting_retry">Kameraeinstellungen aktualisieren</string>
-
     <!-- In-app release notes. -->
     <string name="whats_new_title">Was ist neu?</string>
     <string name="whats_new_version">Version %1$s</string>
