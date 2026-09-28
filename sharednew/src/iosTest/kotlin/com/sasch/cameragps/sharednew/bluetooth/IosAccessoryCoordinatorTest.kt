@@ -610,7 +610,6 @@ class IosAccessoryCoordinatorTest {
             mac = "1D2B4E1C-0000-4000-8000-0000000000A1",
             deviceName = "ILCE-7M4",
             remoteControlEnabled = true,
-            handshakeDelayMs = 500,
         )
         val SECOND_CAMERA =
             CAMERA.copy(mac = "1D2B4E1C-0000-4000-8000-0000000000B2", deviceEnabled = false)

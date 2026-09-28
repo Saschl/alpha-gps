@@ -43,6 +43,24 @@ class CameraLocationLinkingTest {
     }
 
     @Test
+    fun connectionAndReconnectionStartDiscoveryWithoutAdvancingTime() = runTest {
+        val f = Fixture(backgroundScope)
+        repeat(2) {
+            f.connect("A")
+            runCurrent()
+
+            assertEquals("A" to BleOperation.DiscoverServices, f.transport.operations.first())
+            assertTrue(f.session("A").isLocationReady)
+            assertEquals(0L, testScheduler.currentTime)
+
+            f.transport.connected.remove("A")
+            f.transport.emit(BleTransportEvent.Disconnected("A", null))
+            runCurrent()
+            f.transport.operations.clear()
+        }
+    }
+
+    @Test
     fun subscribesBeforeTheUnchangedHandshakeAndSupportsCamerasWithoutDd01() = runTest {
         for (hasStatus in listOf(true, false)) {
             val f = Fixture(backgroundScope)
@@ -815,7 +833,5 @@ class CameraLocationLinkingTest {
         override suspend fun getAlwaysOnEnabledDeviceCount() = 0
         override suspend fun setRemoteControlEnabled(deviceId: String, enabled: Boolean) = 0
         override suspend fun isRemoteControlEnabled(address: String) = remoteEnabled
-        override suspend fun getHandshakeDelayMs(address: String): Long? = 0
-        override suspend fun setHandshakeDelayMs(deviceId: String, delayMs: Long) = Unit
     }
 }

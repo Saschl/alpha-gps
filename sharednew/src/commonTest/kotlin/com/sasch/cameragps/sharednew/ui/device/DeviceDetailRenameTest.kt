@@ -62,11 +62,9 @@ class DeviceDetailRenameTest {
         override suspend fun isDeviceEnabled(deviceId: String) = true
         override suspend fun isAlwaysOnEnabled(deviceId: String) = false
         override suspend fun isRemoteControlEnabled(deviceId: String) = false
-        override suspend fun getHandshakeDelayMs(deviceId: String) = 0L
         override suspend fun setDeviceEnabled(deviceId: String, enabled: Boolean) = Unit
         override suspend fun setAlwaysOnEnabled(deviceId: String, enabled: Boolean) = Unit
         override suspend fun setRemoteControlEnabled(deviceId: String, enabled: Boolean) = Unit
-        override suspend fun setHandshakeDelayMs(deviceId: String, delayMs: Long) = Unit
         override suspend fun getDeviceName(deviceId: String) = names[deviceId]
 
         override suspend fun setDeviceName(deviceId: String, name: String) {

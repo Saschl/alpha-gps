@@ -285,5 +285,4 @@
     <string name="remote_control_hint">En algunos modelos de cámara, el control remoto no puede ser utilizado mientras enlace la localización está activada. Si la conexión o la transferencia GPS se detiene, apáguelo.</string>
     <string name="haptic_feedback">Respuesta háptica</string>
     <string name="haptic_feedback_description">Vibrar al pulsar el disparador remoto y al tomar la foto</string>
-    <string name="handshake_delay_title">Configuración de el retraso de conexión</string>
 </resources>

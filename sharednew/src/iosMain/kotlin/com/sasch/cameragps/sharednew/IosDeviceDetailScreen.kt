@@ -58,14 +58,6 @@ internal fun IosDeviceDetailScreen(
             deviceDao.setRemoteControlEnabled(deviceId.uppercase(), enabled)
         }
 
-        override suspend fun getHandshakeDelayMs(deviceId: String): Long {
-            return deviceDao.getHandshakeDelayMs(deviceId.uppercase()) ?: 0L
-        }
-
-        override suspend fun setHandshakeDelayMs(deviceId: String, delayMs: Long) {
-            deviceDao.setHandshakeDelayMs(deviceId.uppercase(), delayMs)
-        }
-
         override suspend fun getDeviceName(deviceId: String): String? {
             return deviceDao.getDeviceName(deviceId.uppercase())
         }

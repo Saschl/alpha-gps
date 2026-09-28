@@ -22,11 +22,11 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
@@ -81,13 +81,6 @@ private fun createAndroidDataSource(dao: CameraDeviceDAO): DeviceDetailDataSourc
 
         override suspend fun setRemoteControlEnabled(deviceId: String, enabled: Boolean) {
             dao.setRemoteControlEnabled(deviceId, enabled)
-        }
-
-        override suspend fun getHandshakeDelayMs(deviceId: String) =
-            dao.getHandshakeDelayMs(deviceId) ?: 0L
-
-        override suspend fun setHandshakeDelayMs(deviceId: String, delayMs: Long) {
-            dao.setHandshakeDelayMs(deviceId, delayMs)
         }
 
         override suspend fun getDeviceName(deviceId: String) = dao.getDeviceName(deviceId)

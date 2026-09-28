@@ -12,7 +12,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -30,7 +29,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import cameragps.sharednew.generated.resources.Res
-import cameragps.sharednew.generated.resources.wifi_remote_title
 import cameragps.sharednew.generated.resources.always_on_description
 import cameragps.sharednew.generated.resources.auto_area_adjustment
 import cameragps.sharednew.generated.resources.auto_area_adjustment_hint
@@ -46,10 +44,6 @@ import cameragps.sharednew.generated.resources.dialog_ok
 import cameragps.sharednew.generated.resources.enableConstantly
 import cameragps.sharednew.generated.resources.enable_device
 import cameragps.sharednew.generated.resources.enable_remote_control
-import cameragps.sharednew.generated.resources.handshake_delay_description
-import cameragps.sharednew.generated.resources.handshake_delay_off
-import cameragps.sharednew.generated.resources.handshake_delay_seconds
-import cameragps.sharednew.generated.resources.handshake_delay_title
 import cameragps.sharednew.generated.resources.hint_if_issues_after_switching
 import cameragps.sharednew.generated.resources.info_24px
 import cameragps.sharednew.generated.resources.remote_control_hint
@@ -58,6 +52,7 @@ import cameragps.sharednew.generated.resources.rename_camera_label
 import cameragps.sharednew.generated.resources.rename_camera_save
 import cameragps.sharednew.generated.resources.rename_camera_title
 import cameragps.sharednew.generated.resources.setting_info
+import cameragps.sharednew.generated.resources.wifi_remote_title
 import com.sasch.cameragps.sharednew.bluetooth.BleSessionPhase
 import com.sasch.cameragps.sharednew.bluetooth.session.CameraAutoCorrectionSetting
 import com.sasch.cameragps.sharednew.bluetooth.session.CameraSettingState
@@ -66,7 +61,6 @@ import com.sasch.cameragps.sharednew.util.KotlinPlatform
 import com.sasch.cameragps.sharednew.util.currentPlatform
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
-import kotlin.math.roundToInt
 
 /**
  * Shared device detail content that displays toggle rows for device settings.
@@ -164,17 +158,6 @@ fun DeviceDetailContent(
                     viewModel.setRemoteControlStatus(enabled, deviceId)
                 },
                 infoText = stringResource(Res.string.remote_control_hint),
-            )
-        }
-
-        item {
-            HandshakeDelaySlider(
-                delayMs = state.handshakeDelayMs,
-                enabled = state.isDeviceEnabled && state.buttonEnabled,
-                onDelayChanged = { delayMs ->
-                    viewModel.setHandshakeDelay(delayMs, deviceId)
-                },
-                infoText = stringResource(Res.string.handshake_delay_description),
             )
         }
 
@@ -356,55 +339,6 @@ private fun SettingInfoButton(title: String, text: String) {
                     Text(stringResource(Res.string.dialog_ok))
                 }
             },
-        )
-    }
-}
-
-@Composable
-private fun HandshakeDelaySlider(
-    delayMs: Long,
-    enabled: Boolean,
-    onDelayChanged: (Long) -> Unit,
-    infoText: String? = null,
-) {
-    // Local value while dragging; persisted only on release
-    var sliderSeconds by remember(delayMs) { mutableStateOf((delayMs / 1000L).toFloat()) }
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = stringResource(Res.string.handshake_delay_title),
-                style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier.weight(1f),
-            )
-            if (infoText != null) {
-                SettingInfoButton(
-                    title = stringResource(Res.string.handshake_delay_title),
-                    text = infoText,
-                )
-            }
-            val seconds = sliderSeconds.roundToInt()
-            Text(
-                text = if (seconds == 0) {
-                    stringResource(Res.string.handshake_delay_off)
-                } else {
-                    stringResource(Res.string.handshake_delay_seconds, seconds)
-                },
-                style = MaterialTheme.typography.bodyLarge,
-            )
-        }
-        Slider(
-            value = sliderSeconds,
-            onValueChange = { sliderSeconds = it },
-            onValueChangeFinished = {
-                onDelayChanged(sliderSeconds.roundToInt() * 1000L)
-            },
-            valueRange = 0f..10f,
-            steps = 9,
-            enabled = enabled,
         )
     }
 }

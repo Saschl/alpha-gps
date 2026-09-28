@@ -17,13 +17,14 @@ import kotlinx.coroutines.IO
 
 @Database(
     entities = [LogEntry::class, CameraDevice::class],
-    version = 6,
+    version = 7,
     autoMigrations = [
         AutoMigration(from = 1, to = 2),
         AutoMigration(from = 2, to = 3, LogDatabase.DeleteOldColumn::class),
         AutoMigration(from = 3, to = 4),
         AutoMigration(from = 4, to = 5),
-        AutoMigration(from = 5, to = 6)
+        AutoMigration(from = 5, to = 6),
+        AutoMigration(from = 6, to = 7, LogDatabase.DeleteHandshakeDelay::class)
     ]
 )
 @ConstructedBy(LogDatabaseConstructor::class)
@@ -55,6 +56,9 @@ abstract class LogDatabase : RoomDatabase() {
         columnName = "transmitTimezoneAndDst"
     )
     class DeleteOldColumn : AutoMigrationSpec
+
+    @DeleteColumn(tableName = "camera_devices", columnName = "handshakeDelayMs")
+    class DeleteHandshakeDelay : AutoMigrationSpec
 
     companion object {
         private var instance: LogDatabase? = null

@@ -288,14 +288,6 @@ class CameraSessionOrchestrator(
         _events.tryEmit(OrchestratorEvent.DeviceConnected(id))
 
         scope.launch {
-            val delayMs = runCatching { deviceDao.getHandshakeDelayMs(id) }.getOrNull() ?: 0L
-            if (delayMs > 0) {
-                // Some cameras stall their own boot while servicing BLE traffic;
-                // the per-device delay lets them finish starting first
-                log.i { "Delaying connection setup for $id by ${delayMs}ms" }
-                delay(delayMs.milliseconds)
-                if (registry.get(id) == null || !transport.isConnected(id)) return@launch
-            }
             runDiscoveryAndHandshake(id)
         }
     }
