@@ -1,4 +1,5 @@
 import java.util.Locale
+import java.util.Base64
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
@@ -118,6 +119,23 @@ sentryKmp {
     linker.frameworkPath.set(providers.gradleProperty("sentry.cocoa.frameworkPath"))
 }
 
+val heifTestFixturesDir = layout.buildDirectory.dir("generated/heifTestFixtures/kotlin")
+val generateHeifTestFixtures = tasks.register("generateHeifTestFixtures") {
+    val fixtures = rootProject.layout.projectDirectory.dir("heif/src/androidTest/assets")
+    inputs.files(fixtures.file("red-422-10bit.hif"), fixtures.file("red-422-10bit-rotated.hif"))
+    outputs.dir(heifTestFixturesDir)
+    doLast {
+        val entries = mapOf("original" to "red-422-10bit.hif", "rotated" to "red-422-10bit-rotated.hif")
+            .map { (name, file) ->
+                val encoded = Base64.getEncoder().encodeToString(fixtures.file(file).asFile.readBytes())
+                "    val $name: ByteArray get() = kotlin.io.encoding.Base64.decode(\"$encoded\")"
+            }.joinToString("\n")
+        val output = heifTestFixturesDir.get().file("com/sasch/cameragps/sharednew/remote/wifi/HeifTestFixtures.kt").asFile
+        output.parentFile.mkdirs()
+        output.writeText("package com.sasch.cameragps.sharednew.remote.wifi\n\ninternal object HeifTestFixtures {\n$entries\n}\n")
+    }
+}
+
 kotlin {
 
     // Target declarations - add or remove as needed below. These define
@@ -227,6 +245,10 @@ kotlin {
                 implementation(libs.androidx.core)
                 implementation(libs.androidx.junit)
             }
+        }
+
+        iosTest {
+            kotlin.srcDir(generateHeifTestFixtures)
         }
 
         iosMain {

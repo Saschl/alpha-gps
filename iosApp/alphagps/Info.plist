@@ -22,6 +22,8 @@
         <array>
             <string>Bluetooth</string>
         </array>
+        <key>NSPhotoLibraryAddUsageDescription</key>
+        <string>Save photos downloaded from your Sony camera to your photo library.</string>
         <key>UIBackgroundModes</key>
         <array>
             <string>location</string>
