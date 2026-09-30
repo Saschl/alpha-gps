@@ -2,6 +2,7 @@ package com.sasch.cameragps.sharednew.remote.wifi
 
 import androidx.compose.ui.graphics.ImageBitmap
 import com.sasch.cameragps.sharednew.bluetooth.session.CameraSessionRegistry
+import com.sasch.cameragps.sharednew.ui.remote.WifiRemoteViewModel
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.awaitCancellation
@@ -73,7 +74,9 @@ class WifiRemoteControllerTest : WifiLoggingTest() {
         val result = CompletableDeferred<WifiCaptureStatus>()
         var captures = 0
         var shutdownEnabled = false
+        var previewStarts = 0
         override val images: Flow<ImageBitmap> = flow {
+            previewStarts++
             try { awaitCancellation() } finally { cleanup += "preview" }
         }
         override val lost = losses.receiveAsFlow()
@@ -87,6 +90,89 @@ class WifiRemoteControllerTest : WifiLoggingTest() {
             cleanup += "wifi-off"
             return WifiShutdownStatus.Requested
         }
+    }
+
+    @Test
+    fun backFromGalleryResumesPreviewBeforeLeavingTheRemoteScreen() = runTest {
+        val registry = CameraSessionRegistry()
+        val connection = Connection()
+        val controller = WifiRemoteController(backgroundScope, registry, { _, _ -> connection }, {}, {})
+        val model = WifiRemoteViewModel("camera", controller)
+        var exits = 0
+        val close = { exits++; controller.disconnect("camera") }
+        controller.connect("camera", "127.0.0.1")
+        runCurrent()
+        controller.browsePhotos("camera")
+        runCurrent()
+
+        model.navigateBack(close)
+        runCurrent()
+
+        assertEquals(0, exits)
+        assertEquals("CAMERA", controller.owner.value)
+        assertFalse(registry.get("camera")!!.wifiRemote.photoBrowser.open)
+        assertEquals(2, connection.previewStarts)
+        assertFalse("connection" in connection.cleanup)
+
+        model.navigateBack(close)
+        runCurrent()
+        assertEquals(1, exits)
+        assertTrue("connection" in connection.cleanup)
+    }
+
+    @Test
+    fun backFromFullScreenOnlyShrinksThePreview() = runTest {
+        val registry = CameraSessionRegistry()
+        val connection = Connection()
+        val controller = WifiRemoteController(backgroundScope, registry, { _, _ -> connection }, {}, {})
+        val model = WifiRemoteViewModel("camera", controller)
+        model.expandPreview()
+        assertFalse(model.fullScreenPreview)
+        controller.connect("camera", "127.0.0.1")
+        runCurrent()
+        model.expandPreview()
+        assertFalse(model.fullScreenPreview, "Wait for a live preview before expanding")
+        registry.updateWifiRemote("CAMERA", registry.get("camera")!!.wifiRemote.copy(
+            hasLiveView = true, preview = WifiPreviewStatus.Streaming))
+        model.expandPreview()
+        assertTrue(model.fullScreenPreview)
+
+        model.navigateBack { error("Minimizing must not exit remote shooting") }
+        runCurrent()
+
+        assertFalse(model.fullScreenPreview)
+        assertEquals("CAMERA", controller.owner.value)
+        assertEquals(1, connection.previewStarts)
+        assertTrue(connection.cleanup.isEmpty())
+        controller.closeAndJoin()
+    }
+
+    @Test
+    fun backDuringDownloadDoesNotDisconnectOrLeaveTheGallery() = runTest {
+        val registry = CameraSessionRegistry()
+        val connection = Connection()
+        val controller = WifiRemoteController(backgroundScope, registry, { _, _ -> connection }, {}, {})
+        val model = WifiRemoteViewModel("camera", controller)
+        controller.connect("camera", "127.0.0.1")
+        runCurrent()
+        controller.browsePhotos("camera")
+        runCurrent()
+        controller.downloadPhoto("camera", 42L)
+        runCurrent()
+
+        model.navigateBack { error("Busy gallery must not exit remote shooting") }
+        runCurrent()
+
+        assertTrue(registry.get("camera")!!.wifiRemote.photoBrowser.open)
+        assertTrue(registry.get("camera")!!.wifiRemote.imageTransfer.busy)
+        assertFalse("connection" in connection.cleanup)
+        controller.cancelPhotoOperation("camera")
+        runCurrent()
+        model.navigateBack { error("Gallery must return to live view") }
+        runCurrent()
+        assertFalse(registry.get("camera")!!.wifiRemote.photoBrowser.open)
+        assertEquals(2, connection.previewStarts)
+        controller.closeAndJoin()
     }
 
     @Test

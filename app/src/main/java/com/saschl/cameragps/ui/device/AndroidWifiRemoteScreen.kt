@@ -9,7 +9,6 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.provider.Settings
-import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
@@ -69,7 +68,6 @@ fun AndroidWifiRemoteScreen(identifier: String, onClose: () -> Unit) {
             else if (!granted) controller.imageStoragePermissionDenied(identifier)
         }
     val close = { controller.disconnect(identifier); onClose() }
-    BackHandler(onBack = close)
     LifecycleEventEffect(Lifecycle.Event.ON_STOP) {
         if (activity?.isChangingConfigurations != true) {
             pendingHost = null

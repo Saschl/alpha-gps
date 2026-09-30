@@ -19,6 +19,8 @@
     <string name="wifi_remote_uncertain">Capture could not be confirmed. Check the camera before taking another photo.</string>
     <string name="wifi_remote_rejected">The camera refused the shutter request. Check its shooting mode and card.</string>
     <string name="wifi_remote_preview_waiting">Waiting for preview…</string>
+    <string name="wifi_remote_fullscreen">Full-screen preview</string>
+    <string name="wifi_remote_minimize">Minimize preview</string>
     <string name="wifi_remote_preview_failed">Preview stopped. Disconnect and reconnect to try again.</string>
     <string name="wifi_remote_invalid_ip">Enter the camera’s IPv4 address, for example the address shown in its Wi-Fi connection details.</string>
     <string name="wifi_remote_join_wifi">Join the camera’s Wi-Fi network in phone settings, then return here.</string>

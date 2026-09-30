@@ -2,10 +2,7 @@ package com.sasch.cameragps.sharednew.ui.remote
 
 import com.sasch.cameragps.sharednew.remote.wifi.WifiPhotoDownloadFormat
 
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -27,18 +24,19 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
+import androidx.navigationevent.NavigationEventInfo
+import androidx.navigationevent.compose.NavigationBackHandler
+import androidx.navigationevent.compose.rememberNavigationEventState
 import cameragps.sharednew.generated.resources.Res
 import cameragps.sharednew.generated.resources.wifi_remote_address_failed
 import cameragps.sharednew.generated.resources.wifi_remote_approval
@@ -47,6 +45,7 @@ import cameragps.sharednew.generated.resources.wifi_remote_auto_setup
 import cameragps.sharednew.generated.resources.wifi_remote_bluetooth_required
 import cameragps.sharednew.generated.resources.wifi_remote_browse
 import cameragps.sharednew.generated.resources.wifi_remote_browse_unsupported
+import cameragps.sharednew.generated.resources.wifi_remote_browser_back
 import cameragps.sharednew.generated.resources.wifi_remote_capture
 import cameragps.sharednew.generated.resources.wifi_remote_capture_hint
 import cameragps.sharednew.generated.resources.wifi_remote_captured
@@ -68,8 +67,6 @@ import cameragps.sharednew.generated.resources.wifi_remote_opening
 import cameragps.sharednew.generated.resources.wifi_remote_other_camera
 import cameragps.sharednew.generated.resources.wifi_remote_permission
 import cameragps.sharednew.generated.resources.wifi_remote_preparing
-import cameragps.sharednew.generated.resources.wifi_remote_preview_failed
-import cameragps.sharednew.generated.resources.wifi_remote_preview_waiting
 import cameragps.sharednew.generated.resources.wifi_remote_rejected
 import cameragps.sharednew.generated.resources.wifi_remote_settings
 import cameragps.sharednew.generated.resources.wifi_remote_setup
@@ -82,7 +79,6 @@ import cameragps.sharednew.generated.resources.wifi_remote_title
 import cameragps.sharednew.generated.resources.wifi_remote_uncertain
 import cameragps.sharednew.generated.resources.wifi_remote_wifi_disabled
 import com.sasch.cameragps.sharednew.remote.wifi.WifiCaptureStatus
-import com.sasch.cameragps.sharednew.remote.wifi.WifiPreviewStatus
 import com.sasch.cameragps.sharednew.remote.wifi.WifiRemoteController
 import com.sasch.cameragps.sharednew.remote.wifi.WifiRemoteFailure
 import com.sasch.cameragps.sharednew.remote.wifi.WifiRemotePhase
@@ -92,6 +88,27 @@ import org.jetbrains.compose.resources.stringResource
 
 class WifiRemoteViewModel(val identifier: String, val controller: WifiRemoteController) : ViewModel() {
     var host by mutableStateOf("")
+    var fullScreenPreview by mutableStateOf(false)
+        private set
+
+    fun expandPreview() {
+        val state = controller.sessions.value[identifier.uppercase()]?.wifiRemote ?: return
+        if (state.phase == WifiRemotePhase.Ready && state.hasLiveView && !state.photoBrowser.open) {
+            fullScreenPreview = true
+        }
+    }
+
+    fun collapsePreview() { fullScreenPreview = false }
+
+    fun navigateBack(onClose: () -> Unit) {
+        when {
+            fullScreenPreview -> collapsePreview()
+            controller.sessions.value[identifier.uppercase()]?.wifiRemote?.photoBrowser?.open == true ->
+                controller.leavePhotoBrowser(identifier)
+            else -> onClose()
+        }
+    }
+
     override fun onCleared() { controller.disconnect(identifier) }
 }
 
@@ -121,9 +138,27 @@ fun WifiRemoteScreen(viewModel: WifiRemoteViewModel, onConnect: (String) -> Unit
     val busy = state.phase !in setOf(WifiRemotePhase.Idle, WifiRemotePhase.Failed)
     val otherCamera = owner != null && owner != id
     var manual by remember { mutableStateOf(!controller.supportsAutomaticConnection) }
+    val back = { viewModel.navigateBack(onClose) }
+    NavigationBackHandler(
+        state = rememberNavigationEventState(NavigationEventInfo.None),
+        isBackEnabled = true,
+        onBackCompleted = back,
+    )
+    LaunchedEffect(ready, state.photoBrowser.open) {
+        if (!ready || state.photoBrowser.open) viewModel.collapsePreview()
+    }
+    if (viewModel.fullScreenPreview && ready && !state.photoBrowser.open) {
+        WifiFullScreenPreview(image, state, onCollapse = viewModel::collapsePreview,
+            onCapture = { controller.capture(id) })
+        return
+    }
     Scaffold(topBar = {
         TopAppBar(title = { Text(stringResource(Res.string.wifi_remote_title)) }, navigationIcon = {
-            TextButton(onClick = onClose) { Text(stringResource(Res.string.wifi_remote_close)) }
+            TextButton(onClick = back,
+                enabled = !state.photoBrowser.open || (!state.photoBrowser.loading && !state.imageTransfer.busy)) {
+                Text(stringResource(if (state.photoBrowser.open) Res.string.wifi_remote_browser_back
+                    else Res.string.wifi_remote_close))
+            }
         })
     }) { padding ->
         BoxWithConstraints(Modifier.fillMaxSize().padding(padding).padding(16.dp)) {
@@ -132,15 +167,8 @@ fun WifiRemoteScreen(viewModel: WifiRemoteViewModel, onConnect: (String) -> Unit
                 return@BoxWithConstraints
             }
             val preview: @Composable (Modifier) -> Unit = { modifier ->
-                Box(modifier.background(Color.Black), contentAlignment = Alignment.Center) {
-                    if (owner == id && image != null) {
-                        Image(image!!, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
-                    } else {
-                        Text(stringResource(if (state.preview == WifiPreviewStatus.Failed)
-                            Res.string.wifi_remote_preview_failed else Res.string.wifi_remote_preview_waiting),
-                            color = Color.White, modifier = Modifier.padding(16.dp))
-                    }
-                }
+                WifiLiveViewPreview(image = image.takeIf { owner == id }, state = state,
+                    modifier = modifier, onExpand = viewModel::expandPreview)
             }
             val controls: @Composable (Modifier) -> Unit = { modifier ->
                 Column(modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
