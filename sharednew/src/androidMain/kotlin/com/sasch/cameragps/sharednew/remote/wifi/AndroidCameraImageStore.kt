@@ -12,6 +12,14 @@ import kotlinx.coroutines.withContext
 import java.io.File
 
 internal class AndroidCameraImageStore(private val context: Context) : CameraImageStore {
+    override val canConvertHeif: Boolean get() = true
+
+    override suspend fun createJpeg(info: SonyImageInfo): CameraImageDestination {
+        check(canConvertHeif)
+        require(info.mimeType == "image/heif")
+        return AndroidCameraJpegDestination.create(context.cacheDir, info, this, ::convertAndroidHeifToJpeg)
+    }
+
     // Creation returns ownership even if cancelled during blocking storage I/O.
     override suspend fun create(info: SonyImageInfo): CameraImageDestination =
         withContext(NonCancellable) {

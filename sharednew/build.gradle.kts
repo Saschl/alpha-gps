@@ -218,6 +218,8 @@ kotlin {
                 // dependencies declared in commonMain.
                 // LanguagePreference.android.kt: per-app language below API 33.
                 implementation(libs.androidx.appcompat)
+                implementation(libs.androidx.exifinterface)
+                implementation(project(":heif"))
 
             }
         }
