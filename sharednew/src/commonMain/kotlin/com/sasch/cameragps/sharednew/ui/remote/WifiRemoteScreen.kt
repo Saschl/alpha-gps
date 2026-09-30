@@ -101,6 +101,9 @@ fun WifiRemoteScreen(viewModel: WifiRemoteViewModel, onConnect: (String) -> Unit
                      onWifiSettings: () -> Unit,
                      onClose: () -> Unit,
                      onConnectAutomatically: () -> Unit = {},
+                     wifiSettingsLabel: String = stringResource(Res.string.wifi_remote_settings),
+                     networkPermissionMessage: String = stringResource(Res.string.wifi_remote_permission),
+                     openingSessionMessage: String = stringResource(Res.string.wifi_remote_opening),
                      onDownloadPhoto: (Long, WifiPhotoDownloadFormat) -> Unit = { handle, format ->
                          viewModel.controller.downloadPhoto(
                              viewModel.identifier,
@@ -153,7 +156,7 @@ fun WifiRemoteScreen(viewModel: WifiRemoteViewModel, onConnect: (String) -> Unit
                         }
                         if (manual) {
                             Text(stringResource(Res.string.wifi_remote_setup))
-                            OutlinedButton(onClick = onWifiSettings) { Text(stringResource(Res.string.wifi_remote_settings)) }
+                            OutlinedButton(onClick = onWifiSettings) { Text(wifiSettingsLabel) }
                             OutlinedTextField(value = viewModel.host, onValueChange = { viewModel.host = it.take(64) },
                                 label = { Text(stringResource(Res.string.wifi_remote_ip)) }, singleLine = true,
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
@@ -172,13 +175,13 @@ fun WifiRemoteScreen(viewModel: WifiRemoteViewModel, onConnect: (String) -> Unit
                         }
                         shutdownMessage?.let { Text(stringResource(it)) }
                     }
-                    if (state.phase == WifiRemotePhase.OpeningSession) Text(stringResource(Res.string.wifi_remote_opening))
+                    if (state.phase == WifiRemotePhase.OpeningSession) Text(openingSessionMessage)
                     if (state.phase == WifiRemotePhase.PreparingCamera) Text(stringResource(Res.string.wifi_remote_preparing))
                     if (state.phase == WifiRemotePhase.AwaitingNetworkApproval) Text(stringResource(Res.string.wifi_remote_approval))
                     if (state.phase == WifiRemotePhase.JoiningNetwork) Text(stringResource(Res.string.wifi_remote_joining))
                     if (state.phase == WifiRemotePhase.Closing) Text(stringResource(Res.string.wifi_remote_closing))
                     state.failure?.let { failure ->
-                        Text(stringResource(when (failure) {
+                        Text(if (failure == WifiRemoteFailure.NetworkPermissionDenied) networkPermissionMessage else stringResource(when (failure) {
                             WifiRemoteFailure.InvalidAddress -> Res.string.wifi_remote_invalid_ip
                             WifiRemoteFailure.JoinCameraWifi -> Res.string.wifi_remote_join_wifi
                             WifiRemoteFailure.NetworkPermissionDenied -> Res.string.wifi_remote_permission

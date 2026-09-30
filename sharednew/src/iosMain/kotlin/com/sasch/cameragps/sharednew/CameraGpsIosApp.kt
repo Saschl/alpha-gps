@@ -132,6 +132,7 @@ internal fun CameraGpsIosApp(
             queue = null
         ) { _ ->
             isAppInForeground = false
+            IosBluetoothController.wifiRemote.disconnect()
         }
         val activeObserver = center.addObserverForName(
             name = UIApplicationDidBecomeActiveNotification,

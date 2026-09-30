@@ -22,6 +22,8 @@
         <array>
             <string>Bluetooth</string>
         </array>
+        <key>NSLocalNetworkUsageDescription</key>
+        <string>Connect to your Sony camera for live view and photo downloads.</string>
         <key>NSPhotoLibraryAddUsageDescription</key>
         <string>Save photos downloaded from your Sony camera to your photo library.</string>
         <key>UIBackgroundModes</key>

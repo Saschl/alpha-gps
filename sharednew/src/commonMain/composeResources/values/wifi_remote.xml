@@ -26,15 +26,15 @@
     <string name="wifi_remote_failed">Could not connect. Check the camera IP, keep its smartphone connection active, and close other camera-control apps.</string>
     <string name="wifi_remote_lost">The camera connection was lost. Join its Wi-Fi again and reconnect.</string>
     <string name="wifi_remote_other_camera">Another Wi-Fi remote session is open. Close it before connecting this camera.</string>
-    <string name="wifi_remote_auto_setup">Keep the camera connected by Bluetooth and close Creators’ App. Alpha GPS will start camera Wi-Fi and ask Android to connect.</string>
+    <string name="wifi_remote_auto_setup">Keep the camera connected by Bluetooth and close Creators’ App. Alpha GPS will start camera Wi-Fi and ask your phone to connect.</string>
     <string name="wifi_remote_auto_connect">Connect automatically</string>
     <string name="wifi_remote_manual">Manual connection</string>
     <string name="wifi_remote_preparing">Starting camera Wi-Fi…</string>
-    <string name="wifi_remote_approval">Approve the camera Wi-Fi connection in Android’s dialog…</string>
+    <string name="wifi_remote_approval">Approve the camera Wi-Fi connection in the system dialog…</string>
     <string name="wifi_remote_joining">Joining camera Wi-Fi…</string>
     <string name="wifi_remote_bluetooth_required">Wait for the camera’s Bluetooth connection to finish, then try again. You can also use manual connection.</string>
     <string name="wifi_remote_setup_failed">Could not start camera Wi-Fi or read its connection details. Keep the camera awake, close Creators’ App, and retry or use manual connection.</string>
-    <string name="wifi_remote_join_failed">Android could not join camera Wi-Fi or the request was declined. Retry and approve the connection, or use manual connection.</string>
+    <string name="wifi_remote_join_failed">Your phone could not join camera Wi-Fi or the request was declined. Retry and approve the connection, or use manual connection.</string>
     <string name="wifi_remote_address_failed">Connected to Wi-Fi but could not find the camera address. Use manual connection with the camera IP.</string>
     <string name="wifi_remote_wifi_disabled">Turn on phone Wi-Fi, then try again.</string>
     <string name="wifi_remote_location_required">This Android version requires phone Location to be turned on for automatic Wi-Fi joining.</string>
@@ -45,9 +45,9 @@
     <string name="wifi_remote_photo_captured">Captured: %1$s</string>
     <string name="wifi_remote_photo_format">Choose a format to download</string>
     <string name="wifi_remote_download_format">Download %1$s</string>
-    <string name="wifi_remote_photo_download_hint">Originals are saved to Pictures/Alpha GPS and stay on the camera. Keep this screen open until the download finishes.</string>
+    <string name="wifi_remote_photo_download_hint">Originals are saved to your photo library and stay on the camera. Keep this screen open until the download finishes.</string>
     <string name="wifi_remote_photo_close">Close</string>
-    <string name="wifi_remote_browser_hint">Download original JPEG, RAW and HEIF files to Pictures/Alpha GPS. Browses card slot 1 on newer cameras. Files stay on the camera. Keep this screen open until the download finishes.</string>
+    <string name="wifi_remote_browser_hint">Download original JPEG, RAW and HEIF files to your photo library. Browses card slot 1 on newer cameras. Files stay on the camera. Keep this screen open until the download finishes.</string>
     <string name="wifi_remote_browser_loading">Reading camera photos…</string>
     <string name="wifi_remote_browser_failed">Could not read camera photos or change transfer mode. Retry, or disconnect and reconnect if the camera is busy.</string>
     <string name="wifi_remote_browser_empty">No supported photos on this page.</string>
@@ -61,7 +61,7 @@
     <string name="wifi_remote_download_saved">Saved</string>
     <string name="wifi_remote_download_too_large">Image exceeds the 512 MB download limit.</string>
     <string name="wifi_remote_transfer_progress">Saving %1$s…</string>
-    <string name="wifi_remote_transfer_saved">Saved %1$s to Pictures/Alpha GPS.</string>
+    <string name="wifi_remote_transfer_saved">Saved %1$s to your photo library.</string>
     <string name="wifi_remote_transfer_failed">Download failed. Any incomplete file was removed. You can retry the download.</string>
     <string name="wifi_remote_transfer_cancelled">Download cancelled. Any incomplete file was removed.</string>
     <string name="wifi_remote_transfer_cancel">Cancel</string>
@@ -71,4 +71,7 @@
     <string name="wifi_remote_jpeg_copy_hint">Downloads the HEIF and saves a full-resolution JPEG copy on this phone. HDR and some metadata may not be preserved.</string>
     <string name="wifi_remote_converting_jpeg">Converting to JPEG…</string>
     <string name="wifi_remote_conversion_failed">Could not create a JPEG copy. This phone may not support the HEIF format or have enough memory or storage. You can download the original HEIF instead.</string>
+    <string name="wifi_remote_ios_settings">App permissions</string>
+    <string name="wifi_remote_ios_permission">Allow Local Network access in the app’s Settings, then reconnect.</string>
+    <string name="wifi_remote_ios_opening">Connecting to camera… If iOS asks, allow Local Network access.</string>
 </resources>
