@@ -1,67 +1,64 @@
 package com.sasch.cameragps.sharednew.remote.wifi
 
 import android.net.Network
-import java.io.EOFException
 import java.net.InetSocketAddress
 import java.net.Socket
 import java.net.SocketTimeoutException
+import javax.net.SocketFactory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 
-/** A socket created by the approved camera Network; the process routing is untouched. */
 internal class AndroidPtpIpConnectionFactory(
     private val network: Network,
     private val host: String,
     private val port: Int = 15740,
 ) : PtpIpConnectionFactory {
-    init {
-        require(port in 1..65535)
-    }
+    init { require(port in 1..65535) }
 
-    override suspend fun connect(): PtpIpPacketConnection {
-        var socket: Socket? = null
-        try {
-            return withContext(Dispatchers.IO) {
-                val opened = network.socketFactory.createSocket()
-                socket = opened
-                opened.connect(InetSocketAddress(host, port), 10_000)
-                opened.soTimeout = 1_000
-                AndroidPtpIpConnection(opened)
-            }
-        } catch (failure: Throwable) {
-            withContext(NonCancellable + Dispatchers.IO) { socket?.close() }
-            throw failure
-        }
-    }
+    override suspend fun connect(): PtpIpPacketConnection =
+        CameraPtpIpConnection(AndroidCameraByteConnection.open(network.socketFactory, host, port))
 }
 
-internal class AndroidPtpIpConnection(private val socket: Socket) : PtpIpPacketConnection {
-    private val decoder = PtpIpPacketCodec()
-    private val pending = ArrayDeque<PtpIpPacket>()
-    private val readBuffer = ByteArray(16 * 1024)
+internal class AndroidPtpIpConnection(socket: Socket) : PtpIpPacketConnection by
+    CameraPtpIpConnection(AndroidCameraByteConnection(socket))
 
-    override suspend fun send(packet: PtpIpPacket) = withContext(Dispatchers.IO) {
-        socket.getOutputStream().write(PtpIpPacketCodec.encode(packet))
+internal class AndroidCameraByteConnection(private val socket: Socket) : CameraByteConnection {
+    override suspend fun write(bytes: ByteArray) = withContext(Dispatchers.IO) {
+        socket.getOutputStream().write(bytes)
     }
 
-    override suspend fun receive(): PtpIpPacket = withContext(Dispatchers.IO) {
-        while (pending.isEmpty()) {
+    override suspend fun read(): ByteArray? = withContext(Dispatchers.IO) {
+        val buffer = ByteArray(16 * 1024)
+        while (true) {
             currentCoroutineContext().ensureActive()
-            val bytes = try {
-                socket.getInputStream().read(readBuffer)
-            } catch (_: SocketTimeoutException) {
-                continue
-            }
-            if (bytes < 0) throw EOFException("PTP/IP connection closed")
-            if (bytes > 0) pending.addAll(decoder.feed(readBuffer.copyOf(bytes)))
+            val count = try { socket.getInputStream().read(buffer) }
+            catch (_: SocketTimeoutException) { continue }
+            return@withContext if (count < 0) null else buffer.copyOf(count)
         }
-        pending.removeFirst()
+        @Suppress("UNREACHABLE_CODE")
+        null
     }
 
-    override suspend fun close() = withContext(Dispatchers.IO) {
-        socket.close()
+    override suspend fun close() = withContext(NonCancellable + Dispatchers.IO) { socket.close() }
+
+    companion object {
+        suspend fun open(sockets: SocketFactory, host: String, port: Int): AndroidCameraByteConnection {
+            var socket: Socket? = null
+            try {
+                return withContext(Dispatchers.IO) {
+                    val opened = sockets.createSocket()
+                    socket = opened
+                    opened.connect(InetSocketAddress(host, port), 10_000)
+                    opened.soTimeout = 1_000
+                    AndroidCameraByteConnection(opened)
+                }
+            } catch (failure: Throwable) {
+                withContext(NonCancellable + Dispatchers.IO) { socket?.close() }
+                throw failure
+            }
+        }
     }
 }

@@ -7,7 +7,7 @@ import kotlin.test.*
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 
-class AndroidCameraHttpTransportTest {
+class AndroidCameraHttpTransportTest : WifiLoggingTest() {
     private suspend fun response(bytes: ByteArray, test: suspend (SonyLiveViewByteStream) -> Unit) {
         ServerSocket(0).use { server ->
             val worker = thread {
@@ -49,7 +49,7 @@ class AndroidCameraHttpTransportTest {
             assertEquals("abc", bytes.toByteArray().decodeToString())
         }
         response("HTTP/1.1 200 OK\r\nContent-Length: 99\r\n\r\nabc".toByteArray()) { stream ->
-            assertFailsWith<java.io.EOFException> { while (stream.read() != null) { } }
+            assertFailsWith<IllegalStateException> { while (stream.read() != null) { } }
         }
     }
 

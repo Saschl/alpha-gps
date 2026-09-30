@@ -8,19 +8,9 @@ import android.net.NetworkRequest
 import android.os.Build
 import com.sasch.cameragps.sharednew.bluetooth.session.CameraSessionOrchestrator
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.NonCancellable
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.emitAll
-import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.receiveAsFlow
-import kotlinx.coroutines.withContext
 import java.net.InetAddress
-import kotlin.random.Random
 
 fun createAndroidWifiRemoteController(context: Context, scope: CoroutineScope,
                                       orchestrator: CameraSessionOrchestrator): WifiRemoteController {
@@ -75,69 +65,16 @@ private class AndroidWifiRemoteConnector(context: Context) : WifiRemoteConnector
         }
         connectivity.registerNetworkCallback(NetworkRequest.Builder()
             .addTransportType(NetworkCapabilities.TRANSPORT_WIFI).build(), callback)
-        val protocolScope = CoroutineScope(scope.coroutineContext + SupervisorJob())
-        var session: PtpIpOpenedSession? = null
-        try {
-            if (connectivity.getNetworkCapabilities(network) == null) {
-                throw WifiRemoteConnectException(WifiRemoteFailure.NetworkLost)
-            }
-            val opened = PtpIpSessionOpener(AndroidPtpIpConnectionFactory(network, host), protocolScope)
-                .open(Random.nextBytes(16), "Alpha GPS")
-                ?: throw WifiRemoteConnectException(WifiRemoteFailure.CameraUnavailable)
-            session = opened
-            val ready = when (val init = opened.initializeSony()) {
-                is SonyPtpInitializationResult.Ready -> init
-                is SonyPtpInitializationResult.Rejected -> throw WifiRemoteConnectException(WifiRemoteFailure.CameraRefused)
-                else -> throw WifiRemoteConnectException(WifiRemoteFailure.ProtocolError)
-            }
-            val transfer = SonyImageTransfer(
-                opened.commands, ready, opened.events,
-                ::decodeAndroidCameraThumbnail, imageStore
-            )
-            val shutter = SonyPtpShutter(opened.commands, ready, opened.events)
-            val preview = SonyLiveViewStream(opened.commands, ready, opened.events,
-                AndroidCameraHttpTransport(network.socketFactory))
-            return object : WifiRemoteConnection {
-                override val cameraName = opened.camera.cameraName
-                override val canTransferImages = transfer.supported
-                override val canConvertHeif = imageStore.canConvertHeif
-                override suspend fun openPhotoBrowser() = transfer.openBrowser()
-                override suspend fun photoPage(offset: Int) = transfer.page(offset)
-                override suspend fun photoThumbnail(handle: Long) = transfer.thumbnail(handle)
-                override suspend fun downloadPhoto(
-                    handle: Long,
-                    format: WifiPhotoDownloadFormat,
-                    onProgress: (WifiImageTransferState) -> Unit
-                ) =
-                    transfer.download(handle, format, onProgress)
-
-                override suspend fun closePhotoBrowser() = transfer.closeBrowser()
-                override val canCapture = ready.deviceInfo.supports(SonyPtpOperation.SDIO_CONTROL_DEVICE) &&
-                    ready.extendedInfo.supportsControl(SonyPtpControlCode.HALF_PRESS) &&
-                    ready.extendedInfo.supportsControl(SonyPtpControlCode.FULL_PRESS)
-                override val images = flow {
-                    val dd = ready.deviceDescription ?: error("Camera has no preview endpoint")
-                    emitAll(preview.images(SonyLiveViewEndpoint.fromDeviceDescription(dd, host)))
-                }
-                override val lost = merge(losses.receiveAsFlow(), opened.events.isClosed.filter { it }.map { Unit })
-                override suspend fun capture() = when (shutter.captureStill()) {
-                    SonyPtpCaptureResult.CaptureEventObserved -> WifiCaptureStatus.Captured
-                    is SonyPtpCaptureResult.Rejected, SonyPtpCaptureResult.Unsupported -> WifiCaptureStatus.Rejected
-                    else -> WifiCaptureStatus.Uncertain
-                }
-                override suspend fun turnOffWifi() =
-                    SonyWifiShutdown(opened.commands, ready).request()
-                override suspend fun close() {
-                    try { opened.close() }
-                    finally { protocolScope.cancel(); connectivity.unregisterNetworkCallback(callback); losses.close() }
-                }
-            }
-        } catch (failure: Throwable) {
-            withContext(NonCancellable) {
-                try { session?.close() }
-                finally { protocolScope.cancel(); connectivity.unregisterNetworkCallback(callback); losses.close() }
-            }
-            throw failure
+        if (connectivity.getLinkProperties(network) == null) {
+            connectivity.unregisterNetworkCallback(callback)
+            losses.close()
+            throw WifiRemoteConnectException(WifiRemoteFailure.NetworkLost)
         }
+        return openSonyWifiSession(
+            AndroidPtpIpConnectionFactory(network, host), scope, host,
+            AndroidCameraHttpTransport(network.socketFactory), imageStore,
+            ::decodeAndroidCameraThumbnail, losses.receiveAsFlow(),
+            releaseNetwork = { connectivity.unregisterNetworkCallback(callback); losses.close() },
+        )
     }
 }
