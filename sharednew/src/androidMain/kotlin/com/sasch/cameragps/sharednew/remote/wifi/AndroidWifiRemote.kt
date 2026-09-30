@@ -100,14 +100,16 @@ private class AndroidWifiRemoteConnector(context: Context) : WifiRemoteConnector
             return object : WifiRemoteConnection {
                 override val cameraName = opened.camera.cameraName
                 override val canTransferImages = transfer.supported
+                override val canConvertHeif = imageStore.canConvertHeif
                 override suspend fun openPhotoBrowser() = transfer.openBrowser()
                 override suspend fun photoPage(offset: Int) = transfer.page(offset)
                 override suspend fun photoThumbnail(handle: Long) = transfer.thumbnail(handle)
                 override suspend fun downloadPhoto(
                     handle: Long,
+                    format: WifiPhotoDownloadFormat,
                     onProgress: (WifiImageTransferState) -> Unit
                 ) =
-                    transfer.download(handle, onProgress)
+                    transfer.download(handle, format, onProgress)
 
                 override suspend fun closePhotoBrowser() = transfer.closeBrowser()
                 override val canCapture = ready.deviceInfo.supports(SonyPtpOperation.SDIO_CONTROL_DEVICE) &&

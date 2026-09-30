@@ -23,11 +23,13 @@ class WifiRemoteControllerTest {
         override val cameraName = "Test camera"
         override val canCapture = true
         override val canTransferImages = true
+        override var canConvertHeif = true
         var browsing = false
         var downloads = 0
         var photos = listOf(WifiCameraPhoto(42L, "DSC.JPG", 100L, "image/jpeg", ""))
         val thumbnailRequests = mutableListOf<Long>()
         val downloadedHandles = mutableListOf<Long>()
+        val downloadedFormats = mutableListOf<WifiPhotoDownloadFormat>()
         var failBrowserExit = false
         val downloadResult = CompletableDeferred<WifiImageTransferState>()
         override suspend fun openPhotoBrowser(): CameraPhotoPage {
@@ -47,10 +49,12 @@ class WifiRemoteControllerTest {
 
         override suspend fun downloadPhoto(
             handle: Long,
+            format: WifiPhotoDownloadFormat,
             onProgress: (WifiImageTransferState) -> Unit
         ): WifiImageTransferState {
             downloads++
             downloadedHandles += handle
+            downloadedFormats += format
             return try {
                 downloadResult.await().copy(filename = photos.first { it.handle == handle }.filename)
             } finally {
@@ -244,7 +248,7 @@ class WifiRemoteControllerTest {
         controller.downloadPhoto("camera", 42L)
         runCurrent()
         assertEquals(1, connection.downloads)
-        assertEquals(setOf(42L), registry.get("camera")?.wifiRemote?.photoBrowser?.savedHandles)
+        assertEquals(setOf(WifiPhotoDownload(42)), registry.get("camera")?.wifiRemote?.photoBrowser?.savedDownloads)
         controller.leavePhotoBrowser("camera")
         runCurrent()
         assertFalse(registry.get("camera")!!.wifiRemote.photoBrowser.open)
@@ -276,11 +280,51 @@ class WifiRemoteControllerTest {
         connection.downloadResult.complete(WifiImageTransferState(WifiImageTransferStatus.Saved))
         controller.downloadPhoto("camera", 42)
         runCurrent()
-        assertEquals(setOf(42L), registry.get("camera")!!.wifiRemote.photoBrowser.savedHandles)
+        assertEquals(setOf(WifiPhotoDownload(42)), registry.get("camera")!!.wifiRemote.photoBrowser.savedDownloads)
         controller.downloadPhoto("camera", 43)
         runCurrent()
         assertEquals(listOf(42L, 43L), connection.downloadedHandles)
-        assertEquals(setOf(42L, 43L), registry.get("camera")!!.wifiRemote.photoBrowser.savedHandles)
+        assertEquals(setOf(WifiPhotoDownload(42), WifiPhotoDownload(43)), registry.get("camera")!!.wifiRemote.photoBrowser.savedDownloads)
+        controller.closeAndJoin()
+    }
+
+    @Test
+    fun jpegCopiesAndOriginalsHaveIndependentSavedStateAndRejectUnsupportedConversions() = runTest {
+        val registry = CameraSessionRegistry()
+        val connection = Connection().apply {
+            photos = listOf(
+                WifiCameraPhoto(42, "ONE.HIF", 100, "image/heif", ""),
+                WifiCameraPhoto(43, "TWO.JPG", 100, "image/jpeg", ""),
+            )
+            downloadResult.complete(WifiImageTransferState(WifiImageTransferStatus.Saved))
+        }
+        val controller = WifiRemoteController(backgroundScope, registry, { _, _ -> connection }, {}, {})
+        controller.connect("camera", "127.0.0.1")
+        runCurrent()
+        controller.browsePhotos("camera")
+        runCurrent()
+        controller.downloadPhoto("camera", 43, WifiPhotoDownloadFormat.Jpeg)
+        assertEquals(0, connection.downloads)
+        controller.downloadPhoto("camera", 42, WifiPhotoDownloadFormat.Jpeg)
+        runCurrent()
+        controller.downloadPhoto("camera", 42, WifiPhotoDownloadFormat.Jpeg)
+        runCurrent()
+        assertEquals(1, connection.downloads)
+        controller.downloadPhoto("camera", 42)
+        runCurrent()
+        assertEquals(listOf(WifiPhotoDownloadFormat.Jpeg, WifiPhotoDownloadFormat.Original), connection.downloadedFormats)
+        assertEquals(setOf(WifiPhotoDownload(42), WifiPhotoDownload(42, WifiPhotoDownloadFormat.Jpeg)),
+            registry.get("camera")!!.wifiRemote.photoBrowser.savedDownloads)
+        controller.closeAndJoin()
+
+        connection.canConvertHeif = false
+        controller.connect("camera", "127.0.0.1")
+        runCurrent()
+        controller.browsePhotos("camera")
+        runCurrent()
+        controller.downloadPhoto("camera", 42, WifiPhotoDownloadFormat.Jpeg)
+        runCurrent()
+        assertEquals(2, connection.downloads)
         controller.closeAndJoin()
     }
 

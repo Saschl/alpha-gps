@@ -33,7 +33,11 @@ enum class WifiCaptureStatus { Idle, Shooting, Captured, Uncertain, Rejected }
 enum class WifiPreviewStatus { Waiting, Streaming, Failed }
 enum class WifiShutdownStatus { NotRequested, Requested, Unavailable, Unconfirmed }
 
-enum class WifiImageTransferStatus { Idle, Downloading, Saved, Cancelled, Failed, PermissionDenied }
+enum class WifiImageTransferStatus { Idle, Downloading, Converting, Saved, Cancelled, Failed, ConversionFailed, PermissionDenied }
+
+enum class WifiPhotoDownloadFormat { Original, Jpeg }
+
+data class WifiPhotoDownload(val handle: Long, val format: WifiPhotoDownloadFormat = WifiPhotoDownloadFormat.Original)
 
 data class WifiImageTransferState(
     val status: WifiImageTransferStatus = WifiImageTransferStatus.Idle,
@@ -41,7 +45,7 @@ data class WifiImageTransferState(
     val bytesReceived: Long = 0,
     val totalBytes: Long = 0,
 ) {
-    val busy: Boolean get() = status == WifiImageTransferStatus.Downloading
+    val busy: Boolean get() = status == WifiImageTransferStatus.Downloading || status == WifiImageTransferStatus.Converting
 }
 
 data class WifiCameraPhoto(
@@ -62,7 +66,7 @@ data class WifiPhotoBrowserState(
     val offset: Int = 0,
     val totalObjects: Int = 0,
     val hasMore: Boolean = false,
-    val savedHandles: Set<Long> = emptySet(),
+    val savedDownloads: Set<WifiPhotoDownload> = emptySet(),
 )
 
 data class WifiRemoteState(
@@ -74,6 +78,7 @@ data class WifiRemoteState(
     val capture: WifiCaptureStatus = WifiCaptureStatus.Idle,
     val preview: WifiPreviewStatus = WifiPreviewStatus.Waiting,
     val canTransferImages: Boolean = false,
+    val canConvertHeif: Boolean = false,
     val photoBrowser: WifiPhotoBrowserState = WifiPhotoBrowserState(),
     val imageTransfer: WifiImageTransferState = WifiImageTransferState(),
     val wifiShutdown: WifiShutdownStatus = WifiShutdownStatus.NotRequested,

@@ -67,4 +67,8 @@
     <string name="wifi_remote_transfer_cancel">Cancel</string>
     <string name="wifi_remote_storage_permission">Allow storage access to save photos to your phone.</string>
     <string name="wifi_remote_browse_unsupported">This camera does not advertise supported photo browsing.</string>
+    <string name="wifi_remote_jpeg_copy">JPEG copy (from HEIF)</string>
+    <string name="wifi_remote_jpeg_copy_hint">Downloads the HEIF and saves a full-resolution JPEG copy on this phone. HDR and some metadata may not be preserved.</string>
+    <string name="wifi_remote_converting_jpeg">Converting to JPEG…</string>
+    <string name="wifi_remote_conversion_failed">Could not create a JPEG copy. This phone may not support the HEIF format or have enough memory or storage. You can download the original HEIF instead.</string>
 </resources>

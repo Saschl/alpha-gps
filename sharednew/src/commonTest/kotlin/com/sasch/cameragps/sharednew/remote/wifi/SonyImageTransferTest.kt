@@ -104,6 +104,9 @@ class SonyImageTransferTest {
         var blockWrite = false
         var failWrite = false
         var failCommit = false
+        var failPrepare = false
+        var blockPrepare = false
+        var prepared = false
         override suspend fun write(bytes: ByteArray) {
             if (blockWrite) awaitCancellation()
             check(!failWrite)
@@ -114,6 +117,12 @@ class SonyImageTransferTest {
                 )
             }
             received += bytes.size
+        }
+
+        override suspend fun prepare() {
+            prepared = true
+            if (blockPrepare) awaitCancellation()
+            check(!failPrepare)
         }
 
         override suspend fun commit() {
@@ -181,6 +190,71 @@ class SonyImageTransferTest {
         assertEquals(jpg.captureId, raw.captureId)
         assertTrue(jpg.captureId != otherFolder.captureId)
         assertTrue(jpg.captureId != otherCard.captureId)
+        queue.close()
+    }
+
+    @Test
+    fun jpegConversionRunsAfterTransferAndOnlyPublishesSuccessfulCopies() = runTest {
+        for (failConversion in listOf(false, true)) {
+            val transport = Transport().apply { metadata = mapOf(1L to info(size.toLong(), "DSC.HIF", 0xb110)) }
+            val queue = PtpIpCommandQueue(transport, backgroundScope)
+            val output = Destination().apply { failPrepare = failConversion }
+            val store = object : CameraImageStore {
+                override val canConvertHeif = true
+                override suspend fun create(info: SonyImageInfo): CameraImageDestination = error("Must convert")
+                override suspend fun createJpeg(info: SonyImageInfo): CameraImageDestination {
+                    assertEquals("image/heif", info.mimeType)
+                    return output
+                }
+            }
+            val transfer = SonyImageTransfer(queue, ready(), store = store)
+            transfer.openBrowser()
+            val progress = mutableListOf<WifiImageTransferState>()
+            val result = transfer.download(1, WifiPhotoDownloadFormat.Jpeg) { progress += it }
+            assertEquals("DSC.jpg", result.filename)
+            assertEquals(transport.size, output.received)
+            assertEquals(WifiImageTransferStatus.Converting, progress.last().status)
+            assertTrue(progress.last().busy)
+            assertTrue(output.prepared)
+            assertEquals(!failConversion, output.committed)
+            assertEquals(failConversion, output.aborted)
+            assertEquals(if (failConversion) WifiImageTransferStatus.ConversionFailed else WifiImageTransferStatus.Saved,
+                result.status)
+            queue.close()
+        }
+    }
+
+    @Test
+    fun cancellationDuringConversionAbortsAndDoesNotPublish() = runTest {
+        val transport = Transport().apply { metadata = mapOf(1L to info(size.toLong(), "DSC.HIF", 0xb110)) }
+        val queue = PtpIpCommandQueue(transport, backgroundScope)
+        val output = Destination().apply { blockPrepare = true }
+        val store = object : CameraImageStore {
+            override val canConvertHeif = true
+            override suspend fun create(info: SonyImageInfo): CameraImageDestination = error("Must convert")
+            override suspend fun createJpeg(info: SonyImageInfo): CameraImageDestination = output
+        }
+        val transfer = SonyImageTransfer(queue, ready(), store = store)
+        transfer.openBrowser()
+        val job = launch { transfer.download(1, WifiPhotoDownloadFormat.Jpeg) {} }
+        runCurrent()
+        assertTrue(output.prepared)
+        job.cancel()
+        job.join()
+        assertTrue(output.aborted)
+        assertFalse(output.committed)
+        queue.close()
+    }
+
+    @Test
+    fun unsupportedConversionDoesNotTransferOrCreateFiles() = runTest {
+        val transport = Transport().apply { metadata = mapOf(1L to info(size.toLong(), "DSC.HIF", 0xb110)) }
+        val queue = PtpIpCommandQueue(transport, backgroundScope)
+        val transfer = SonyImageTransfer(queue, ready()) { error("No file") }
+        transfer.openBrowser()
+        val before = transport.operations.size
+        assertEquals(WifiImageTransferStatus.ConversionFailed, transfer.download(1, WifiPhotoDownloadFormat.Jpeg) {}.status)
+        assertEquals(before, transport.operations.size)
         queue.close()
     }
 

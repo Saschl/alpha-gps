@@ -28,11 +28,13 @@ internal interface WifiRemoteConnection {
     val cameraName: String
     val canCapture: Boolean
     val canTransferImages: Boolean get() = false
+    val canConvertHeif: Boolean get() = false
     suspend fun openPhotoBrowser(): CameraPhotoPage = error("Photo browsing unavailable")
     suspend fun photoPage(offset: Int): CameraPhotoPage = error("Photo browsing unavailable")
     suspend fun photoThumbnail(handle: Long): ImageBitmap? = null
     suspend fun downloadPhoto(
         handle: Long,
+        format: WifiPhotoDownloadFormat,
         onProgress: (WifiImageTransferState) -> Unit
     ): WifiImageTransferState =
         WifiImageTransferState(WifiImageTransferStatus.Failed)
@@ -169,15 +171,18 @@ class WifiRemoteController internal constructor(
         }
     }
 
-    fun downloadPhoto(identifier: String, handle: Long) {
+    fun downloadPhoto(identifier: String, handle: Long, format: WifiPhotoDownloadFormat = WifiPhotoDownloadFormat.Original) {
         val state = registry.get(identifier)?.wifiRemote ?: return
-        if (!state.photoBrowser.open || handle in state.photoBrowser.savedHandles ||
+        val download = WifiPhotoDownload(handle, format)
+        if (format == WifiPhotoDownloadFormat.Jpeg && (!state.canConvertHeif ||
+            state.photoBrowser.photos.none { it.handle == handle && it.mimeType == "image/heif" })) return
+        if (!state.photoBrowser.open || download in state.photoBrowser.savedDownloads ||
             state.photoBrowser.photos.none { it.handle == handle && it.downloadable }
         ) return
         photoWork(
             identifier,
             { it.copy(imageTransfer = WifiImageTransferState(WifiImageTransferStatus.Downloading)) }) { id, connection ->
-            val result = connection.downloadPhoto(handle) { progress ->
+            val result = connection.downloadPhoto(handle, format) { progress ->
                 updateReady(id) {
                     it.copy(imageTransfer = progress)
                 }
@@ -185,8 +190,8 @@ class WifiRemoteController internal constructor(
             updateReady(id) {
                 it.copy(
                     imageTransfer = result, photoBrowser = it.photoBrowser.copy(
-                        savedHandles = if (result.status == WifiImageTransferStatus.Saved) it.photoBrowser.savedHandles + handle
-                        else it.photoBrowser.savedHandles
+                        savedDownloads = if (result.status == WifiImageTransferStatus.Saved) it.photoBrowser.savedDownloads + download
+                        else it.photoBrowser.savedDownloads
                     )
                 )
             }
@@ -210,7 +215,7 @@ class WifiRemoteController internal constructor(
             _thumbnails.value = emptyMap()
             updateReady(id) {
                 it.copy(
-                    photoBrowser = WifiPhotoBrowserState(savedHandles = it.photoBrowser.savedHandles),
+                    photoBrowser = WifiPhotoBrowserState(savedDownloads = it.photoBrowser.savedDownloads),
                     imageTransfer = WifiImageTransferState(), preview = WifiPreviewStatus.Waiting
                 )
             }
@@ -328,7 +333,8 @@ class WifiRemoteController internal constructor(
                 captureRequests = requests
                 registry.updateWifiRemote(id, WifiRemoteState(phase = WifiRemotePhase.Ready,
                     canCaptureStill = opened.canCapture, cameraName = opened.cameraName,
-                    canTransferImages = opened.canTransferImages
+                    canTransferImages = opened.canTransferImages,
+                    canConvertHeif = opened.canConvertHeif
                 )
                 )
                 launch {

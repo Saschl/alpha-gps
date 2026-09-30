@@ -1,5 +1,7 @@
 package com.saschl.cameragps.ui.device
 
+import com.sasch.cameragps.sharednew.remote.wifi.WifiPhotoDownloadFormat
+
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
@@ -55,13 +57,14 @@ fun AndroidWifiRemoteScreen(identifier: String, onClose: () -> Unit) {
         }
     }
     var pendingPhoto by rememberSaveable { mutableStateOf<Long?>(null) }
+    var pendingPhotoFormat by rememberSaveable { mutableStateOf(WifiPhotoDownloadFormat.Original) }
     val storagePermission =
         rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
             val handle = pendingPhoto
             pendingPhoto = null
             if (granted && handle != null && lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) controller.downloadPhoto(
                 identifier,
-                handle
+                handle, pendingPhotoFormat
             )
             else if (!granted) controller.imageStoragePermissionDenied(identifier)
         }
@@ -97,15 +100,16 @@ fun AndroidWifiRemoteScreen(identifier: String, onClose: () -> Unit) {
         } else if (host == null) controller.connectAutomatically(identifier) else controller.connect(identifier, host)
     }
     WifiRemoteScreen(model, onConnect = { connect(it) }, onConnectAutomatically = { connect(null) },
-        onDownloadPhoto = { handle ->
+        onDownloadPhoto = { handle, format ->
             if (Build.VERSION.SDK_INT <= 28 && ContextCompat.checkSelfPermission(
                     context,
                     android.Manifest.permission.WRITE_EXTERNAL_STORAGE
                 ) != PackageManager.PERMISSION_GRANTED
             ) {
                 pendingPhoto = handle
+                pendingPhotoFormat = format
                 storagePermission.launch(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
-            } else controller.downloadPhoto(identifier, handle)
+            } else controller.downloadPhoto(identifier, handle, format)
         },
         onWifiSettings = { context.startActivity(Intent(Settings.ACTION_WIFI_SETTINGS)) }, onClose = close)
 }

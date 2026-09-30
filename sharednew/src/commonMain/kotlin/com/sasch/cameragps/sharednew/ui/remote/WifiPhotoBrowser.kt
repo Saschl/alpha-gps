@@ -53,6 +53,8 @@ import androidx.compose.ui.unit.dp
 import cameragps.sharednew.generated.resources.*
 import com.sasch.cameragps.sharednew.remote.wifi.SonyImageTransfer
 import com.sasch.cameragps.sharednew.remote.wifi.WifiCameraCapture
+import com.sasch.cameragps.sharednew.remote.wifi.WifiPhotoDownload
+import com.sasch.cameragps.sharednew.remote.wifi.WifiPhotoDownloadFormat
 import com.sasch.cameragps.sharednew.remote.wifi.WifiImageTransferState
 import com.sasch.cameragps.sharednew.remote.wifi.WifiImageTransferStatus
 import com.sasch.cameragps.sharednew.remote.wifi.WifiRemoteController
@@ -64,7 +66,7 @@ import org.jetbrains.compose.resources.stringResource
 @Composable
 internal fun WifiPhotoBrowser(
     state: WifiRemoteState, controller: WifiRemoteController,
-    identifier: String, onDownload: (Long) -> Unit
+    identifier: String, onDownload: (Long, WifiPhotoDownloadFormat) -> Unit
 ) {
     val browser = state.photoBrowser
     val thumbnails by controller.thumbnails.collectAsState()
@@ -167,14 +169,16 @@ private fun PhotoPreview(image: ImageBitmap?, loading: Boolean) {
 @Composable
 private fun PhotoDetailsSheet(
     capture: WifiCameraCapture, image: ImageBitmap?, state: WifiRemoteState,
-    onDismiss: () -> Unit, onDownload: (Long) -> Unit, onCancel: () -> Unit,
+    onDismiss: () -> Unit, onDownload: (Long, WifiPhotoDownloadFormat) -> Unit, onCancel: () -> Unit,
 ) {
     val browser = state.photoBrowser
     val transfer = state.imageTransfer
     var selectedHandle by rememberSaveable(capture.id) {
         mutableStateOf(capture.files.singleOrNull()?.handle)
     }
+    var selectedFormat by rememberSaveable(capture.id) { mutableStateOf(WifiPhotoDownloadFormat.Original) }
     val selected = capture.files.firstOrNull { it.handle == selectedHandle }
+    val selectedDownload = selected?.let { WifiPhotoDownload(it.handle, selectedFormat) }
     ModalBottomSheet(
         onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         modifier = Modifier.fillMaxHeight(0.9f)
@@ -189,25 +193,35 @@ private fun PhotoDetailsSheet(
             Text(stringResource(Res.string.wifi_remote_photo_format), style = MaterialTheme.typography.titleMedium)
             Column(Modifier.selectableGroup()) {
                 capture.files.forEach { file ->
-                    val saved = file.handle in browser.savedHandles
-                    Row(
-                        Modifier.fillMaxWidth().selectable(
-                            selected = file.handle == selectedHandle,
-                            enabled = !transfer.busy && file.downloadable && !saved,
-                            role = Role.RadioButton, onClick = { selectedHandle = file.handle }
-                        ).padding(vertical = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        RadioButton(selected = file.handle == selectedHandle, onClick = null,
-                            enabled = !transfer.busy && file.downloadable && !saved)
-                        Column(Modifier.weight(1f)) {
-                            Text(file.formatLabel, style = MaterialTheme.typography.titleSmall)
-                            Text(file.filename, style = MaterialTheme.typography.bodySmall)
-                            Text(stringResource(Res.string.wifi_remote_photo_size, (file.size + 1023) / 1024),
-                                style = MaterialTheme.typography.bodySmall)
-                            if (saved) Text(stringResource(Res.string.wifi_remote_download_saved))
-                            if (!file.downloadable) Text(stringResource(Res.string.wifi_remote_download_too_large))
+                    val formats = if (state.canConvertHeif && file.mimeType == "image/heif")
+                        WifiPhotoDownloadFormat.entries else listOf(WifiPhotoDownloadFormat.Original)
+                    formats.forEach { format ->
+                        val converted = format == WifiPhotoDownloadFormat.Jpeg
+                        val saved = WifiPhotoDownload(file.handle, format) in browser.savedDownloads
+                        val isSelected = file.handle == selectedHandle && format == selectedFormat
+                        Row(
+                            Modifier.fillMaxWidth().selectable(
+                                selected = isSelected,
+                                enabled = !transfer.busy && file.downloadable && !saved,
+                                role = Role.RadioButton, onClick = { selectedHandle = file.handle; selectedFormat = format }
+                            ).padding(vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            RadioButton(selected = isSelected, onClick = null,
+                                enabled = !transfer.busy && file.downloadable && !saved)
+                            Column(Modifier.weight(1f)) {
+                                Text(if (converted) stringResource(Res.string.wifi_remote_jpeg_copy) else file.formatLabel,
+                                    style = MaterialTheme.typography.titleSmall)
+                                Text(if (converted) file.filename.substringBeforeLast('.') + ".jpg" else file.filename,
+                                    style = MaterialTheme.typography.bodySmall)
+                                if (converted) Text(stringResource(Res.string.wifi_remote_jpeg_copy_hint),
+                                    style = MaterialTheme.typography.bodySmall)
+                                else Text(stringResource(Res.string.wifi_remote_photo_size, (file.size + 1023) / 1024),
+                                    style = MaterialTheme.typography.bodySmall)
+                                if (saved) Text(stringResource(Res.string.wifi_remote_download_saved))
+                                if (!file.downloadable) Text(stringResource(Res.string.wifi_remote_download_too_large))
+                            }
                         }
                     }
                 }
@@ -217,12 +231,13 @@ private fun PhotoDetailsSheet(
                 Text(stringResource(Res.string.wifi_remote_transfer_cancel))
             }
             Button(
-                onClick = { selected?.let { onDownload(it.handle) } }, modifier = Modifier.fillMaxWidth(),
+                onClick = { selected?.let { onDownload(it.handle, selectedFormat) } }, modifier = Modifier.fillMaxWidth(),
                 enabled = !browser.loading && !transfer.busy && selected != null && selected.downloadable &&
-                    selected.handle !in browser.savedHandles
+                    selectedDownload !in browser.savedDownloads
             ) {
                 Text(if (selected == null) stringResource(Res.string.wifi_remote_download)
-                    else stringResource(Res.string.wifi_remote_download_format, selected.formatLabel))
+                    else stringResource(Res.string.wifi_remote_download_format,
+                        if (selectedFormat == WifiPhotoDownloadFormat.Jpeg) "JPEG" else selected.formatLabel))
             }
             Text(stringResource(Res.string.wifi_remote_photo_download_hint), style = MaterialTheme.typography.bodySmall)
             TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) {
@@ -241,6 +256,11 @@ private fun PhotoTransferStatus(transfer: WifiImageTransferState) {
                 if (transfer.totalBytes > 0) transfer.bytesReceived.toFloat() / transfer.totalBytes else 0f
             }, modifier = Modifier.fillMaxWidth())
         }
+        WifiImageTransferStatus.Converting -> {
+            Text(stringResource(Res.string.wifi_remote_converting_jpeg))
+            LinearProgressIndicator(Modifier.fillMaxWidth())
+        }
+        WifiImageTransferStatus.ConversionFailed -> Text(stringResource(Res.string.wifi_remote_conversion_failed))
         WifiImageTransferStatus.Saved -> Text(stringResource(Res.string.wifi_remote_transfer_saved, transfer.filename))
         WifiImageTransferStatus.Failed -> Text(stringResource(Res.string.wifi_remote_transfer_failed))
         WifiImageTransferStatus.Cancelled -> Text(stringResource(Res.string.wifi_remote_transfer_cancelled))

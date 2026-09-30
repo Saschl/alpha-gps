@@ -6,6 +6,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import org.jetbrains.compose.resources.decodeToImageBitmap
@@ -15,6 +17,7 @@ import kotlin.time.Duration.Companion.seconds
 
 internal interface CameraImageDestination {
     suspend fun write(bytes: ByteArray)
+    suspend fun prepare() {}
     suspend fun commit()
 
     /** Removes an incomplete file; harmless after commit. */
@@ -23,6 +26,8 @@ internal interface CameraImageDestination {
 
 internal fun interface CameraImageStore {
     suspend fun create(info: SonyImageInfo): CameraImageDestination
+    val canConvertHeif: Boolean get() = false
+    suspend fun createJpeg(info: SonyImageInfo): CameraImageDestination = error("HEIF conversion unavailable")
 }
 
 internal data class SonyImageInfo(
@@ -173,10 +178,17 @@ internal class SonyImageTransfer(
 
     suspend fun download(
         handle: Long,
+        format: WifiPhotoDownloadFormat = WifiPhotoDownloadFormat.Original,
         onProgress: (WifiImageTransferState) -> Unit
     ): WifiImageTransferState {
         val photo = pagePhotos.singleOrNull { it.handle == handle && it.downloadable }
             ?: return WifiImageTransferState(WifiImageTransferStatus.Failed)
+        val convert = format == WifiPhotoDownloadFormat.Jpeg
+        if (convert && (photo.mimeType != "image/heif" || !store.canConvertHeif)) {
+            return WifiImageTransferState(WifiImageTransferStatus.ConversionFailed, photo.filename)
+        }
+        val filename = if (convert) photo.filename.substringBeforeLast('.') + ".jpg" else photo.filename
+        var converting = false
         var destination: CameraImageDestination? = null
         var committed = false
         try {
@@ -193,7 +205,7 @@ internal class SonyImageTransfer(
                     info.filename == photo.filename && info.size == photo.size && info.mimeType == photo.mimeType &&
                             info.capturedAt == photo.capturedAt
                 )
-                val output = store.create(info)
+                val output = if (convert) store.createJpeg(info) else store.create(info)
                 destination = output
                 var offset = 0L
                 while (offset < info.size) {
@@ -222,32 +234,38 @@ internal class SonyImageTransfer(
                     onProgress(
                         WifiImageTransferState(
                             WifiImageTransferStatus.Downloading,
-                            photo.filename,
+                            filename,
                             offset,
                             info.size
                         )
                     )
                 }
+                converting = convert
+                if (convert) onProgress(WifiImageTransferState(WifiImageTransferStatus.Converting, filename))
+                output.prepare()
+                currentCoroutineContext().ensureActive()
                 withContext(NonCancellable) {
                     output.commit()
                     committed = true
                     destination = null
                 }
-                WifiImageTransferState(WifiImageTransferStatus.Saved, photo.filename)
+                WifiImageTransferState(WifiImageTransferStatus.Saved, filename)
             }
         } catch (_: TimeoutCancellationException) {
             return WifiImageTransferState(
-                if (committed) WifiImageTransferStatus.Saved else WifiImageTransferStatus.Failed,
-                photo.filename
+                if (committed) WifiImageTransferStatus.Saved else if (converting) WifiImageTransferStatus.ConversionFailed else WifiImageTransferStatus.Failed,
+                filename
             )
         } catch (cancelled: CancellationException) {
             if (committed) return WifiImageTransferState(
                 WifiImageTransferStatus.Saved,
-                photo.filename
+                filename
             )
             throw cancelled
         } catch (_: Exception) {
-            return WifiImageTransferState(WifiImageTransferStatus.Failed, photo.filename)
+            return WifiImageTransferState(
+                if (converting) WifiImageTransferStatus.ConversionFailed else WifiImageTransferStatus.Failed, filename
+            )
         } finally {
             withContext(NonCancellable) { destination?.abort() }
         }

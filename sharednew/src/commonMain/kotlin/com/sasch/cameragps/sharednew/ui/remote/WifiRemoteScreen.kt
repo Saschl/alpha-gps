@@ -1,5 +1,7 @@
 package com.sasch.cameragps.sharednew.ui.remote
 
+import com.sasch.cameragps.sharednew.remote.wifi.WifiPhotoDownloadFormat
+
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -99,10 +101,10 @@ fun WifiRemoteScreen(viewModel: WifiRemoteViewModel, onConnect: (String) -> Unit
                      onWifiSettings: () -> Unit,
                      onClose: () -> Unit,
                      onConnectAutomatically: () -> Unit = {},
-                     onDownloadPhoto: (Long) -> Unit = {
+                     onDownloadPhoto: (Long, WifiPhotoDownloadFormat) -> Unit = { handle, format ->
                          viewModel.controller.downloadPhoto(
                              viewModel.identifier,
-                             it
+                             handle, format
                          )
                      }
 ) {
