@@ -1,0 +1,1 @@
+-keep class com.sasch.cameragps.heif.HeifDecoder { *; }
