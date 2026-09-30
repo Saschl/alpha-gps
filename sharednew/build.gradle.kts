@@ -120,14 +120,11 @@ sentryKmp {
 
 kotlin {
 
-    androidLibrary {
-        androidResources.enable = true
-    }
-
     // Target declarations - add or remove as needed below. These define
     // which platforms this KMP module supports.
     // See: https://kotlinlang.org/docs/multiplatform-discover-project.html#targets
     android {
+        androidResources.enable = true
         namespace = "com.sasch.cameragps.sharednew"
         compileSdk {
             version = release(37) {
@@ -193,7 +190,6 @@ kotlin {
                 //implementation(libs.androidx.sqlite.bundled)
                 implementation(libs.androidx.room.runtime)
                 implementation(libs.components.resources)
-                implementation(libs.androidx.activity.compose)
                 implementation(libs.androidx.sqlite.bundled)
                 implementation(libs.logging)
                 implementation(libs.kotlinx.datetime)
@@ -218,6 +214,7 @@ kotlin {
                 // dependencies declared in commonMain.
                 // LanguagePreference.android.kt: per-app language below API 33.
                 implementation(libs.androidx.appcompat)
+                implementation(libs.androidx.activity.compose)
                 implementation(libs.androidx.exifinterface)
                 implementation(project(":heif"))
 
