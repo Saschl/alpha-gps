@@ -22,7 +22,7 @@ internal class TestEventConnection : PtpIpPacketConnection {
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class PtpIpEventMonitorTest {
+class PtpIpEventMonitorTest : WifiLoggingTest() {
     @Test
     fun ignoresOldEventsAndRepliesToProbe() = runTest {
         val connection = TestEventConnection()

@@ -18,7 +18,7 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class WifiRemoteControllerTest {
+class WifiRemoteControllerTest : WifiLoggingTest() {
     private class Connection : WifiRemoteConnection {
         override val cameraName = "Test camera"
         override val canCapture = true

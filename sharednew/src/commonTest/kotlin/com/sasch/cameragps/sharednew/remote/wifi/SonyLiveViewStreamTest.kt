@@ -16,7 +16,7 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class SonyLiveViewStreamTest {
+class SonyLiveViewStreamTest : WifiLoggingTest() {
     private class Camera : PtpIpCommandTransport {
         val events = TestEventConnection()
         val responses = Channel<PtpIpPacket>(Channel.UNLIMITED)

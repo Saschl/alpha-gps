@@ -1,5 +1,6 @@
 package com.sasch.cameragps.sharednew.remote.wifi
 
+import com.diamondedge.logging.logging
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.CancellationException
@@ -64,26 +65,37 @@ internal class PtpIpSessionOpener(
     private val scope: CoroutineScope,
     private val timeoutMs: Long = 20_000,
 ) {
+    private val log = logging()
+
     suspend fun open(clientGuid: ByteArray, clientName: String): PtpIpOpenedSession? =
         withTimeoutOrNull(timeoutMs) {
             var command: PtpIpPacketConnection? = null
             var event: PtpIpPacketConnection? = null
             try {
+                log.i { "Wi-Fi PTP opening command channel" }
                 command = connectionFactory.connect()
+                log.i { "Wi-Fi PTP sending command handshake" }
                 command.send(PtpIpHandshake.commandRequest(clientGuid, clientName))
                 val ack = PtpIpHandshake.parseCommandAck(command.receive())
+                log.i { "Wi-Fi PTP command acknowledged; opening event channel" }
 
                 event = connectionFactory.connect()
                 event.send(PtpIpHandshake.eventRequest(ack.connectionNumber))
                 require(event.receive().type == PtpIpHandshake.INIT_EVENT_ACK)
+                log.i { "Wi-Fi PTP event handshake acknowledged" }
 
                 val session = PtpIpOpenedSession(ack, PtpIpCommandQueue(command, scope), command, event, scope)
                 command = null
                 event = null
                 session
             } catch (cancelled: CancellationException) {
+                log.i { "Wi-Fi PTP opening cancelled or timed out: ${cancelled.message}" }
                 throw cancelled
-            } catch (_: Exception) {
+            } catch (failure: WifiRemoteConnectException) {
+                log.w { "Wi-Fi PTP connection failed: ${failure.failure}" }
+                throw failure
+            } catch (failure: Exception) {
+                log.w { "Wi-Fi PTP handshake failed: ${failure.message}" }
                 null
             } finally {
                 withContext(NonCancellable) {

@@ -1,5 +1,6 @@
 package com.sasch.cameragps.sharednew.remote.wifi
 
+import com.diamondedge.logging.logging
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -40,6 +41,7 @@ internal class PtpIpCommandQueue(
         val result = CompletableDeferred<PtpIpTransactionResult>()
     }
 
+    private val log = logging()
     private val requests = Channel<Pending>(64)
     private var nextTransactionId = 1
     private var active: Pending? = null
@@ -82,10 +84,12 @@ internal class PtpIpCommandQueue(
                         PtpIpTransactionResult.Uncertain
                     }
                 } catch (_: TimeoutCancellationException) {
+                    log.w { "Wi-Fi PTP command 0x${pending.code.toString(16)} timed out after ${pending.timeoutMs}ms" }
                     PtpIpTransactionResult.Uncertain
                 } catch (cancelled: CancellationException) {
                     throw cancelled
-                } catch (_: Exception) {
+                } catch (failure: Exception) {
+                    log.w { "Wi-Fi PTP command 0x${pending.code.toString(16)} failed (${failure::class.simpleName})" }
                     // Native socket exception text can contain network names or addresses.
                     PtpIpTransactionResult.Failure("PTP/IP transaction failed")
                 }
@@ -154,4 +158,11 @@ internal class PtpIpCommandQueue(
         }
         worker.cancel()
     }
+}
+
+internal fun PtpIpTransactionResult.diagnosticSummary(): String = when (this) {
+    is PtpIpTransactionResult.Response -> "response=0x${response.code.toString(16)} dataBytes=${data?.size ?: 0}"
+    is PtpIpTransactionResult.Failure -> "failed=$reason"
+    PtpIpTransactionResult.Uncertain -> "timed out or uncertain"
+    PtpIpTransactionResult.Closed -> "connection closed"
 }

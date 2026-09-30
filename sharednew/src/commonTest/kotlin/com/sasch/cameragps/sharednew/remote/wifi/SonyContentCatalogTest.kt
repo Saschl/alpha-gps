@@ -8,7 +8,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
-class SonyContentCatalogTest {
+class SonyContentCatalogTest : WifiLoggingTest() {
     private fun number(value: Long, size: Int) = ByteArray(size) { (value ushr (8 * it)).toByte() }
     private fun file(id: Int, format: Int, path: String): ByteArray {
         val name = path.encodeToByteArray() + byteArrayOf(0)

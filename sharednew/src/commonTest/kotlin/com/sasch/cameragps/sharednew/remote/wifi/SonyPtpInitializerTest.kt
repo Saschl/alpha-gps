@@ -13,7 +13,7 @@ import kotlin.test.assertTrue
 import kotlin.test.assertFailsWith
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class SonyPtpInitializerTest {
+class SonyPtpInitializerTest : WifiLoggingTest() {
     private class Transport : PtpIpCommandTransport {
         val sent = mutableListOf<PtpIpPacket>()
         val replies = Channel<PtpIpPacket>(Channel.UNLIMITED)

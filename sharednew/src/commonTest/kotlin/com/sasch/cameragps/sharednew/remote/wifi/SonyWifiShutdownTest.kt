@@ -8,7 +8,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
-class SonyWifiShutdownTest {
+class SonyWifiShutdownTest : WifiLoggingTest() {
     private fun number(value: Long, size: Int) = ByteArray(size) { (value ushr (8 * it)).toByte() }
     private fun property(code: Int, value: Int = 1, enabled: Int = 1): ByteArray =
         number(code.toLong(), 2) + number(4, 2) + byteArrayOf(0, enabled.toByte()) +

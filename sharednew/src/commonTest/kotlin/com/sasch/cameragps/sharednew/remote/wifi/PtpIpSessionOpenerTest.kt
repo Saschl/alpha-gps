@@ -11,7 +11,7 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class PtpIpSessionOpenerTest {
+class PtpIpSessionOpenerTest : WifiLoggingTest() {
     private class FakeConnection : PtpIpPacketConnection {
         val sent = mutableListOf<PtpIpPacket>()
         val replies = Channel<PtpIpPacket>(Channel.UNLIMITED)

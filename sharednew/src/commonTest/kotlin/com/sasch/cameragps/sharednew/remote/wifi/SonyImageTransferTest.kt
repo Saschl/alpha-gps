@@ -13,7 +13,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class SonyImageTransferTest {
+class SonyImageTransferTest : WifiLoggingTest() {
     private fun number(value: Long, size: Int) = ByteArray(size) { (value ushr (8 * it)).toByte() }
     private fun string(value: String) = byteArrayOf((value.length + 1).toByte()) +
             value.fold(byteArrayOf()) { bytes, char ->

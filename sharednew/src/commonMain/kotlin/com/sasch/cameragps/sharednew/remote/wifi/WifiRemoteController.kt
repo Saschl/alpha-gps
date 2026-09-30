@@ -1,6 +1,7 @@
 package com.sasch.cameragps.sharednew.remote.wifi
 
 import androidx.compose.ui.graphics.ImageBitmap
+import com.diamondedge.logging.logging
 import com.sasch.cameragps.sharednew.bluetooth.BleSessionPhase
 import com.sasch.cameragps.sharednew.bluetooth.session.CameraSessionRegistry
 import kotlinx.coroutines.CancellationException
@@ -66,6 +67,8 @@ class WifiRemoteController internal constructor(
     private val releaseControls: (String) -> Unit,
     private val automaticConnector: WifiAutomaticConnector? = null,
 ) {
+    private val log = logging()
+    private var attempt = 0
     val supportsAutomaticConnection get() = automaticConnector != null
     val sessions = registry.sessions
     private val _image = MutableStateFlow<ImageBitmap?>(null)
@@ -91,6 +94,7 @@ class WifiRemoteController internal constructor(
         val automatic = automaticConnector ?: return
         start(identifier, WifiRemotePhase.PreparingCamera) { id, sessionScope ->
             automatic.open(id, sessionScope) { phase ->
+                log.i { "Wi-Fi remote attempt=$attempt phase=$phase" }
                 if (registry.get(id)?.wifiRemote?.phase != WifiRemotePhase.Closing) {
                     registry.updateWifiRemote(id, WifiRemoteState(phase = phase))
                 }
@@ -100,7 +104,12 @@ class WifiRemoteController internal constructor(
 
     private fun start(identifier: String, phase: WifiRemotePhase,
                       open: suspend (String, CoroutineScope) -> WifiRemoteConnection) {
-        if (job != null) return
+        if (job != null) {
+            log.w { "Wi-Fi remote connect ignored: previous attempt=$attempt is still active or closing" }
+            return
+        }
+        attempt++
+        log.i { "Wi-Fi remote attempt=$attempt starting phase=$phase" }
         val id = identifier.uppercase()
         if (registry.get(id) == null) registry.upsert(id) { it.copy(phase = BleSessionPhase.Disconnected) }
         _owner.value = id
@@ -303,6 +312,7 @@ class WifiRemoteController internal constructor(
     fun disconnect(identifier: String? = null) {
         val id = _owner.value ?: return
         if (identifier != null && !id.equals(identifier, true)) return
+        log.i { "Wi-Fi remote attempt=$attempt disconnect requested" }
         registry.updateWifiRemote(id, WifiRemoteState(phase = WifiRemotePhase.Closing))
         job?.cancel()
     }
@@ -325,10 +335,13 @@ class WifiRemoteController internal constructor(
         var failure: WifiRemoteFailure? = null
         var shutdown = WifiShutdownStatus.NotRequested
         try {
+            log.i { "Wi-Fi remote attempt=$attempt claiming BLE remote controls" }
             claimControls(id)
+            log.i { "Wi-Fi remote attempt=$attempt BLE remote controls claimed" }
             coroutineScope {
                 val opened = open(id, this)
                 connection = opened
+                log.i { "Wi-Fi remote attempt=$attempt ready; starting live view" }
                 val requests = Channel<Unit>(Channel.RENDEZVOUS)
                 captureRequests = requests
                 registry.updateWifiRemote(id, WifiRemoteState(phase = WifiRemotePhase.Ready,
@@ -354,9 +367,16 @@ class WifiRemoteController internal constructor(
                 }
                 awaitCancellation()
             }
-        } catch (cancelled: CancellationException) { throw cancelled }
-        catch (failed: WifiRemoteConnectException) { failure = failed.failure }
-        catch (_: Exception) { failure = WifiRemoteFailure.ProtocolError }
+        } catch (cancelled: CancellationException) {
+            log.i { "Wi-Fi remote attempt=$attempt cancelled" }
+            throw cancelled
+        } catch (failed: WifiRemoteConnectException) {
+            failure = failed.failure
+            log.w { "Wi-Fi remote attempt=$attempt failed: $failure" }
+        } catch (failed: Exception) {
+            failure = WifiRemoteFailure.ProtocolError
+            log.w { "Wi-Fi remote attempt=$attempt failed: ${failed.message}" }
+        }
         finally {
             sessionScope = null
             activeConnection = null
@@ -393,6 +413,7 @@ class WifiRemoteController internal constructor(
                         releaseControls(id)
                         _owner.value = null
                         job = null
+                        log.i { "Wi-Fi remote attempt=$attempt cleanup complete; failure=$failure shutdown=$shutdown" }
                     }
                 }
             }
@@ -401,8 +422,14 @@ class WifiRemoteController internal constructor(
 
     private fun startPreview(id: String, connection: WifiRemoteConnection, parent: CoroutineScope) {
         previewJob = parent.launch {
+            var receivedFrame = false
+            log.i { "Wi-Fi live view starting" }
             try {
                 connection.images.collect { image ->
+                    if (!receivedFrame) {
+                        log.i { "Wi-Fi live view first image ${image.width}x${image.height}" }
+                        receivedFrame = true
+                    }
                     _image.value = image
                     updateReady(id) {
                         it.copy(
@@ -414,10 +441,13 @@ class WifiRemoteController internal constructor(
                 updateReady(id) { it.copy(hasLiveView = false, preview = WifiPreviewStatus.Failed) }
             } catch (cancelled: CancellationException) {
                 currentCoroutineContext().ensureActive()
+                log.w { "Wi-Fi live view timed out: ${cancelled.message}" }
                 updateReady(id) { it.copy(hasLiveView = false, preview = WifiPreviewStatus.Failed) }
-            } catch (_: Exception) {
+            } catch (failure: Exception) {
+                log.w { "Wi-Fi live view failed: ${failure.message}" }
                 updateReady(id) { it.copy(hasLiveView = false, preview = WifiPreviewStatus.Failed) }
             } finally {
+                log.i { "Wi-Fi live view stopped; receivedFrame=$receivedFrame" }
                 _image.value = null
             }
         }

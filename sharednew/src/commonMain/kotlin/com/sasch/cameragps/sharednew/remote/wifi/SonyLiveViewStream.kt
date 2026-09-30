@@ -1,6 +1,7 @@
 package com.sasch.cameragps.sharednew.remote.wifi
 
 import androidx.compose.ui.graphics.ImageBitmap
+import com.diamondedge.logging.logging
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
@@ -40,6 +41,7 @@ internal class SonyLiveViewStream(
     private val http: SonyLiveViewHttpTransport,
     private val decodeDispatcher: CoroutineDispatcher = Dispatchers.Default,
 ) {
+    private val log = logging()
     private var collecting = false
 
     fun images(endpoint: SonyLiveViewEndpoint): Flow<ImageBitmap> = frames(endpoint).map { frame ->
@@ -81,8 +83,10 @@ internal class SonyLiveViewStream(
                 }
                 liveviewAttempted = true
                 check(accepted(control(SonyPtpControlCode.LIVE_VIEW_ENABLE, true))) { "Live-view enable failed" }
+                log.i { "Wi-Fi live view enabled; opening HTTP stream" }
                 val opened = openWithRetry(endpoint)
                 stream = opened
+                log.i { "Wi-Fi live-view HTTP ready; waiting for first frame" }
                 val decoder = SonyLiveViewFrameDecoder()
                 while (true) {
                     val frames = withTimeout(10_000.milliseconds) {
@@ -127,6 +131,7 @@ internal class SonyLiveViewStream(
                         opened = stream
                         return@withTimeout stream
                     } catch (failure: SonyLiveViewHttpStatus) {
+                        log.w { "Wi-Fi live-view HTTP attempt=${attempt + 1} status=${failure.status}" }
                         if (failure.status != 503 || attempt == 2) throw failure
                         delay(500.milliseconds)
                     }
@@ -143,7 +148,9 @@ internal class SonyLiveViewStream(
         val params = if ((capabilities.vendorCodeVersion ?: 0) >= 310) listOf(code.toLong(), 1L)
         else listOf(code.toLong())
         return commands.executeDataOut(SonyPtpOperation.SDIO_CONTROL_DEVICE, params,
-            byteArrayOf(if (down) 2 else 1, 0), operationTimeoutMs = 3_000)
+            byteArrayOf(if (down) 2 else 1, 0), operationTimeoutMs = 3_000).also {
+            log.i { "Wi-Fi live-view control=0x${code.toString(16)} enabled=$down ${it.diagnosticSummary()}" }
+        }
     }
 
     private fun accepted(result: PtpIpTransactionResult) =

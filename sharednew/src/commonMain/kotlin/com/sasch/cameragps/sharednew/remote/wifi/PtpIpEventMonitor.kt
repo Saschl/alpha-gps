@@ -1,5 +1,6 @@
 package com.sasch.cameragps.sharednew.remote.wifi
 
+import com.diamondedge.logging.logging
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
@@ -53,7 +54,8 @@ internal class PtpIpEventMonitor(
             }
         } catch (cancelled: CancellationException) {
             throw cancelled
-        } catch (_: Exception) {
+        } catch (failure: Exception) {
+            logging("PtpIpEventMonitor").w { "Wi-Fi PTP event channel failed: ${failure.message}" }
             // The owning session observes Closed and tears down its command connection.
         } finally {
             closed.value = true

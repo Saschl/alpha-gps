@@ -13,7 +13,7 @@ import kotlin.test.assertTrue
 import kotlin.test.assertContentEquals
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class PtpIpCommandQueueTest {
+class PtpIpCommandQueueTest : WifiLoggingTest() {
     private class FakeTransport : PtpIpCommandTransport {
         val sent = mutableListOf<PtpIpPacket>()
         val replies = Channel<PtpIpPacket>(Channel.UNLIMITED)

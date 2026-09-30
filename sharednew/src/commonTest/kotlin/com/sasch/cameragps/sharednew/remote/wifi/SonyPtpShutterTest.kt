@@ -11,7 +11,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class SonyPtpShutterTest {
+class SonyPtpShutterTest : WifiLoggingTest() {
     private class Transport : PtpIpCommandTransport {
         val sent = mutableListOf<PtpIpPacket>()
         val replies = Channel<PtpIpPacket>(Channel.UNLIMITED)
