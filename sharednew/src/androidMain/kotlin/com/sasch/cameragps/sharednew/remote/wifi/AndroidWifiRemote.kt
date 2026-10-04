@@ -78,7 +78,7 @@ private class AndroidWifiRemoteConnector(context: Context) : WifiRemoteConnector
         return openSonyWifiSession(
             AndroidPtpIpConnectionFactory(network, host), scope, host,
             AndroidCameraHttpTransport(network.socketFactory), imageStore,
-            ::decodeAndroidCameraThumbnail, losses.receiveAsFlow(),
+            ::decodeAndroidCameraThumbnail, ::decodeAndroidCameraPreview, losses.receiveAsFlow(),
             releaseNetwork = { connectivity.unregisterNetworkCallback(callback); losses.close() },
         )
     }

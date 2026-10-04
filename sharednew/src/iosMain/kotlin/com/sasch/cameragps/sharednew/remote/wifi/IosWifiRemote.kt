@@ -28,7 +28,9 @@ private class IosWifiRemoteConnector : WifiRemoteConnector {
             connect = { CameraPtpIpConnection(IosCameraByteConnection.open(host, 15740)) },
         ) { connections ->
             openSonyWifiSession(connections, scope, host,
-                CameraHttpTransport(IosCameraByteConnection::open), imageStore, ::decodeIosCameraThumbnail)
+                CameraHttpTransport(IosCameraByteConnection::open), imageStore,
+                ::decodeIosCameraThumbnail, ::decodeIosCameraPreview
+            )
         }
     }
 }

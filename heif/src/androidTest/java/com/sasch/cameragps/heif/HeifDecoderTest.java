@@ -77,7 +77,8 @@ public class HeifDecoderTest {
         assertThrows(IOException.class, () -> HeifDecoder.decodeThumbnail(new byte[]{1, 2, 3}, BUDGET));
     }
 
-    @Test public void mapsSharedApiFailuresToIOException() throws Exception {
+    @Test
+    public void mapsNativeFailuresToIOException() throws Exception {
         IOException emptyPath = assertThrows(IOException.class, () -> HeifDecoder.decodeFile("", BUDGET, null));
         assertEquals("Invalid HEIF path", emptyPath.getMessage());
         assertThrows(IOException.class, () -> HeifDecoder.decodeFile(null, BUDGET, null));
@@ -87,12 +88,38 @@ public class HeifDecoderTest {
         assertThrows(IOException.class, () -> HeifDecoder.decodeThumbnail(new byte[0], BUDGET));
         IOException oversized = assertThrows(IOException.class,
             () -> HeifDecoder.decodeThumbnail(new byte[512 * 1024 + 1], BUDGET));
-        assertEquals("Invalid HEIF thumbnail size", oversized.getMessage());
+        assertEquals("Invalid HEIF preview", oversized.getMessage());
         byte[] encoded = fixture("red-422-10bit.hif");
         assertThrows(IOException.class, () -> HeifDecoder.decodeThumbnail(encoded, -1));
         assertThrows(IOException.class, () -> HeifDecoder.decodeFile("", -1, null));
         assertThrows(IOException.class, () -> HeifDecoder.decodeThumbnail(encoded, 1));
         Bitmap recovered = HeifDecoder.decodeThumbnail(encoded, BUDGET);
         try { verifyRed(recovered, 128, 64); } finally { recovered.recycle(); }
+    }
+
+    @Test
+    public void previewsRetainMoreDetailThanThumbnails() throws Exception {
+        byte[] encoded = fixture("red-422-preview.hif");
+        byte[] original = encoded.clone();
+        Bitmap thumbnail = HeifDecoder.decodeThumbnail(encoded, BUDGET);
+        Bitmap preview = HeifDecoder.decodePreview(encoded, BUDGET);
+        try {
+            verifyRed(thumbnail, 640, 320);
+            verifyRed(preview, 2048, 1024);
+        } finally {
+            thumbnail.recycle();
+            preview.recycle();
+        }
+        assertThrows(IOException.class, () -> HeifDecoder.decodePreview(null, BUDGET));
+        assertThrows(IOException.class, () -> HeifDecoder.decodePreview(new byte[]{1, 2, 3}, BUDGET));
+        assertThrows(IOException.class, () -> HeifDecoder.decodePreview(new byte[8 * 1024 * 1024 + 1], BUDGET));
+        assertThrows(IOException.class, () -> HeifDecoder.decodePreview(encoded, 1));
+        Bitmap recovered = HeifDecoder.decodePreview(encoded, BUDGET);
+        try {
+            verifyRed(recovered, 2048, 1024);
+        } finally {
+            recovered.recycle();
+        }
+        assertArrayEquals(original, encoded);
     }
 }

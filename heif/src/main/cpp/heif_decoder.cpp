@@ -21,7 +21,7 @@ void initialize() {
 Image decodeHeif(const char* path, const uint8_t* bytes, size_t length, int maxDimension,
                  uint64_t memoryBudget, const std::function<bool()>& cancelled) {
     initialize();
-    if (memoryBudget < 1024 * 1024 || (maxDimension != 0 && maxDimension != 640)) {
+    if (memoryBudget < 1024 * 1024 || (maxDimension != 0 && maxDimension != 640 && maxDimension != 2048)) {
         throw std::runtime_error("Invalid HEIF decode limits");
     }
     auto context = std::unique_ptr<heif_context, decltype(&heif_context_free)>(heif_context_alloc(), heif_context_free);

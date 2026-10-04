@@ -6,3 +6,6 @@ import com.sasch.cameragps.heif.HeifDecoder
 
 internal fun decodeAndroidCameraThumbnail(bytes: ByteArray): ImageBitmap =
     HeifDecoder.decodeThumbnail(bytes, heifDecodeMemoryBudget()).asImageBitmap()
+
+internal fun decodeAndroidCameraPreview(bytes: ByteArray): ImageBitmap =
+    HeifDecoder.decodePreview(bytes, heifDecodeMemoryBudget()).asImageBitmap()

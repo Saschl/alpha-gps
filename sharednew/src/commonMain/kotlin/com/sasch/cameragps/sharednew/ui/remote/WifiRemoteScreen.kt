@@ -33,6 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
+import com.diamondedge.logging.logging
 import androidx.navigationevent.NavigationEventInfo
 import androidx.navigationevent.compose.NavigationBackHandler
 import androidx.navigationevent.compose.rememberNavigationEventState
@@ -107,11 +108,15 @@ class WifiRemoteViewModel(val identifier: String, val controller: WifiRemoteCont
         val state = controller.sessions.value[identifier.uppercase()]?.wifiRemote ?: return
         if (!state.photoBrowser.open || selectedPhotoIds.isNotEmpty()) return
         val index = groupCameraPhotos(state.photoBrowser.photos).indexOfFirst { it.id == captureId }
-        if (index >= 0) viewedPhotoIndex = state.photoBrowser.offset + index
+        if (index >= 0) {
+            viewedPhotoIndex = state.photoBrowser.offset + index
+            viewPhotoAt(viewedPhotoIndex!!)
+        }
     }
 
     fun closePhoto() {
         viewedPhotoIndex = null
+        controller.clearPhotoPreview(identifier)
     }
 
     fun viewPhotoAt(index: Int) {
@@ -119,9 +124,11 @@ class WifiRemoteViewModel(val identifier: String, val controller: WifiRemoteCont
         val state = controller.sessions.value[identifier.uppercase()]?.wifiRemote ?: return
         val browser = state.photoBrowser
         if (!browser.open) return
-        val count = groupCameraPhotos(browser.photos).size
+        val captures = groupCameraPhotos(browser.photos)
+        val count = captures.size
         if (index in browser.offset until browser.offset + count) {
             viewedPhotoIndex = index
+            controller.showPhotoPreview(identifier, captures[index - browser.offset].preview.handle)
         } else if (!browser.loading && !state.imageTransfer.busy) {
             val offset = when {
                 index == browser.offset - 1 && browser.offset > 0 -> maxOf(
@@ -186,7 +193,10 @@ class WifiRemoteViewModel(val identifier: String, val controller: WifiRemoteCont
         }
     }
 
-    override fun onCleared() { controller.disconnect(identifier) }
+    override fun onCleared() {
+        logging("WifiRemoteViewModel").d { "Wi-Fi remote ViewModel cleared -> Wi-Fi disconnect requested" }
+        controller.disconnect(identifier)
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

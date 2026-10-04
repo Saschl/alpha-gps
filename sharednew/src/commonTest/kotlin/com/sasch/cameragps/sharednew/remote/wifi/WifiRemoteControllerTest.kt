@@ -1,10 +1,14 @@
 package com.sasch.cameragps.sharednew.remote.wifi
 
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.ImageBitmapConfig
+import androidx.compose.ui.graphics.colorspace.ColorSpaces
 import com.sasch.cameragps.sharednew.bluetooth.session.CameraSessionRegistry
 import com.sasch.cameragps.sharednew.ui.remote.WifiRemoteViewModel
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -20,6 +24,18 @@ import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class WifiRemoteControllerTest : WifiLoggingTest() {
+    private class PreviewBitmap(override val width: Int = 1600, override val height: Int = 800) :
+        ImageBitmap {
+        override val colorSpace = ColorSpaces.Srgb
+        override val hasAlpha = false
+        override val config = ImageBitmapConfig.Argb8888
+        override fun prepareToDraw() = Unit
+        override fun readPixels(
+            buffer: IntArray, startX: Int, startY: Int, width: Int,
+            height: Int, bufferOffset: Int, stride: Int
+        ) = Unit
+    }
+
     private class Connection : WifiRemoteConnection {
         override val cameraName = "Test camera"
         override val canCapture = true
@@ -29,6 +45,14 @@ class WifiRemoteControllerTest : WifiLoggingTest() {
         var downloads = 0
         var photos = listOf(WifiCameraPhoto(42L, "DSC.JPG", 100L, "image/jpeg", ""))
         val thumbnailRequests = mutableListOf<Long>()
+        var thumbnailImage: ImageBitmap? = null
+        val screenPreviewRequests = mutableListOf<Long>()
+        var screenPreviewGate: CompletableDeferred<Unit>? = null
+        var screenPreviewImage: ImageBitmap? = PreviewBitmap()
+        var ignorePreviewCancellation = false
+        var failScreenPreview = false
+        val unavailablePreviews = mutableSetOf<Long>()
+        val failingPreviews = mutableSetOf<Long>()
         val pageRequests = mutableListOf<Int>()
         var pageGate: CompletableDeferred<Unit>? = null
         var failPage = false
@@ -53,7 +77,16 @@ class WifiRemoteControllerTest : WifiLoggingTest() {
 
         override suspend fun photoThumbnail(handle: Long): ImageBitmap? {
             thumbnailRequests += handle
-            return null
+            return thumbnailImage
+        }
+
+        override suspend fun photoPreview(handle: Long): ImageBitmap? {
+            screenPreviewRequests += handle
+            val gate = screenPreviewGate
+            if (ignorePreviewCancellation) withContext(NonCancellable) { gate?.await() }
+            else gate?.await()
+            check(!failScreenPreview && handle !in failingPreviews)
+            return screenPreviewImage.takeUnless { handle in unavailablePreviews }
         }
 
         override suspend fun downloadPhoto(
@@ -130,6 +163,118 @@ class WifiRemoteControllerTest : WifiLoggingTest() {
                 ),
             )
         }
+    }
+
+    @Test
+    fun viewerLoadsPairedJpegScreenPreviewOnDemandWithoutReplacingGridThumbnails() = runTest {
+        val connection = pagedConnection()
+        connection.thumbnailImage = PreviewBitmap(160, 80)
+        val controller = WifiRemoteController(
+            backgroundScope,
+            CameraSessionRegistry(),
+            { _, _ -> connection },
+            {},
+            {})
+        val model = WifiRemoteViewModel("camera", controller)
+        controller.connect("camera", "127.0.0.1")
+        runCurrent()
+        controller.browsePhotos("camera")
+        runCurrent()
+        assertTrue(connection.screenPreviewRequests.isEmpty())
+        val thumbnails = controller.thumbnails.value
+        assertEquals(160, thumbnails.getValue(77L).width)
+        connection.screenPreviewGate = CompletableDeferred()
+        model.openPhoto("photo:38")
+        runCurrent()
+        assertEquals(listOf(76L), connection.screenPreviewRequests)
+        assertTrue(controller.photoPreview.value!!.loading)
+        assertNull(controller.photoPreview.value!!.image)
+        connection.screenPreviewGate!!.complete(Unit)
+        runCurrent()
+        assertEquals(1600, controller.photoPreview.value!!.image!!.width)
+        assertFalse(controller.photoPreview.value!!.loading)
+        assertEquals(thumbnails, controller.thumbnails.value)
+        model.viewPhotoAt(38)
+        runCurrent()
+        assertEquals(listOf(76L), connection.screenPreviewRequests)
+        model.closePhoto()
+        assertNull(controller.photoPreview.value)
+        controller.closeAndJoin()
+    }
+
+    @Test
+    fun swipingDiscardsLatePreviewAndFailureKeepsBrowserUsable() = runTest {
+        val connection = pagedConnection()
+        val registry = CameraSessionRegistry()
+        val controller =
+            WifiRemoteController(backgroundScope, registry, { _, _ -> connection }, {}, {})
+        val model = WifiRemoteViewModel("camera", controller)
+        controller.connect("camera", "127.0.0.1")
+        runCurrent()
+        controller.browsePhotos("camera")
+        runCurrent()
+        connection.unavailablePreviews += 0L
+        val delayed = CompletableDeferred<Unit>()
+        connection.screenPreviewGate = delayed
+        connection.ignorePreviewCancellation = true
+        model.openPhoto("photo:0")
+        runCurrent()
+        connection.screenPreviewGate = null
+        model.viewPhotoAt(1)
+        runCurrent()
+        assertEquals(2L, controller.photoPreview.value!!.handle)
+        delayed.complete(Unit)
+        runCurrent()
+        assertEquals(2L, controller.photoPreview.value!!.handle)
+        connection.failScreenPreview = true
+        model.viewPhotoAt(2)
+        runCurrent()
+        assertNull(controller.photoPreview.value!!.image)
+        assertFalse(controller.photoPreview.value!!.loading)
+        assertFalse(registry.get("camera")!!.wifiRemote.photoBrowser.failed)
+        model.viewPhotoAt(2)
+        runCurrent()
+        assertEquals(listOf(0L, 2L, 4L, 5L), connection.screenPreviewRequests)
+        controller.closeAndJoin()
+        assertNull(controller.photoPreview.value)
+    }
+
+    @Test
+    fun downloadCancelsPendingPreviewAndPageChangeClearsIt() = runTest {
+        val connection = pagedConnection()
+        val controller = WifiRemoteController(
+            backgroundScope,
+            CameraSessionRegistry(),
+            { _, _ -> connection },
+            {},
+            {})
+        val model = WifiRemoteViewModel("camera", controller)
+        controller.connect("camera", "127.0.0.1")
+        runCurrent()
+        controller.browsePhotos("camera")
+        runCurrent()
+        connection.screenPreviewGate = CompletableDeferred()
+        model.openPhoto("photo:0")
+        runCurrent()
+        controller.downloadPhoto("camera", 1L)
+        runCurrent()
+        assertNull(controller.photoPreview.value)
+        model.viewPhotoAt(1)
+        runCurrent()
+        assertEquals(listOf(0L), connection.screenPreviewRequests)
+        connection.downloadResult.complete(WifiImageTransferState(WifiImageTransferStatus.Saved))
+        connection.screenPreviewGate = null
+        runCurrent()
+        model.viewPhotoAt(1)
+        runCurrent()
+        assertEquals(2L, controller.photoPreview.value!!.handle)
+        model.viewPhotoAt(40)
+        runCurrent()
+        assertNull(controller.photoPreview.value)
+        model.viewPhotoAt(40)
+        runCurrent()
+        assertEquals(80L, controller.photoPreview.value!!.handle)
+        controller.closeAndJoin()
     }
 
     @Test
@@ -706,7 +851,8 @@ class WifiRemoteControllerTest : WifiLoggingTest() {
     }
 
     @Test
-    fun pairedCapturesRequestOnlyRawPreviewsAndDownloadEachSelectedFormatIndependently() = runTest {
+    fun pairedCapturesPreferCompanionPreviewsAndDownloadEachSelectedFormatIndependently() =
+        runTest {
         val registry = CameraSessionRegistry()
         val connection = Connection().apply {
             photos = listOf(
@@ -723,6 +869,11 @@ class WifiRemoteControllerTest : WifiLoggingTest() {
         controller.browsePhotos("camera")
         runCurrent()
         assertEquals(listOf(43L, 45L, 46L), connection.thumbnailRequests)
+            controller.showPhotoPreview("camera", 42L)
+            runCurrent()
+            controller.showPhotoPreview("camera", 44L)
+            runCurrent()
+            assertEquals(listOf(42L, 44L), connection.screenPreviewRequests)
         connection.downloadResult.complete(WifiImageTransferState(WifiImageTransferStatus.Saved))
         controller.downloadPhoto("camera", 42)
         runCurrent()
@@ -731,6 +882,74 @@ class WifiRemoteControllerTest : WifiLoggingTest() {
         runCurrent()
         assertEquals(listOf(42L, 43L), connection.downloadedHandles)
         assertEquals(setOf(WifiPhotoDownload(42), WifiPhotoDownload(43)), registry.get("camera")!!.wifiRemote.photoBrowser.savedDownloads)
+        controller.closeAndJoin()
+    }
+
+    @Test
+    fun heifPairsFallBackToRawWhenCompanionPreviewIsMissingOrThrows() = runTest {
+        for (throws in listOf(false, true)) {
+            val connection = Connection().apply {
+                photos = listOf(
+                    WifiCameraPhoto(42, "ONE.HIF", 100, "image/heif", "", captureId = "one"),
+                    WifiCameraPhoto(43, "ONE.ARW", 100, "image/x-sony-arw", "", captureId = "one"),
+                )
+                thumbnailImage = PreviewBitmap(160, 80)
+                if (throws) failingPreviews += 42L else unavailablePreviews += 42L
+            }
+            val controller = WifiRemoteController(
+                backgroundScope,
+                CameraSessionRegistry(),
+                { _, _ -> connection },
+                {},
+                {})
+            val model = WifiRemoteViewModel("camera", controller)
+            controller.connect("camera", "127.0.0.1")
+            runCurrent()
+            controller.browsePhotos("camera")
+            runCurrent()
+            assertEquals(listOf(43L), connection.thumbnailRequests)
+            val thumbnails = controller.thumbnails.value
+            assertEquals(160, thumbnails.getValue(43L).width)
+            model.openPhoto("one")
+            runCurrent()
+            assertEquals(listOf(42L, 43L), connection.screenPreviewRequests)
+            assertEquals(42L, controller.photoPreview.value!!.handle)
+            assertEquals(connection.screenPreviewImage, controller.photoPreview.value!!.image)
+            assertFalse(controller.photoPreview.value!!.loading)
+            assertEquals(thumbnails, controller.thumbnails.value)
+            controller.closeAndJoin()
+        }
+    }
+
+    @Test
+    fun unavailableHeifAndRawPreviewsKeepTheRawGalleryThumbnail() = runTest {
+        val connection = Connection().apply {
+            photos = listOf(
+                WifiCameraPhoto(42, "ONE.HIF", 100, "image/heif", "", captureId = "one"),
+                WifiCameraPhoto(43, "ONE.ARW", 100, "image/x-sony-arw", "", captureId = "one"),
+            )
+            thumbnailImage = PreviewBitmap(160, 80)
+            unavailablePreviews += listOf(42L, 43L)
+        }
+        val registry = CameraSessionRegistry()
+        val controller =
+            WifiRemoteController(backgroundScope, registry, { _, _ -> connection }, {}, {})
+        controller.connect("camera", "127.0.0.1")
+        runCurrent()
+        controller.browsePhotos("camera")
+        runCurrent()
+        controller.showPhotoPreview("camera", 42L)
+        runCurrent()
+        assertEquals(listOf(42L, 43L), connection.screenPreviewRequests)
+        assertNull(controller.photoPreview.value!!.image)
+        assertFalse(controller.photoPreview.value!!.loading)
+        val capture =
+            groupCameraPhotos(registry.get("camera")!!.wifiRemote.photoBrowser.photos).single()
+        assertEquals(
+            connection.thumbnailImage,
+            controller.thumbnails.value[capture.thumbnail.handle]
+        )
+        assertFalse(registry.get("camera")!!.wifiRemote.photoBrowser.failed)
         controller.closeAndJoin()
     }
 

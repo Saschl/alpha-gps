@@ -38,10 +38,16 @@ int main(int argc, char** argv) {
         std::ifstream input(file, std::ios::binary);
         std::vector<uint8_t> bytes((std::istreambuf_iterator<char>(input)), {});
         verifyRed(alpha::decodeHeif(nullptr, bytes.data(), bytes.size(), 640, memory, neverCancel), 128, 64);
+        std::ifstream previewInput(std::string(argv[1]) + "/red-422-preview.hif", std::ios::binary);
+        std::vector<uint8_t> previewBytes((std::istreambuf_iterator<char>(previewInput)), {});
+        require(!previewBytes.empty(), "Missing preview fixture");
+        verifyRed(alpha::decodeHeif(nullptr, previewBytes.data(), previewBytes.size(), 640, memory, neverCancel), 640, 320);
+        verifyRed(alpha::decodeHeif(nullptr, previewBytes.data(), previewBytes.size(), 2048, memory, neverCancel), 2048, 1024);
         rejects([&] { alpha::decodeHeif(nullptr, bytes.data(), 20, 0, memory, neverCancel); });
         rejects([&] { alpha::decodeHeif(file.c_str(), nullptr, 0, 0, 1, neverCancel); });
         rejects([&] { alpha::decodeHeif(file.c_str(), nullptr, 0, 0, memory, [] { return true; }); });
-        std::cout << "10-bit 4:2:2 file/memory decode, colours, rotation, malformed input, limits, cancellation passed\n";
+        std::cout
+                << "10-bit 4:2:2 file/memory decode, thumbnails, previews, colours, rotation, malformed input, limits, cancellation passed\n";
         return 0;
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';

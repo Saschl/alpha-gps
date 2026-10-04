@@ -225,7 +225,7 @@ internal fun WifiPhotoBrowser(
                     },
                 ) {
                     Box {
-                        PhotoPreview(thumbnails[capture.preview.handle], browser.loading)
+                        PhotoPreview(thumbnails[capture.thumbnail.handle], browser.loading)
                         if (selecting) Surface(
                             modifier = Modifier.align(Alignment.TopEnd).padding(4.dp),
                             shape = RoundedCornerShape(24.dp),
@@ -313,6 +313,7 @@ private fun PhotoPreview(image: ImageBitmap?, loading: Boolean) {
 @Composable
 internal fun PhotoDetailsSheet(
     capture: WifiCameraCapture, image: ImageBitmap?, state: WifiRemoteState,
+    previewLoading: Boolean,
     onDismiss: () -> Unit, onDownload: (Long, WifiPhotoDownloadFormat) -> Unit, onCancel: () -> Unit,
 ) {
     val browser = state.photoBrowser
@@ -330,7 +331,7 @@ internal fun PhotoDetailsSheet(
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Text(capture.name, style = MaterialTheme.typography.headlineSmall)
-            PhotoPreview(image, browser.loading)
+            PhotoPreview(image, browser.loading || previewLoading)
             if (capture.preview.capturedAt.isNotBlank()) {
                 Text(stringResource(Res.string.wifi_remote_photo_captured, capture.preview.capturedAt.replace('T', ' ')))
             }

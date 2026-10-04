@@ -19,5 +19,7 @@ public final class HeifDecoder {
 
     public static native Bitmap decodeThumbnail(byte[] encoded, long memoryBudget) throws IOException;
 
+    public static native Bitmap decodePreview(byte[] encoded, long memoryBudget) throws IOException;
+
     public static native byte[] readExif(String path) throws IOException;
 }

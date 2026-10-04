@@ -11,6 +11,7 @@ import cameragps.sharednew.generated.resources.wifi_remote_ios_opening
 import cameragps.sharednew.generated.resources.wifi_remote_ios_permission
 import cameragps.sharednew.generated.resources.wifi_remote_ios_settings
 import com.sasch.cameragps.sharednew.bluetooth.IosBluetoothController
+import com.sasch.cameragps.sharednew.logging.logIosLifecycle
 import com.sasch.cameragps.sharednew.ui.remote.WifiRemoteScreen
 import com.sasch.cameragps.sharednew.ui.remote.WifiRemoteViewModel
 import kotlinx.coroutines.launch
@@ -29,7 +30,11 @@ internal fun IosWifiRemoteScreen(identifier: String, onClose: () -> Unit) {
         WifiRemoteViewModel(identifier.uppercase(), controller)
     }
     DisposableEffect(identifier) {
-        onDispose { controller.disconnect(identifier) }
+        logIosLifecycle("Wi-Fi remote screen attached")
+        onDispose {
+            logIosLifecycle("Wi-Fi remote screen disposed -> Wi-Fi disconnect requested")
+            controller.disconnect(identifier)
+        }
     }
     if (owner.equals(identifier, ignoreCase = true)) {
         DisposableEffect(Unit) {
@@ -59,6 +64,10 @@ internal fun IosWifiRemoteScreen(identifier: String, onClose: () -> Unit) {
                 } else controller.imageStoragePermissionDenied(identifier)
             }
         },
-        onClose = { controller.disconnect(identifier); onClose() },
+        onClose = {
+            logIosLifecycle("Wi-Fi remote screen closed by user -> Wi-Fi disconnect requested")
+            controller.disconnect(identifier)
+            onClose()
+        },
     )
 }

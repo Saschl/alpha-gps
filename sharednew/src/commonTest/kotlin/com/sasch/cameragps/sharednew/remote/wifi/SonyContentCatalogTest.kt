@@ -92,6 +92,8 @@ class SonyContentCatalogTest : WifiLoggingTest() {
         var paginated = false
         val heifThumbnail = byteArrayOf(0, 0, 0, 16) + "ftypheic".encodeToByteArray() + ByteArray(4)
         var decodedThumbnail: ByteArray? = null
+        var decodedPreview: ByteArray? = null
+        var previewResponse = 0x2001L
         val transport = object : PtpIpCommandTransport {
             override suspend fun receive() = replies.receive()
             override suspend fun send(packet: PtpIpPacket) {
@@ -120,7 +122,7 @@ class SonyContentCatalogTest : WifiLoggingTest() {
                     else batch(content(100, 1099, jpeg, raw), content(101, 1100, jpeg, raw))
 
                     0x923d -> ByteArray(params.last().toInt()) { 7 }
-                    0x923e -> heifThumbnail
+                    0x923e -> if (params.last() == 1L || previewResponse == 0x2001L) heifThumbnail else null
                     0x9207 -> {
                         connection.packets.send(
                             PtpIpPacket(
@@ -139,7 +141,11 @@ class SonyContentCatalogTest : WifiLoggingTest() {
                 }
                 replies.send(
                     PtpIpPacket(
-                        7, number(0x2001, 2) + number(id.toLong(), 4) +
+                        7,
+                        number(
+                            if (code == 0x923e && params.last() == 2L) previewResponse else 0x2001,
+                            2
+                        ) + number(id.toLong(), 4) +
                                 if (code == 0x923d) number(returnedTimestamp, 8) else byteArrayOf()
                     )
                 )
@@ -156,6 +162,9 @@ class SonyContentCatalogTest : WifiLoggingTest() {
         var received = 0
         val transfer = SonyImageTransfer(queue, ready, events, decodeNonJpegThumbnail = { bytes ->
             decodedThumbnail = bytes
+            null
+        }, decodePreview = { bytes ->
+            decodedPreview = bytes
             null
         }) {
             object : CameraImageDestination {
@@ -175,6 +184,7 @@ class SonyContentCatalogTest : WifiLoggingTest() {
         assertTrue(transfer.supported)
         val page = transfer.openBrowser()
         val handle = page.photos.first { it.mimeType == "image/x-sony-arw" }.handle
+        val previewHandle = page.photos.first { it.mimeType == "image/jpeg" }.handle
         assertEquals(3, page.photos.size)
         assertEquals(0x9207 to listOf(0xd30fL, 1L), requests.first())
         assertEquals(0x923c to listOf(0L, 0L, 100L, 1L, 0L), requests[1])
@@ -182,6 +192,24 @@ class SonyContentCatalogTest : WifiLoggingTest() {
         assertEquals(null, transfer.thumbnail(heifHandle))
         assertContentEquals(heifThumbnail, decodedThumbnail)
         assertEquals(0x923e to listOf(42L, 0x01000003L, 1L), requests.last())
+        assertEquals(null, transfer.preview(previewHandle))
+        assertContentEquals(heifThumbnail, decodedPreview)
+        assertEquals(0x923e to listOf(42L, 0x01000001L, 2L), requests.last())
+        assertTrue(requests.none { it.first == 0x923d }, "Preview must not fetch the original")
+        val requestCount = requests.size
+        assertEquals(null, transfer.preview(-1L))
+        assertEquals(requestCount, requests.size)
+        previewResponse = 0x2005
+        decodedPreview = null
+        assertEquals(null, transfer.preview(previewHandle))
+        assertEquals(null, decodedPreview)
+        assertEquals(null, transfer.thumbnail(heifHandle))
+        assertEquals(
+            1L,
+            requests.last().second.last(),
+            "Thumbnail remains available after rejected preview"
+        )
+        previewResponse = 0x2001
         assertEquals(WifiImageTransferStatus.Saved, transfer.download(handle) {}.status)
         assertTrue(committed)
         assertEquals(600_000, received)
@@ -189,6 +217,18 @@ class SonyContentCatalogTest : WifiLoggingTest() {
             listOf(42L, 0x01000002L, 0L, 0L, 524288L),
             requests.first { it.first == 0x923d }.second
         )
+        decodedPreview = null
+        assertEquals(null, transfer.preview(handle))
+        assertContentEquals(
+            heifThumbnail,
+            decodedPreview,
+            "Unrecognized RAW layout uses the camera preview"
+        )
+        assertEquals(
+            listOf(42L, 0x01000002L, 0L, 0L, 65536L),
+            requests.last { it.first == 0x923d }.second
+        )
+        assertEquals(0x923e to listOf(42L, 0x01000002L, 2L), requests.last())
         returnedTimestamp = 3001
         assertEquals(WifiImageTransferStatus.Failed, transfer.download(handle) {}.status)
         assertTrue(aborted)

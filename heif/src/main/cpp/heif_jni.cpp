@@ -1,18 +1,31 @@
-#include "heif_c_api.h"
+#include "heif_decoder.h"
 #include <android/bitmap.h>
 #include <jni.h>
 #include <cstring>
 #include <memory>
+#include <stdexcept>
 
 namespace {
-using Image = std::unique_ptr<alpha_heif_image, decltype(&alpha_heif_image_release)>;
-using Bytes = std::unique_ptr<alpha_heif_bytes, decltype(&alpha_heif_bytes_release)>;
-
 void throwIo(JNIEnv* env, const char* message) {
     if (env->ExceptionCheck()) return;
     const auto exception = env->FindClass("java/io/IOException");
     if (exception) env->ThrowNew(exception, message);
 }
+
+// C++ exceptions must not cross the JNI boundary; preserve any pending Java exception.
+    template<typename F>
+    auto protect(JNIEnv *env, F action) noexcept -> decltype(action()) {
+        try {
+            return action();
+        } catch (const std::bad_alloc &) {
+            throwIo(env, "Insufficient memory for HEIF decode");
+        } catch (const std::exception &failure) {
+            throwIo(env, failure.what());
+        } catch (...) {
+            throwIo(env, "HEIF decode failed");
+        }
+        return nullptr;
+    }
 
 class UtfChars {
 public:
@@ -25,6 +38,30 @@ private:
     jstring value_;
     const char* chars_;
 };
+
+    class ByteArrayElements {
+    public:
+        ByteArrayElements(JNIEnv *env, jbyteArray value) : env_(env), value_(value),
+                                                           bytes_(env->GetByteArrayElements(value, nullptr)) {
+        }
+
+        ~ByteArrayElements() {
+            if (bytes_) env_->ReleaseByteArrayElements(value_, bytes_, JNI_ABORT);
+        }
+
+        ByteArrayElements(const ByteArrayElements &) = delete;
+
+        ByteArrayElements &operator=(const ByteArrayElements &) = delete;
+
+        const uint8_t *get() const {
+            return reinterpret_cast<const uint8_t *>(bytes_);
+        }
+
+    private:
+        JNIEnv *env_;
+        jbyteArray value_;
+        jbyte *bytes_;
+    };
 
 class Cancellation {
 public:
@@ -64,9 +101,13 @@ private:
     jmethodID method_ = nullptr;
 };
 
-jobject bitmapFromImage(JNIEnv* env, jclass decoder, const alpha_heif_image* image) {
-    const int width = alpha_heif_image_width(image);
-    const int height = alpha_heif_image_height(image);
+    jobject bitmapFromImage(JNIEnv *env, jclass decoder, heif_image *image) {
+        const int width = heif_image_get_primary_width(image);
+        const int height = heif_image_get_primary_height(image);
+        int stride = 0;
+        const auto *source = heif_image_get_plane_readonly(image, heif_channel_interleaved, &stride);
+        if (!source || stride < width * 4) throw std::runtime_error("Invalid decoded HEIF pixels");
+        const bool premultiplied = heif_image_is_premultiplied_alpha(image);
     const auto create = env->GetStaticMethodID(decoder, "createBitmap", "(II)Landroid/graphics/Bitmap;");
     if (!create) return nullptr;
     jobject bitmap = env->CallStaticObjectMethod(decoder, create, width, height);
@@ -79,9 +120,6 @@ jobject bitmapFromImage(JNIEnv* env, jclass decoder, const alpha_heif_image* ima
         throwIo(env, "Cannot access decoded bitmap");
         return nullptr;
     }
-    const int stride = alpha_heif_image_stride(image);
-    const auto* source = alpha_heif_image_pixels(image);
-    const bool premultiplied = alpha_heif_image_premultiplied(image);
     for (int y = 0; y < height; ++y) {
         auto* row = static_cast<uint8_t*>(pixels) + static_cast<size_t>(y) * info.stride;
         std::memcpy(row, source + static_cast<size_t>(y) * stride, static_cast<size_t>(width) * 4);
@@ -95,50 +133,72 @@ jobject bitmapFromImage(JNIEnv* env, jclass decoder, const alpha_heif_image* ima
     AndroidBitmap_unlockPixels(env, bitmap);
     return bitmap;
 }
+
+    jobject decodeMemory(JNIEnv *env, jclass decoder, jbyteArray encoded, jlong memoryBudget,
+            jsize maxBytes, int maxDimension) {
+        const auto length = encoded ? env->GetArrayLength(encoded) : 0;
+        if (memoryBudget <= 0 || length <= 0 || length > maxBytes) {
+            throwIo(env, "Invalid HEIF preview");
+            return nullptr;
+        }
+        const ByteArrayElements bytes(env, encoded);
+        if (env->ExceptionCheck()) return nullptr;
+        if (!bytes.get()) throw std::bad_alloc();
+        const auto image = alpha::decodeHeif(nullptr, bytes.get(), length, maxDimension,
+                memoryBudget, [] {
+                    return false;
+                });
+        return bitmapFromImage(env, decoder, image.get());
+    }
 }
 
 extern "C" JNIEXPORT jobject JNICALL
 Java_com_sasch_cameragps_heif_HeifDecoder_decodeFile(JNIEnv* env, jclass decoder, jstring path,
                                                   jlong memoryBudget, jobject callback) {
-    // Guard the signed Java value before converting to the C API's uint64_t.
-    if (memoryBudget <= 0) { throwIo(env, "Invalid HEIF input"); return nullptr; }
-    UtfChars filename(env, path);
-    if (env->ExceptionCheck()) return nullptr;
-    Cancellation cancelled(env, callback);
-    if (env->ExceptionCheck()) return nullptr;
-    alpha_heif_error error{};
-    const Image image(alpha_heif_decode_file(filename.get(), memoryBudget,
-        [](void* context) { return (*static_cast<Cancellation*>(context))() ? 1 : 0; },
-        &cancelled, &error), alpha_heif_image_release);
-    if (!image) { throwIo(env, error.message); return nullptr; }
-    return bitmapFromImage(env, decoder, image.get());
+    return protect(env, [&]() -> jobject {
+        // Guard the signed Java value before converting to the decoder's uint64_t.
+        if (memoryBudget <= 0) throw std::invalid_argument("Invalid HEIF input");
+        UtfChars filename(env, path);
+        if (env->ExceptionCheck()) return nullptr;
+        if (!filename.get() || !*filename.get()) throw std::invalid_argument("Invalid HEIF path");
+        Cancellation cancelled(env, callback);
+        if (env->ExceptionCheck()) return nullptr;
+        const auto image = alpha::decodeHeif(filename.get(), nullptr, 0, 0, memoryBudget,
+                [&] {
+                    return cancelled();
+                });
+        return bitmapFromImage(env, decoder, image.get());
+    });
 }
 
 extern "C" JNIEXPORT jobject JNICALL
 Java_com_sasch_cameragps_heif_HeifDecoder_decodeThumbnail(JNIEnv* env, jclass decoder, jbyteArray encoded,
                                                        jlong memoryBudget) {
-    if (memoryBudget <= 0) { throwIo(env, "Invalid HEIF thumbnail"); return nullptr; }
-    const auto length = encoded ? env->GetArrayLength(encoded) : 0;
-    auto* bytes = length ? env->GetByteArrayElements(encoded, nullptr) : nullptr;
-    if (env->ExceptionCheck()) return nullptr;
-    alpha_heif_error error{};
-    const Image image(alpha_heif_decode_thumbnail(reinterpret_cast<const uint8_t*>(bytes), length,
-        memoryBudget, &error), alpha_heif_image_release);
-    if (bytes) env->ReleaseByteArrayElements(encoded, bytes, JNI_ABORT);
-    if (!image) { throwIo(env, error.message); return nullptr; }
-    return bitmapFromImage(env, decoder, image.get());
+    return protect(env, [&] {
+        return decodeMemory(env, decoder, encoded, memoryBudget, 512 * 1024, 640);
+    });
+}
+
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_sasch_cameragps_heif_HeifDecoder_decodePreview(JNIEnv *env, jclass decoder, jbyteArray encoded,
+        jlong memoryBudget) {
+    return protect(env, [&] {
+        return decodeMemory(env, decoder, encoded, memoryBudget, 8 * 1024 * 1024, 2048);
+    });
 }
 
 extern "C" JNIEXPORT jbyteArray JNICALL
 Java_com_sasch_cameragps_heif_HeifDecoder_readExif(JNIEnv* env, jclass, jstring path) {
-    UtfChars filename(env, path);
-    if (env->ExceptionCheck()) return nullptr;
-    alpha_heif_error error{};
-    const Bytes bytes(alpha_heif_read_exif(filename.get(), &error), alpha_heif_bytes_release);
-    if (!bytes) { throwIo(env, error.message); return nullptr; }
-    const auto size = static_cast<jsize>(alpha_heif_bytes_size(bytes.get()));
-    auto result = env->NewByteArray(size);
-    if (result && size) env->SetByteArrayRegion(result, 0, size,
-        reinterpret_cast<const jbyte*>(alpha_heif_bytes_data(bytes.get())));
-    return result;
+    return protect(env, [&]() -> jbyteArray {
+        UtfChars filename(env, path);
+        if (env->ExceptionCheck()) return nullptr;
+        if (!filename.get() || !*filename.get()) throw std::invalid_argument("Invalid HEIF path");
+        const auto bytes = alpha::readHeifExif(filename.get());
+        const auto size = static_cast<jsize>(bytes.size());
+        auto result = env->NewByteArray(size);
+        if (result && size)
+            env->SetByteArrayRegion(result, 0, size,
+                    reinterpret_cast<const jbyte *>(bytes.data()));
+        return result;
+    });
 }

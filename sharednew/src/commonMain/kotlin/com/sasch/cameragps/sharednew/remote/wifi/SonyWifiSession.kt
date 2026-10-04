@@ -14,6 +14,7 @@ internal suspend fun openSonyWifiSession(
     http: SonyLiveViewHttpTransport,
     imageStore: CameraImageStore,
     decodeThumbnail: (ByteArray) -> ImageBitmap?,
+    decodePreview: (ByteArray) -> ImageBitmap?,
     networkLost: Flow<Unit> = emptyFlow(),
     releaseNetwork: () -> Unit = {},
 ): WifiRemoteConnection {
@@ -39,7 +40,7 @@ internal suspend fun openSonyWifiSession(
         }
         val transfer = SonyImageTransfer(
             opened.commands, ready, opened.events,
-            decodeThumbnail, imageStore
+            decodeThumbnail, decodePreview, imageStore
         )
         val shutter = SonyPtpShutter(opened.commands, ready, opened.events)
         val preview = SonyLiveViewStream(opened.commands, ready, opened.events,
@@ -51,6 +52,7 @@ internal suspend fun openSonyWifiSession(
             override suspend fun openPhotoBrowser() = transfer.openBrowser()
             override suspend fun photoPage(offset: Int) = transfer.page(offset)
             override suspend fun photoThumbnail(handle: Long) = transfer.thumbnail(handle)
+            override suspend fun photoPreview(handle: Long) = transfer.preview(handle)
             override suspend fun downloadPhoto(
                 handle: Long,
                 format: WifiPhotoDownloadFormat,

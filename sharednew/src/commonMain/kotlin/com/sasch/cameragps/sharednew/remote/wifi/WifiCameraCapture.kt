@@ -1,10 +1,20 @@
 package com.sasch.cameragps.sharednew.remote.wifi
 
 internal data class WifiCameraCapture(val id: String, val files: List<WifiCameraPhoto>) {
-    val preview: WifiCameraPhoto
-        get() = files.firstOrNull { it.mimeType == "image/x-sony-arw" }
-            ?: files.firstOrNull { it.mimeType == "image/jpeg" }
-            ?: files.first()
+    val previewCandidates: List<WifiCameraPhoto>
+        get() = files.sortedBy {
+            when (it.mimeType) {
+                "image/jpeg" -> 0
+                "image/heif" -> 1
+                "image/x-sony-arw" -> 2
+                else -> 3
+            }
+        }
+
+    val preview: WifiCameraPhoto get() = previewCandidates.first()
+
+    val thumbnail: WifiCameraPhoto
+        get() = files.firstOrNull { it.mimeType == "image/x-sony-arw" } ?: preview
 
     val name: String get() = preview.filename.substringBeforeLast('.')
 }

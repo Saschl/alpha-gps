@@ -51,6 +51,7 @@ class SonyImageTransferTest : WifiLoggingTest() {
         var shortChunk = false
         var oversizedChunk = false
         var rejected = false
+        var imageRange: ((Long, Int) -> ByteArray)? = null
         override suspend fun receive() = replies.receive()
         override suspend fun send(packet: PtpIpPacket) {
             if (packet.type != 6) return
@@ -79,7 +80,8 @@ class SonyImageTransferTest : WifiLoggingTest() {
                 0x101b, 0x9211 -> {
                     val count = params.last()
                         .toInt() - (if (shortChunk) 1 else 0) + (if (oversizedChunk) 1 else 0)
-                    ByteArray(count) { ((params[1] + it) % 251).toByte() }
+                    imageRange?.invoke(params[1], count)
+                        ?: ByteArray(count) { ((params[1] + it) % 251).toByte() }
                 }
 
                 else -> null
@@ -132,6 +134,26 @@ class SonyImageTransferTest : WifiLoggingTest() {
         override suspend fun abort() {
             aborted = true
         }
+    }
+
+    @Test
+    fun rawPreviewUsesBoundedPartialReadsAndNeverCreatesADownload() = runTest {
+        val transport = Transport(32_000_000).apply {
+            metadata = mapOf(1L to info(size.toLong(), "ONLY.ARW", 0xb101))
+            imageRange = { _, count -> ByteArray(count) }
+        }
+        val queue = PtpIpCommandQueue(transport, backgroundScope)
+        val transfer = SonyImageTransfer(queue, ready()) { error("Preview must not save a file") }
+        transfer.openBrowser()
+        assertEquals(
+            null,
+            transfer.preview(1L),
+            "Unsupported RAW header falls back without downloading the original"
+        )
+        assertEquals(
+            listOf(listOf(1L, 0L, 0L, 65536L)),
+            transport.operations.filter { it.first == 0x9211 }.map { it.second })
+        queue.close()
     }
 
     @Test

@@ -35,6 +35,7 @@ internal interface WifiRemoteConnection {
     suspend fun openPhotoBrowser(): CameraPhotoPage = error("Photo browsing unavailable")
     suspend fun photoPage(offset: Int): CameraPhotoPage = error("Photo browsing unavailable")
     suspend fun photoThumbnail(handle: Long): ImageBitmap? = null
+    suspend fun photoPreview(handle: Long): ImageBitmap? = null
     suspend fun downloadPhoto(
         handle: Long,
         format: WifiPhotoDownloadFormat,
@@ -68,6 +69,12 @@ internal interface WifiManualSetupConnector {
 
 internal class WifiRemoteConnectException(val failure: WifiRemoteFailure) : Exception("Wi-Fi remote connection failed")
 
+data class WifiPhotoPreview(
+    val handle: Long,
+    val image: ImageBitmap? = null,
+    val loading: Boolean = true
+)
+
 /** App-owned, Main.immediate-confined. Images stay separate from per-camera session state. */
 class WifiRemoteController internal constructor(
     private val scope: CoroutineScope,
@@ -90,6 +97,9 @@ class WifiRemoteController internal constructor(
     private var job: Job? = null
     private val _thumbnails = MutableStateFlow<Map<Long, ImageBitmap>>(emptyMap())
     val thumbnails = _thumbnails.asStateFlow()
+    private val _photoPreview = MutableStateFlow<WifiPhotoPreview?>(null)
+    val photoPreview = _photoPreview.asStateFlow()
+    private var photoPreviewJob: Job? = null
     private var sessionScope: CoroutineScope? = null
     private var activeConnection: WifiRemoteConnection? = null
     private var previewJob: Job? = null
@@ -211,6 +221,7 @@ class WifiRemoteController internal constructor(
                 )
             )
         }) { id, connection ->
+            clearPhotoPreview(id)
             previewJob?.cancelAndJoin()
             previewJob = null
             _image.value = null
@@ -234,11 +245,53 @@ class WifiRemoteController internal constructor(
             else captures.indices.sortedBy { abs(page.offset + it - preferredPhotoIndex) }
             for (index in previewOrder) {
                 val capture = captures[index]
-                val photo = capture.preview
+                val photo = capture.thumbnail
                 connection.photoThumbnail(photo.handle)
                     ?.let { _thumbnails.value += photo.handle to it }
             }
         }
+    }
+
+    fun showPhotoPreview(identifier: String, handle: Long) {
+        val id = identifier.uppercase()
+        val state = registry.get(id)?.wifiRemote ?: return
+        val connection = activeConnection ?: return
+        val parent = sessionScope ?: return
+        val capture = groupCameraPhotos(state.photoBrowser.photos)
+            .firstOrNull { it.preview.handle == handle } ?: return
+        if (_owner.value != id || state.phase != WifiRemotePhase.Ready ||
+            !state.photoBrowser.open || state.imageTransfer.busy ||
+            _photoPreview.value?.handle == handle
+        ) return
+        clearPhotoPreview(id)
+        _photoPreview.value = WifiPhotoPreview(handle)
+        photoPreviewJob = parent.launch {
+            var image: ImageBitmap? = null
+            for (photo in capture.previewCandidates) {
+                currentCoroutineContext().ensureActive()
+                image = try {
+                    connection.photoPreview(photo.handle)
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (failure: Exception) {
+                    log.w { "${photo.formatLabel} preview failed: ${failure.message}" }
+                    null
+                }
+                currentCoroutineContext().ensureActive()
+                if (image != null) break
+                log.d { "${photo.formatLabel} preview unavailable; trying remaining capture formats" }
+            }
+            currentCoroutineContext().ensureActive()
+            _photoPreview.value = WifiPhotoPreview(handle, image, loading = false)
+            if (image == null) log.d { "Camera screen preview unavailable; retaining thumbnail" }
+        }
+    }
+
+    fun clearPhotoPreview(identifier: String) {
+        if (!_owner.value.equals(identifier, true)) return
+        photoPreviewJob?.cancel()
+        photoPreviewJob = null
+        _photoPreview.value = null
     }
 
     fun downloadPhoto(identifier: String, handle: Long, format: WifiPhotoDownloadFormat = WifiPhotoDownloadFormat.Original) {
@@ -317,6 +370,7 @@ class WifiRemoteController internal constructor(
                     )
                 )
             }) { id, connection ->
+            clearPhotoPreview(id)
             previewJob?.cancelAndJoin()
             previewJob = null
             connection.closePhotoBrowser()
@@ -356,6 +410,10 @@ class WifiRemoteController internal constructor(
         if (_owner.value != id || state.phase != WifiRemotePhase.Ready || !state.canTransferImages ||
             state.capture == WifiCaptureStatus.Shooting || photoJob != null
         ) return
+        photoPreviewJob?.cancel()
+        photoPreviewJob = null
+        _photoPreview.value =
+            _photoPreview.value?.takeIf { it.image != null }?.copy(loading = false)
         registry.updateWifiRemote(id, starting(state))
         val work = parent.launch(start = CoroutineStart.LAZY) {
             try {
@@ -481,6 +539,8 @@ class WifiRemoteController internal constructor(
             activeConnection = null
             previewJob = null
             photoJob = null
+            photoPreviewJob = null
+            _photoPreview.value = null
             _thumbnails.value = emptyMap()
             captureRequests?.close()
             captureRequests = null

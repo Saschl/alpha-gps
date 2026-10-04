@@ -11,7 +11,7 @@ class WifiCameraCaptureTest {
             1024, mime, "2026-09-23T12:00:00", captureId = captureId)
 
     @Test
-    fun groupsByCameraIdentityAndPrefersRawPreviewRegardlessOfFileOrder() {
+    fun groupsByCameraIdentityAndPrefersJpegOrHeifOverRawRegardlessOfFileOrder() {
         val heif = photo(1, "image/heif", "content:1:42")
         val raw = photo(2, "image/x-sony-arw", "content:1:42")
         val jpeg = photo(3, "image/jpeg", "content:1:43")
@@ -20,9 +20,24 @@ class WifiCameraCaptureTest {
         val groups = groupCameraPhotos(listOf(heif, raw, jpeg, otherRaw, otherCard))
         assertEquals(3, groups.size)
         assertEquals(listOf(heif, raw), groups[0].files)
-        assertEquals(raw, groups[0].preview)
-        assertEquals(otherRaw, groups[1].preview)
+        assertEquals(heif, groups[0].preview)
+        assertEquals(raw, groups[0].thumbnail)
+        assertEquals(listOf(heif, raw), groups[0].previewCandidates)
+        assertEquals(jpeg, groups[1].preview)
+        assertEquals(otherRaw, groups[1].thumbnail)
         assertEquals(otherCard, groups[2].preview)
+        assertEquals(otherCard, groups[2].thumbnail)
+        assertEquals(heif, WifiCameraCapture("one", listOf(raw, heif)).preview)
+        assertEquals(jpeg, WifiCameraCapture("two", listOf(otherRaw, jpeg)).preview)
+        assertEquals(jpeg, WifiCameraCapture("all", listOf(raw, heif, jpeg)).preview)
+    }
+
+    @Test
+    fun rawOnlyCaptureKeepsItsCameraPreview() {
+        val raw = photo(1, "image/x-sony-arw", "raw-only")
+        val capture = groupCameraPhotos(listOf(raw)).single()
+        assertEquals(raw, capture.preview)
+        assertEquals(raw, capture.thumbnail)
     }
 
     @Test

@@ -33,7 +33,13 @@ private class ImageIoReferences {
     fun string(value: String): CFStringRef = own(CFStringCreateWithCString(null, value, kCFStringEncodingUTF8))
 }
 
-internal fun decodeIosCameraThumbnail(bytes: ByteArray): ImageBitmap? {
+internal fun decodeIosCameraThumbnail(bytes: ByteArray): ImageBitmap? =
+    decodeIosCameraImage(bytes, 640)
+
+internal fun decodeIosCameraPreview(bytes: ByteArray): ImageBitmap? =
+    decodeIosCameraImage(bytes, 2048)
+
+private fun decodeIosCameraImage(bytes: ByteArray, maxDimension: Int): ImageBitmap? {
     if (bytes.isEmpty()) return null
     val refs = ImageIoReferences()
     return try {
@@ -42,7 +48,7 @@ internal fun decodeIosCameraThumbnail(bytes: ByteArray): ImageBitmap? {
         val options = refs.options(
             kCGImageSourceCreateThumbnailFromImageAlways to kCFBooleanTrue,
             kCGImageSourceCreateThumbnailWithTransform to kCFBooleanTrue,
-            kCGImageSourceThumbnailMaxPixelSize to refs.number(640),
+            kCGImageSourceThumbnailMaxPixelSize to refs.number(maxDimension),
             kCGImageSourceShouldCacheImmediately to kCFBooleanTrue,
         )
         val image = checkNotNull(CGImageSourceCreateThumbnailAtIndex(source, 0u, options))

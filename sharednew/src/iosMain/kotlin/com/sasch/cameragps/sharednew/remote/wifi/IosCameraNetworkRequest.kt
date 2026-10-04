@@ -11,6 +11,8 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import platform.Network.*
 import platform.NetworkExtension.*
+import platform.UIKit.UIApplication
+import platform.UIKit.UIApplicationState.UIApplicationStateActive
 import platform.darwin.dispatch_get_main_queue
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
@@ -69,26 +71,29 @@ internal class IosCameraNetworkRequest(
                 eventsChannel.trySend(CameraNetworkEvent.Available(Unit))
                 nw_path_monitor_start(monitor)
                 var host: String? = null
-                var connectedHost: String? = null
+                val networkState = IosCameraNetworkState(ssid)
                 var previousMatch: Boolean? = null
                 while (isActive && !closed) {
                     paths.tryReceive().let { if (it.isSuccess) host = it.getOrNull() }
-                    val current = Channel<String?>(1)
-                    NEHotspotNetwork.fetchCurrentWithCompletionHandler { network -> current.trySend(network?.SSID) }
-                    val matches = withTimeoutOrNull(2.seconds) { current.receive() } == ssid
-                    current.close()
+                    val currentSsid = currentSsidWhenActive()
+                    val matches = currentSsid?.let { it == ssid }
                     if (matches != previousMatch) {
                         log.i { "Wi-Fi iOS expected network matches=$matches gateway=$host" }
                         previousMatch = matches
                     }
-                    if (matches && host != null && connectedHost == null) {
-                        log.i { "Wi-Fi iOS network ready; camera gateway=$host" }
-                        eventsChannel.trySend(CameraNetworkEvent.Ready(Unit, host))
-                        connectedHost = host
-                    } else if (connectedHost != null && (!matches || host != connectedHost)) {
-                        log.w { "Wi-Fi iOS network lost; matches=$matches gateway=$host expectedGateway=$connectedHost" }
-                        eventsChannel.trySend(CameraNetworkEvent.Lost(Unit))
-                        return@launch
+                    when (val event = networkState.update(currentSsid, host)) {
+                        is CameraNetworkEvent.Ready -> {
+                            log.i { "Wi-Fi iOS network ready; camera gateway=${event.host}" }
+                            eventsChannel.trySend(event)
+                        }
+
+                        is CameraNetworkEvent.Lost -> {
+                            log.w { "Wi-Fi iOS network lost; matches=$matches gateway=$host" }
+                            eventsChannel.trySend(event)
+                            return@launch
+                        }
+
+                        else -> Unit
                     }
                     delay(500.milliseconds)
                 }
@@ -124,6 +129,37 @@ internal class IosCameraNetworkRequest(
 
     companion object {
         private val joinMutex = Mutex()
+    }
+}
+
+private suspend fun currentSsidWhenActive(): String? {
+    val app = UIApplication.sharedApplication
+    if (app.applicationState != UIApplicationStateActive) return null
+    val current = Channel<String?>(1)
+    try {
+        NEHotspotNetwork.fetchCurrentWithCompletionHandler { network -> current.trySend(network?.SSID) }
+        val ssid = withTimeoutOrNull(2.seconds) { current.receive() }
+        return ssid.takeIf { app.applicationState == UIApplicationStateActive }
+    } finally {
+        current.close()
+    }
+}
+
+internal class IosCameraNetworkState(private val expectedSsid: String) {
+    private var connectedHost: String? = null
+
+    fun update(ssid: String?, host: String?): CameraNetworkEvent<Unit>? {
+        val connected = connectedHost
+        if (connected == null) {
+            if (ssid != expectedSsid || host == null) return null
+            connectedHost = host
+            return CameraNetworkEvent.Ready(Unit, host)
+        }
+        // An unavailable SSID is not evidence that the camera network was left.
+        if (host != connected || (ssid != null && ssid != expectedSsid)) {
+            return CameraNetworkEvent.Lost(Unit)
+        }
+        return null
     }
 }
 

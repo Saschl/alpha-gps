@@ -23,6 +23,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -69,6 +70,10 @@ internal fun WifiPhotoViewer(
     val browser = state.photoBrowser
     val captures = remember(browser.photos) { groupCameraPhotos(browser.photos) }
     val thumbnails by viewModel.controller.thumbnails.collectAsState()
+    val preview by viewModel.controller.photoPreview.collectAsState()
+    DisposableEffect(viewModel) {
+        onDispose { viewModel.controller.clearPhotoPreview(viewModel.identifier) }
+    }
     key(browser.offset) {
         val preceding = if (browser.offset > 0) 1 else 0
         val count = captures.size + preceding + if (browser.hasMore) 1 else 0
@@ -137,7 +142,9 @@ internal fun WifiPhotoViewer(
                     key = { page -> captures.getOrNull(page - preceding)?.id ?: "boundary:$page" },
                 ) { page ->
                     val capture = captures.getOrNull(page - preceding)
-                    val image = capture?.let { thumbnails[it.preview.handle] }
+                    val screenPreview = preview?.takeIf { it.handle == capture?.preview?.handle }
+                    val image =
+                        screenPreview?.image ?: capture?.let { thumbnails[it.thumbnail.handle] }
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         when {
                             capture == null -> Column(
@@ -169,7 +176,9 @@ internal fun WifiPhotoViewer(
                                 modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Fit
                             )
 
-                            browser.loading -> CircularProgressIndicator(color = Color.White)
+                            browser.loading || screenPreview?.loading == true -> CircularProgressIndicator(
+                                color = Color.White
+                            )
                             else -> Text(stringResource(Res.string.wifi_remote_preview_unavailable))
                         }
                     }
@@ -209,8 +218,12 @@ internal fun WifiPhotoViewer(
             }
         }
         if (showDetails && current != null) {
+            val screenPreview = preview?.takeIf { it.handle == current.preview.handle }
             PhotoDetailsSheet(
-                current, thumbnails[current.preview.handle], state,
+                capture = current,
+                image = screenPreview?.image ?: thumbnails[current.thumbnail.handle],
+                state = state,
+                previewLoading = screenPreview?.loading == true,
                 onDismiss = { showDetails = false },
                 onDownload = { handle, format ->
                     onDownload(

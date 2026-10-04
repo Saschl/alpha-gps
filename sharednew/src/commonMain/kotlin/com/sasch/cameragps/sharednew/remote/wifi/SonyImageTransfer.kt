@@ -93,6 +93,7 @@ internal class SonyImageTransfer(
     private val capabilities: SonyPtpInitializationResult.Ready,
     events: PtpIpEventMonitor? = null,
     private val decodeNonJpegThumbnail: (ByteArray) -> ImageBitmap? = { null },
+    private val decodePreview: (ByteArray) -> ImageBitmap? = { null },
     private val store: CameraImageStore,
 ) {
     private val catalog = if (events != null && SonyContentCatalog.supported(capabilities))
@@ -176,6 +177,45 @@ internal class SonyImageTransfer(
         }
     }
 
+    suspend fun preview(handle: Long): ImageBitmap? {
+        val photo = pagePhotos.firstOrNull { it.handle == handle } ?: return null
+        if (photo.mimeType == "image/x-sony-arw") {
+            try {
+                val embedded = SonyArwPreview.read(photo.size) { offset, length ->
+                    read(
+                        handle,
+                        offset,
+                        length
+                    )
+                }
+                if (embedded != null) return withContext(Dispatchers.Default) { embedded.decode() }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                // Other ARW layouts and rejected partial reads retain the camera preview fallback.
+            }
+        }
+        val catalog = catalog ?: return null
+        if (!catalog.hasThumbnails) return null
+        return try {
+            val bytes = catalog.preview(handle)
+            withContext(Dispatchers.Default) {
+                if (bytes.size >= 2 && bytes[0] == 0xff.toByte() && bytes[1] == 0xd8.toByte()) {
+                    val jpeg = SonyJpeg.inspect(bytes)
+                    require(
+                        jpeg.width <= 4096 && jpeg.height <= 4096 &&
+                                jpeg.width.toLong() * jpeg.height <= 8 * 1024 * 1024
+                    )
+                    bytes.copyOf(jpeg.byteCount).decodeToImageBitmap()
+                } else decodePreview(bytes)
+            }
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            null
+        }
+    }
+
     suspend fun download(
         handle: Long,
         format: WifiPhotoDownloadFormat = WifiPhotoDownloadFormat.Original,
@@ -210,25 +250,7 @@ internal class SonyImageTransfer(
                 var offset = 0L
                 while (offset < info.size) {
                     val length = minOf(CHUNK_BYTES.toLong(), info.size - offset).toInt()
-                    val bytes = if (catalog != null) catalog.read(handle, offset, length) else {
-                        val large = capabilities.deviceInfo.supports(GET_PARTIAL_LARGE_OBJECT)
-                        val parameters = if (large) listOf(
-                            handle,
-                            offset and 0xffffffffL,
-                            offset ushr 32,
-                            length.toLong()
-                        )
-                        else listOf(handle, offset, length.toLong())
-                        val result = commands.executeDataIn(
-                            if (large) GET_PARTIAL_LARGE_OBJECT else GET_PARTIAL_OBJECT,
-                            parameters, maxDataBytes = length
-                        )
-                        accepted(result)
-                        result as PtpIpTransactionResult.Response
-                        if (!large) require(result.response.parameters.firstOrNull() == length.toLong())
-                        result.data ?: error("Missing image data")
-                    }
-                    require(bytes.size == length) { "Incomplete image chunk" }
+                    val bytes = read(handle, offset, length)
                     output.write(bytes)
                     offset += length
                     onProgress(
@@ -289,6 +311,26 @@ internal class SonyImageTransfer(
         val result = commands.executeDataIn(code, parameters, maxDataBytes = limit)
         accepted(result)
         return (result as PtpIpTransactionResult.Response).data ?: error("Missing camera data")
+    }
+
+    private suspend fun read(handle: Long, offset: Long, length: Int): ByteArray {
+        val bytes = if (catalog != null) catalog.read(handle, offset, length) else {
+            val large = capabilities.deviceInfo.supports(GET_PARTIAL_LARGE_OBJECT)
+            val parameters =
+                if (large) listOf(handle, offset and 0xffffffffL, offset ushr 32, length.toLong())
+                else listOf(handle, offset, length.toLong())
+            val result = commands.executeDataIn(
+                if (large) GET_PARTIAL_LARGE_OBJECT else GET_PARTIAL_OBJECT,
+                parameters,
+                maxDataBytes = length
+            )
+            accepted(result)
+            result as PtpIpTransactionResult.Response
+            if (!large) require(result.response.parameters.firstOrNull() == length.toLong())
+            result.data ?: error("Missing image data")
+        }
+        require(bytes.size == length) { "Incomplete image chunk" }
+        return bytes
     }
 
     private fun accepted(result: PtpIpTransactionResult) {

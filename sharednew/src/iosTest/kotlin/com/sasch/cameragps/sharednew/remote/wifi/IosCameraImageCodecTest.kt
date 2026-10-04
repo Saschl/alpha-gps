@@ -26,6 +26,13 @@ class IosCameraImageCodecTest {
     }
 
     @Test
+    fun previewsRetainMoreDetailThanThumbnails() {
+        verifyRed(checkNotNull(decodeIosCameraThumbnail(HeifTestFixtures.preview)), 640, 320)
+        verifyRed(checkNotNull(decodeIosCameraPreview(HeifTestFixtures.preview)), 2048, 1024)
+        kotlin.test.assertNull(decodeIosCameraPreview(byteArrayOf(0, 1, 2)))
+    }
+
+    @Test
     fun convertsFullResolutionAndPreservesRotation() = withFixture { path ->
         val output = "$path.jpg"
         try {

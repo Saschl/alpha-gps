@@ -186,6 +186,11 @@ internal class SonyContentCatalog(
         listOf(handle and 0xffffffffL, handle ushr 32, 1L), 512 * 1024
     )
 
+    suspend fun preview(handle: Long): ByteArray = data(
+        0x923e,
+        listOf(handle and 0xffffffffL, handle ushr 32, 2L), 8 * 1024 * 1024
+    )
+
     suspend fun close() {
         if (!requested) return
         control(false)

@@ -13,5 +13,5 @@ The CMake build extracts these archives locally and does not download dependenci
 For Android, build :heif:assembleRelease with Gradle (NDK 29, CMake 3.22.1).
 For host decoder tests:
   cmake -S heif/src/main/cpp -B /tmp/alpha-heif-test -DCMAKE_BUILD_TYPE=Release
-  cmake --build /tmp/alpha-heif-test --target heif_decoder_test heif_c_api_test -j 4
+  cmake --build /tmp/alpha-heif-test --target heif_decoder_test -j 4
   ctest --test-dir /tmp/alpha-heif-test --output-on-failure

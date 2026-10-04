@@ -38,6 +38,7 @@ import com.sasch.cameragps.sharednew.database.logging.LogRepository
 import com.sasch.cameragps.sharednew.language.appLanguagePreference
 import com.sasch.cameragps.sharednew.logging.IosLogFormatter
 import com.sasch.cameragps.sharednew.logging.IosLogging
+import com.sasch.cameragps.sharednew.logging.logIosLifecycle
 import com.sasch.cameragps.sharednew.review.IosReviewPromptEffect
 import com.sasch.cameragps.sharednew.ui.device.SharedDevicesScreen
 import com.sasch.cameragps.sharednew.ui.devicelist.DeviceListViewModel
@@ -56,7 +57,16 @@ import platform.Foundation.NSNotificationCenter
 import platform.UIKit.UIApplication
 import platform.UIKit.UIApplicationDidBecomeActiveNotification
 import platform.UIKit.UIApplicationDidEnterBackgroundNotification
+import platform.UIKit.UIApplicationWillEnterForegroundNotification
+import platform.UIKit.UIApplicationWillResignActiveNotification
+import platform.UIKit.UIApplicationWillTerminateNotification
 import platform.UIKit.UIApplicationState.UIApplicationStateActive
+import platform.UIKit.UIScene
+import platform.UIKit.UISceneDidActivateNotification
+import platform.UIKit.UISceneDidDisconnectNotification
+import platform.UIKit.UISceneDidEnterBackgroundNotification
+import platform.UIKit.UISceneWillDeactivateNotification
+import platform.UIKit.UISceneWillEnterForegroundNotification
 import platform.UIKit.UIViewController
 
 internal enum class IosScreen {
@@ -126,11 +136,13 @@ internal fun CameraGpsIosApp(
 
     DisposableEffect(Unit) {
         val center = NSNotificationCenter.defaultCenter
+        logIosLifecycle("app UI attached; registering lifecycle observers")
         val backgroundObserver = center.addObserverForName(
             name = UIApplicationDidEnterBackgroundNotification,
             `object` = null,
             queue = null
         ) { _ ->
+            logIosLifecycle("UIApplication.didEnterBackground -> Wi-Fi disconnect requested")
             isAppInForeground = false
             IosBluetoothController.wifiRemote.disconnect()
         }
@@ -139,12 +151,29 @@ internal fun CameraGpsIosApp(
             `object` = null,
             queue = null
         ) { _ ->
+            logIosLifecycle("UIApplication.didBecomeActive")
             isAppInForeground = true
+        }
+        val diagnosticObservers = listOf(
+            UIApplicationWillResignActiveNotification to "UIApplication.willResignActive",
+            UIApplicationWillEnterForegroundNotification to "UIApplication.willEnterForeground",
+            UIApplicationWillTerminateNotification to "UIApplication.willTerminate",
+            UISceneWillDeactivateNotification to "UIScene.willDeactivate",
+            UISceneDidEnterBackgroundNotification to "UIScene.didEnterBackground",
+            UISceneWillEnterForegroundNotification to "UIScene.willEnterForeground",
+            UISceneDidActivateNotification to "UIScene.didActivate",
+            UISceneDidDisconnectNotification to "UIScene.didDisconnect",
+        ).map { (name, event) ->
+            center.addObserverForName(name, `object` = null, queue = null) { notification ->
+                logIosLifecycle(event, notification?.`object` as? UIScene)
+            }
         }
 
         onDispose {
+            logIosLifecycle("app UI disposed; removing lifecycle observers")
             center.removeObserver(backgroundObserver)
             center.removeObserver(activeObserver)
+            diagnosticObservers.forEach(center::removeObserver)
         }
     }
 
@@ -153,6 +182,7 @@ internal fun CameraGpsIosApp(
     }
 
     LaunchedEffect(lifecycleState) {
+        logIosLifecycle("Compose lifecycle=$lifecycleState")
         if (lifecycleState == Lifecycle.State.RESUMED) appLanguagePreference.refresh()
     }
     val migrationCandidates by bluetoothController.migrationCandidates.collectAsState()
