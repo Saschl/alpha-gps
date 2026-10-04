@@ -3,5 +3,20 @@
   "extends": [
     "config:best-practices",
     "helpers:pinGitHubActionDigests"
+  ],
+  "packageRules": [
+    {
+      "description": "The KMP SDK is compiled against one exact Sentry Cocoa version, pinned in Xcode (not visible to Renovate).",
+      "matchDepNames": [
+        "io.sentry:sentry-kotlin-multiplatform",
+        "io.sentry.kotlin.multiplatform.gradle"
+      ],
+      "labels": [
+        "needs-xcode-pin"
+      ],
+      "prBodyNotes": [
+        "⚠️ Incomplete on its own: bump the Sentry Cocoa SPM pin in `iosApp/alphagps.xcodeproj` + `Package.resolved` to the version this release was compiled against (see CLAUDE.md → \"Bumping Sentry\"), and update `sentryCocoa` in `gradle/libs.versions.toml`. Until then the iOS link fails with undefined symbols."
+      ]
+    }
   ]
 }

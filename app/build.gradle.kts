@@ -10,7 +10,7 @@ plugins {
     alias(libs.plugins.jetbrains.compose)
     id("androidx.room")
     id("com.google.devtools.ksp")
-    id("io.sentry.android.gradle") version "6.20.0"
+    id("io.sentry.android.gradle") version "6.23.0"
 }
 
 room {
@@ -173,7 +173,7 @@ dependencies {
     implementation(libs.kotlinx.serialization.core)
     implementation(libs.androidx.appcompat)
 
-    implementation(compose.components.resources)
+    implementation(libs.components.resources)
 
 }
 
@@ -204,6 +204,13 @@ sentry {
     // gplayImplementation instead of auto-installation (which is variant-blind).
     ignoredFlavors.set(setOf("foss"))
     autoInstallation {
+        enabled.set(false)
+    }
+
+    // Performance tracing is off (no traces sample rate in the manifest), so the
+    // bytecode it would patch into Room/file I/O/OkHttp/Compose calls records
+    // spans that are never sent. Re-enable together with a sample rate.
+    tracingInstrumentation {
         enabled.set(false)
     }
 }

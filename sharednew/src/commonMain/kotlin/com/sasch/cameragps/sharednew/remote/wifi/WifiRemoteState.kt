@@ -5,6 +5,7 @@ enum class WifiRemotePhase {
     Idle,
     PreparingCamera,
     AwaitingNetworkApproval,
+    AwaitingManualNetwork,
     JoiningNetwork,
     OpeningSession,
     Ready,
@@ -23,6 +24,7 @@ enum class WifiRemoteFailure {
     JoinCameraWifi,
     BluetoothRequired,
     CameraSetupFailed,
+    CameraCredentialsUnavailable,
     NetworkJoinFailed,
     CameraAddressUnavailable,
     WifiDisabled,
@@ -44,6 +46,8 @@ data class WifiImageTransferState(
     val filename: String = "",
     val bytesReceived: Long = 0,
     val totalBytes: Long = 0,
+    val completedFiles: Int = 0,
+    val totalFiles: Int = 0,
 ) {
     val busy: Boolean get() = status == WifiImageTransferStatus.Downloading || status == WifiImageTransferStatus.Converting
 }
@@ -82,6 +86,7 @@ data class WifiRemoteState(
     val photoBrowser: WifiPhotoBrowserState = WifiPhotoBrowserState(),
     val imageTransfer: WifiImageTransferState = WifiImageTransferState(),
     val wifiShutdown: WifiShutdownStatus = WifiShutdownStatus.NotRequested,
+    val manualNetwork: CameraWifiCredentials? = null,
 ) {
     init {
         require((phase == WifiRemotePhase.Failed) == (failure != null))

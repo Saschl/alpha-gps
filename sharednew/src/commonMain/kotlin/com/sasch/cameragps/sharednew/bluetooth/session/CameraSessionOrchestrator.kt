@@ -175,6 +175,10 @@ class CameraSessionOrchestrator(
         if (registry.get(identifier)?.phase != BleSessionPhase.Transmitting) {
             throw WifiRemoteConnectException(WifiRemoteFailure.BluetoothRequired)
         }
+        transport.wifiMtuRequest(identifier)?.let { mtu ->
+            val result = queue.execute(identifier, BleOperation.RequestMtu(mtu))
+            log.i { "Wi-Fi BLE MTU request=$mtu result=$result" }
+        }
         return SonyWifiBootstrap(port).prepare(identifier)
     }
     fun releaseWifiControls(identifier: String) = remoteControl.releaseWifiControls(identifier)
@@ -260,6 +264,7 @@ class CameraSessionOrchestrator(
             is BleTransportEvent.CharacteristicChanged -> handleCharacteristicChanged(event)
 
             is BleTransportEvent.ServicesDiscovered -> Unit // consumed by the queue
+            is BleTransportEvent.MtuChanged -> Unit // consumed by the queue
         }
     }
 

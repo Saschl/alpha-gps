@@ -29,6 +29,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -91,9 +92,6 @@ fun CameraDeviceManager(
     ).cameraDeviceDao()
     val adapter = context.getSystemService<BluetoothManager>()?.adapter
     val locationManager = context.getSystemService<LocationManager>()
-    var selectedDevice by remember {
-        mutableStateOf<AssociatedDeviceCompat?>(null)
-    }
 
     val activity = LocalActivity.current
 
@@ -109,6 +107,12 @@ fun CameraDeviceManager(
             }
         )
     }
+
+    var selectedDeviceAddress by rememberSaveable {
+        mutableStateOf<String?>(null)
+    }
+
+    val selectedDevice = associatedDevices.firstOrNull() { it.address == selectedDeviceAddress }
 
     var isBluetoothEnabled by remember {
         mutableStateOf(adapter?.isEnabled == true)
@@ -287,7 +291,7 @@ fun CameraDeviceManager(
                         associatedDevices =
                             deviceManager.getAssociatedDevices(adapter)
                     }
-                    selectedDevice = null
+                    selectedDeviceAddress = null
                 }
         }
 
@@ -319,7 +323,7 @@ fun CameraDeviceManager(
                         },
                         onConnect = { device ->
                             if (!SCREENSHOT_MODE) {
-                                selectedDevice = device
+                                selectedDeviceAddress = device.address
                             }
                         },
                         onDisassociate = disassociateDevice,
@@ -339,7 +343,7 @@ fun CameraDeviceManager(
                                 deviceManager = deviceManager,
                                 associationId = it,
                         onDisassociate = disassociateDevice,
-                                onClose = { selectedDevice = null },
+                        onClose = { selectedDeviceAddress = null },
                                 onHelpClick = onHelpClick
                             )
                         }

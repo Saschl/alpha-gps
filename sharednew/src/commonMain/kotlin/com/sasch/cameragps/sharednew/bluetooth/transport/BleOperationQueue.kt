@@ -1,8 +1,8 @@
 package com.sasch.cameragps.sharednew.bluetooth.transport
 
 import com.diamondedge.logging.logging
-import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.TimeoutCancellationException
@@ -18,6 +18,7 @@ sealed interface BleOperation {
     data class Read(val characteristicUuid: String) : BleOperation
     data class Subscribe(val characteristicUuid: String, val enable: Boolean) : BleOperation
     data object DiscoverServices : BleOperation
+    data class RequestMtu(val mtu: Int) : BleOperation
 }
 
 sealed interface BleOperationResult {
@@ -179,6 +180,7 @@ class BleOperationQueue(
 
         is BleOperation.DiscoverServices ->
             transport.initiateDiscoverServices(identifier)
+        is BleOperation.RequestMtu -> transport.initiateMtuRequest(identifier, op.mtu)
     }
 
     private fun timeoutFor(op: BleOperation): Long = when (op) {
@@ -190,6 +192,9 @@ class BleOperationQueue(
         pending: BleOperation,
         event: BleTransportEvent,
     ): BleOperationResult? = when {
+        pending is BleOperation.RequestMtu && event is BleTransportEvent.MtuChanged ->
+            event.status.toResult()
+
         pending is BleOperation.Write && event is BleTransportEvent.CharacteristicWritten &&
                 pending.characteristicUuid.equals(event.characteristicUuid, ignoreCase = true) ->
             event.status.toResult()
@@ -226,6 +231,7 @@ class BleOperationQueue(
         is BleOperation.Read -> "Read($characteristicUuid)"
         is BleOperation.Subscribe -> "Subscribe($characteristicUuid, enable=$enable)"
         is BleOperation.DiscoverServices -> "DiscoverServices"
+        is BleOperation.RequestMtu -> "RequestMtu($mtu)"
     }
 
     private fun BleOperationResult.describe(): String = when (this) {

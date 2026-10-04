@@ -20,12 +20,17 @@ fun createAndroidWifiRemoteController(context: Context, scope: CoroutineScope,
         { credentials -> AndroidCameraNetworkRequest(context.applicationContext, credentials) },
         connector::openOnNetwork,
     ) else null
+    val manualSetup = if (Build.VERSION.SDK_INT < 29) AndroidManualWifiSetup(
+        context.applicationContext, orchestrator::prepareCameraWifi, connector::openOnNetwork,
+    ) else null
     return WifiRemoteController(scope, orchestrator.registry, connector,
         orchestrator::claimWifiControls, orchestrator::releaseWifiControls,
         automatic?.let { delegate -> WifiAutomaticConnector { id, sessionScope, phase ->
             try { delegate.open(id, sessionScope, phase) }
             catch (_: SecurityException) { throw WifiRemoteConnectException(WifiRemoteFailure.NetworkPermissionDenied) }
-        } })
+        }
+        }, manualSetup
+    )
 }
 
 private class AndroidWifiRemoteConnector(context: Context) : WifiRemoteConnector {

@@ -1,7 +1,5 @@
 package com.saschl.cameragps.ui.device
 
-import com.sasch.cameragps.sharednew.remote.wifi.WifiPhotoDownloadFormat
-
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
@@ -26,6 +24,8 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.sasch.cameragps.sharednew.remote.wifi.WifiPhotoDownload
+import com.sasch.cameragps.sharednew.remote.wifi.WifiPhotoDownloadFormat
 import com.sasch.cameragps.sharednew.ui.remote.WifiRemoteScreen
 import com.sasch.cameragps.sharednew.ui.remote.WifiRemoteViewModel
 import com.saschl.cameragps.AppServices
@@ -43,6 +43,10 @@ fun AndroidWifiRemoteScreen(identifier: String, onClose: () -> Unit) {
     }
     var pendingHost by rememberSaveable { mutableStateOf<String?>(null) }
     var pendingAutomatic by rememberSaveable { mutableStateOf(false) }
+    fun startCameraSetup() {
+        if (controller.supportsAutomaticConnection) controller.connectAutomatically(identifier)
+        else controller.prepareManualConnection(identifier)
+    }
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { grants ->
         val host = pendingHost
         val automatic = pendingAutomatic
@@ -51,20 +55,22 @@ fun AndroidWifiRemoteScreen(identifier: String, onClose: () -> Unit) {
         if (automatic || host != null) {
             if (grants.values.any { !it }) controller.permissionDenied(identifier)
             else if (lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
-                if (automatic) controller.connectAutomatically(identifier) else controller.connect(identifier, host!!)
+                if (automatic) startCameraSetup() else controller.connect(identifier, host!!)
             }
         }
     }
-    var pendingPhoto by rememberSaveable { mutableStateOf<Long?>(null) }
-    var pendingPhotoFormat by rememberSaveable { mutableStateOf(WifiPhotoDownloadFormat.Original) }
+    var pendingPhotos by rememberSaveable { mutableStateOf(emptyList<Long>()) }
+    var pendingPhotoFormats by rememberSaveable { mutableStateOf(emptyList<String>()) }
     val storagePermission =
         rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-            val handle = pendingPhoto
-            pendingPhoto = null
-            if (granted && handle != null && lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) controller.downloadPhoto(
-                identifier,
-                handle, pendingPhotoFormat
-            )
+            val downloads = pendingPhotos.zip(pendingPhotoFormats) { handle, format ->
+                WifiPhotoDownload(handle, WifiPhotoDownloadFormat.valueOf(format))
+            }
+            pendingPhotos = emptyList()
+            pendingPhotoFormats = emptyList()
+            if (granted && downloads.isNotEmpty() && lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
+                controller.downloadPhotos(identifier, downloads)
+            }
             else if (!granted) controller.imageStoragePermissionDenied(identifier)
         }
     val close = { controller.disconnect(identifier); onClose() }
@@ -72,7 +78,7 @@ fun AndroidWifiRemoteScreen(identifier: String, onClose: () -> Unit) {
         if (activity?.isChangingConfigurations != true) {
             pendingHost = null
             pendingAutomatic = false
-            controller.disconnect(identifier)
+            controller.onAppBackgrounded(identifier)
         }
     }
     DisposableEffect(identifier) {
@@ -95,19 +101,19 @@ fun AndroidWifiRemoteScreen(identifier: String, onClose: () -> Unit) {
             pendingAutomatic = host == null
             // Android 12 requires fine and coarse to be requested together.
             permission.launch(required.toTypedArray())
-        } else if (host == null) controller.connectAutomatically(identifier) else controller.connect(identifier, host)
+        } else if (host == null) startCameraSetup() else controller.connect(identifier, host)
     }
     WifiRemoteScreen(model, onConnect = { connect(it) }, onConnectAutomatically = { connect(null) },
-        onDownloadPhoto = { handle, format ->
+        onDownloadPhotos = { downloads ->
             if (Build.VERSION.SDK_INT <= 28 && ContextCompat.checkSelfPermission(
                     context,
                     android.Manifest.permission.WRITE_EXTERNAL_STORAGE
                 ) != PackageManager.PERMISSION_GRANTED
             ) {
-                pendingPhoto = handle
-                pendingPhotoFormat = format
+                pendingPhotos = downloads.map { it.handle }
+                pendingPhotoFormats = downloads.map { it.format.name }
                 storagePermission.launch(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
-            } else controller.downloadPhoto(identifier, handle, format)
+            } else controller.downloadPhotos(identifier, downloads)
         },
         onWifiSettings = { context.startActivity(Intent(Settings.ACTION_WIFI_SETTINGS)) }, onClose = close)
 }

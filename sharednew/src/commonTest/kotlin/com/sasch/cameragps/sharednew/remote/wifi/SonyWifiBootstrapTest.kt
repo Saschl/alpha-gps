@@ -1,21 +1,37 @@
 package com.sasch.cameragps.sharednew.remote.wifi
 
-import com.sasch.cameragps.sharednew.bluetooth.SonyBluetoothConstants as Sony
+import com.diamondedge.logging.FixedLogLevel
+import com.diamondedge.logging.KmLogging
+import com.diamondedge.logging.PlatformLogger
 import com.sasch.cameragps.sharednew.bluetooth.transport.BleOperation
 import com.sasch.cameragps.sharednew.bluetooth.transport.BleOperationResult
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.test.runCurrent
+import com.sasch.cameragps.sharednew.bluetooth.SonyBluetoothConstants as Sony
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class SonyWifiBootstrapTest {
+    @BeforeTest
+    fun silenceLogs() {
+        KmLogging.setLoggers()
+    }
+
+    @AfterTest
+    fun restoreLogs() {
+        KmLogging.setLoggers(PlatformLogger(FixedLogLevel(true)))
+    }
+
     private class FakeBle : WifiBootstrapBlePort {
         val operations = mutableListOf<BleOperation>()
         var connected = true
@@ -70,6 +86,7 @@ class SonyWifiBootstrapTest {
             is BleOperation.Write -> it.characteristicUuid
             is BleOperation.Subscribe -> it.characteristicUuid
             BleOperation.DiscoverServices -> "discover"
+            is BleOperation.RequestMtu -> "mtu"
         } })
         assertContentEquals(Sony.WIFI_ON_COMMAND, (ble.operations[2] as BleOperation.Write).value)
     }
@@ -104,7 +121,10 @@ class SonyWifiBootstrapTest {
     @Test
     fun boundedCredentialFailureAndCancellationNeverRepeatWifiStart() = runTest {
         val ble = FakeBle().apply { emptySsid = true }
-        assertNull(SonyWifiBootstrap(ble, overallTimeoutMs = 100, credentialPollMs = 10).prepare("camera"))
+        val error = assertFailsWith<WifiRemoteConnectException> {
+            SonyWifiBootstrap(ble, overallTimeoutMs = 100, credentialPollMs = 10).prepare("camera")
+        }
+        assertEquals(WifiRemoteFailure.CameraCredentialsUnavailable, error.failure)
         assertEquals(1, ble.operations.filterIsInstance<BleOperation.Write>().size)
         ble.operations.clear()
         val job = launch { SonyWifiBootstrap(ble).prepare("camera") }

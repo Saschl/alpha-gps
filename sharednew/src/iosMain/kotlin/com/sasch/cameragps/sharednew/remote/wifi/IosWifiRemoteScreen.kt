@@ -1,18 +1,24 @@
 package com.sasch.cameragps.sharednew.remote.wifi
 
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import cameragps.sharednew.generated.resources.Res
-import cameragps.sharednew.generated.resources.wifi_remote_ios_settings
 import cameragps.sharednew.generated.resources.wifi_remote_ios_opening
 import cameragps.sharednew.generated.resources.wifi_remote_ios_permission
+import cameragps.sharednew.generated.resources.wifi_remote_ios_settings
 import com.sasch.cameragps.sharednew.bluetooth.IosBluetoothController
 import com.sasch.cameragps.sharednew.ui.remote.WifiRemoteScreen
 import com.sasch.cameragps.sharednew.ui.remote.WifiRemoteViewModel
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import platform.Foundation.NSURL
-import platform.UIKit.*
+import platform.UIKit.UIApplication
+import platform.UIKit.UIApplicationOpenSettingsURLString
+import platform.UIKit.UIApplicationState
 
 @Composable
 internal fun IosWifiRemoteScreen(identifier: String, onClose: () -> Unit) {
@@ -33,7 +39,8 @@ internal fun IosWifiRemoteScreen(identifier: String, onClose: () -> Unit) {
             onDispose { app.idleTimerDisabled = previous }
         }
     }
-    WifiRemoteScreen(model,
+    WifiRemoteScreen(
+        model,
         onConnect = { controller.connect(identifier, it) },
         onConnectAutomatically = { controller.connectAutomatically(identifier) },
         onWifiSettings = {
@@ -44,11 +51,11 @@ internal fun IosWifiRemoteScreen(identifier: String, onClose: () -> Unit) {
         openingSessionMessage = stringResource(Res.string.wifi_remote_ios_opening),
         networkPermissionMessage = stringResource(Res.string.wifi_remote_ios_permission),
         wifiSettingsLabel = stringResource(Res.string.wifi_remote_ios_settings),
-        onDownloadPhoto = { handle, format ->
+        onDownloadPhotos = { downloads ->
             scope.launch {
                 if (requestIosPhotoSavePermission()) {
                     if (UIApplication.sharedApplication.applicationState != UIApplicationState.UIApplicationStateBackground)
-                        controller.downloadPhoto(identifier, handle, format)
+                        controller.downloadPhotos(identifier, downloads)
                 } else controller.imageStoragePermissionDenied(identifier)
             }
         },

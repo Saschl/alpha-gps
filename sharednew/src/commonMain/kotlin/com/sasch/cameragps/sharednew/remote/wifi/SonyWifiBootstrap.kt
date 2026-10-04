@@ -1,5 +1,6 @@
 package com.sasch.cameragps.sharednew.remote.wifi
 
+import com.diamondedge.logging.logging
 import com.sasch.cameragps.sharednew.bluetooth.SonyBluetoothConstants
 import com.sasch.cameragps.sharednew.bluetooth.transport.BleOperation
 import com.sasch.cameragps.sharednew.bluetooth.transport.BleOperationResult
@@ -13,8 +14,8 @@ internal interface WifiBootstrapBlePort {
     suspend fun execute(identifier: String, operation: BleOperation): BleOperationResult
 }
 
-/** Kept only for the join attempt; never put credentials in a session or diagnostic string. */
-internal class CameraWifiCredentials(val ssid: String, val password: String, val bssid: String?) {
+/** Held only while joining; diagnostic strings must never expose credentials. */
+class CameraWifiCredentials(val ssid: String, val password: String, val bssid: String?) {
     override fun toString(): String = "CameraWifiCredentials(redacted)"
 }
 
@@ -27,50 +28,96 @@ internal class SonyWifiBootstrap(
     private val overallTimeoutMs: Long = 45_000,
     private val credentialPollMs: Long = 500,
 ) {
-    suspend fun prepare(identifier: String): CameraWifiCredentials? = withTimeoutOrNull(overallTimeoutMs) {
-        if (!ble.isConnected(identifier)) return@withTimeoutOrNull null
-        if (!ble.hasCharacteristic(identifier, SonyBluetoothConstants.WIFI_ON_UUID) ||
-            !ble.hasCharacteristic(identifier, SonyBluetoothConstants.WIFI_SSID_UUID) ||
-            !ble.hasCharacteristic(identifier, SonyBluetoothConstants.WIFI_PASSWORD_UUID)) return@withTimeoutOrNull null
+    private val log = logging()
 
-        if (ble.hasCharacteristic(identifier, SonyBluetoothConstants.CAMERA_STATUS_UUID)) {
-            ble.execute(identifier, BleOperation.Subscribe(SonyBluetoothConstants.CAMERA_STATUS_UUID, true))
-            ble.execute(identifier, BleOperation.Read(SonyBluetoothConstants.CAMERA_STATUS_UUID))
-        }
-        if (ble.execute(identifier, BleOperation.Write(
-                SonyBluetoothConstants.WIFI_ON_UUID, SonyBluetoothConstants.WIFI_ON_COMMAND,
-            )) !is BleOperationResult.Success) return@withTimeoutOrNull null
+    suspend fun prepare(identifier: String): CameraWifiCredentials? {
+        var startAccepted = false
+        var stage = "activation"
+        val credentials = withTimeoutOrNull(overallTimeoutMs) {
+            if (!ble.isConnected(identifier)) return@withTimeoutOrNull null
+            if (!ble.hasCharacteristic(identifier, SonyBluetoothConstants.WIFI_ON_UUID) ||
+                !ble.hasCharacteristic(identifier, SonyBluetoothConstants.WIFI_SSID_UUID) ||
+                !ble.hasCharacteristic(identifier, SonyBluetoothConstants.WIFI_PASSWORD_UUID)
+            ) return@withTimeoutOrNull null
 
-        if (ble.hasCharacteristic(identifier, SonyBluetoothConstants.CAMERA_STATUS_UUID)) {
-            while (ble.isConnected(identifier)) {
-                val status = (ble.execute(identifier, BleOperation.Read(SonyBluetoothConstants.CAMERA_STATUS_UUID))
-                    as? BleOperationResult.Success)?.value?.let(::parseWifiStatus) ?: break
-                if (status.first == 2) break
-                if (status.first == 0 && status.second in 2..5) return@withTimeoutOrNull null
-                delay(credentialPollMs)
+            if (ble.hasCharacteristic(identifier, SonyBluetoothConstants.CAMERA_STATUS_UUID)) {
+                ble.execute(
+                    identifier,
+                    BleOperation.Subscribe(SonyBluetoothConstants.CAMERA_STATUS_UUID, true)
+                )
+                ble.execute(
+                    identifier,
+                    BleOperation.Read(SonyBluetoothConstants.CAMERA_STATUS_UUID)
+                )
             }
-        }
+            if (ble.execute(
+                    identifier, BleOperation.Write(
+                        SonyBluetoothConstants.WIFI_ON_UUID, SonyBluetoothConstants.WIFI_ON_COMMAND,
+                    )
+                ) !is BleOperationResult.Success
+            ) return@withTimeoutOrNull null
+            startAccepted = true
+            stage = "camera status"
+            log.i { "Camera accepted Wi-Fi start command; waiting for connection details" }
 
-        var ssid: String? = null
-        while (ssid == null && ble.isConnected(identifier)) {
-            ssid = (ble.execute(identifier, BleOperation.Read(SonyBluetoothConstants.WIFI_SSID_UUID))
-                as? BleOperationResult.Success)?.value?.let(::parsePrefixedAscii)
-            if (ssid == null) delay(credentialPollMs)
-        }
-        if (ssid == null) return@withTimeoutOrNull null
+            if (ble.hasCharacteristic(identifier, SonyBluetoothConstants.CAMERA_STATUS_UUID)) {
+                while (ble.isConnected(identifier)) {
+                    val status = (ble.execute(
+                        identifier,
+                        BleOperation.Read(SonyBluetoothConstants.CAMERA_STATUS_UUID)
+                    )
+                            as? BleOperationResult.Success)?.value?.let(::parseWifiStatus) ?: break
+                    if (status.first == 2) break
+                    if (status.first == 0 && status.second in 2..5) {
+                        startAccepted = false
+                        log.w { "Camera reported Wi-Fi startup error=${status.second}" }
+                        return@withTimeoutOrNull null
+                    }
+                    delay(credentialPollMs)
+                }
+            }
 
-        var password: String? = null
-        while (password == null && ble.isConnected(identifier)) {
-            password = (ble.execute(identifier, BleOperation.Read(SonyBluetoothConstants.WIFI_PASSWORD_UUID))
-                as? BleOperationResult.Success)?.value?.let(::parsePrefixedAscii)
-            if (password == null) delay(credentialPollMs)
+            stage = "SSID"
+            var ssid: String? = null
+            while (ssid == null && ble.isConnected(identifier)) {
+                ssid = (ble.execute(
+                    identifier,
+                    BleOperation.Read(SonyBluetoothConstants.WIFI_SSID_UUID)
+                )
+                        as? BleOperationResult.Success)?.value?.let(::parsePrefixedAscii)
+                if (ssid == null) delay(credentialPollMs)
+            }
+            if (ssid == null) return@withTimeoutOrNull null
+
+            stage = "password"
+            var password: String? = null
+            while (password == null && ble.isConnected(identifier)) {
+                password = (ble.execute(
+                    identifier,
+                    BleOperation.Read(SonyBluetoothConstants.WIFI_PASSWORD_UUID)
+                )
+                        as? BleOperationResult.Success)?.value?.let(::parsePrefixedAscii)
+                if (password == null) delay(credentialPollMs)
+            }
+            if (password == null || ssid.length !in 1..32 || password.length !in 8..63) return@withTimeoutOrNull null
+            stage = "BSSID"
+            val bssid =
+                if (ble.hasCharacteristic(identifier, SonyBluetoothConstants.WIFI_BSSID_UUID)) {
+                    (ble.execute(
+                        identifier,
+                        BleOperation.Read(SonyBluetoothConstants.WIFI_BSSID_UUID)
+                    )
+                            as? BleOperationResult.Success)?.value?.let(::parseAscii)
+                } else null
+            CameraWifiCredentials(ssid, password, bssid)
         }
-        if (password == null || ssid.length !in 1..32 || password.length !in 8..63) return@withTimeoutOrNull null
-        val bssid = if (ble.hasCharacteristic(identifier, SonyBluetoothConstants.WIFI_BSSID_UUID)) {
-            (ble.execute(identifier, BleOperation.Read(SonyBluetoothConstants.WIFI_BSSID_UUID))
-                as? BleOperationResult.Success)?.value?.let(::parseAscii)
-        } else null
-        CameraWifiCredentials(ssid, password, bssid)
+        if (credentials == null) {
+            log.w { "Camera Wi-Fi setup failed during $stage; startAccepted=$startAccepted" }
+            if (startAccepted) throw WifiRemoteConnectException(WifiRemoteFailure.CameraCredentialsUnavailable)
+        } else {
+            log.i { "Camera Wi-Fi connection details read successfully" }
+        }
+        return credentials
     }
 
     private fun parsePrefixedAscii(value: ByteArray): String? =

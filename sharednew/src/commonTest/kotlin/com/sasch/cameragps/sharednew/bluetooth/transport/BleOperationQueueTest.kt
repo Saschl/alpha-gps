@@ -3,10 +3,16 @@ package com.sasch.cameragps.sharednew.bluetooth.transport
 import com.diamondedge.logging.FixedLogLevel
 import com.diamondedge.logging.KmLogging
 import com.diamondedge.logging.PlatformLogger
-import kotlinx.coroutines.*
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.emptyFlow
-import kotlinx.coroutines.test.*
-import kotlin.test.*
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.runTest
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
+import kotlin.test.Test
+import kotlin.test.assertEquals
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class BleOperationQueueTest {
@@ -15,6 +21,8 @@ class BleOperationQueueTest {
         val writes = mutableListOf<String>()
         override fun isConnected(identifier: String) = true
         override fun hasCharacteristic(identifier: String, characteristicUuid: String) = true
+        override fun supportsWriteWithResponse(identifier: String, characteristicUuid: String) =
+            true
         override fun initiateWrite(identifier: String, characteristicUuid: String, value: ByteArray): Boolean {
             writes += characteristicUuid
             return true

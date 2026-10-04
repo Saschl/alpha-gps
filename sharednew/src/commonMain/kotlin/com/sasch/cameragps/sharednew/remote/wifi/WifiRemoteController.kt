@@ -5,6 +5,7 @@ import com.diamondedge.logging.logging
 import com.sasch.cameragps.sharednew.bluetooth.BleSessionPhase
 import com.sasch.cameragps.sharednew.bluetooth.session.CameraSessionRegistry
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
@@ -23,6 +24,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.math.abs
 import kotlin.time.Duration.Companion.seconds
 
 internal interface WifiRemoteConnection {
@@ -56,6 +58,14 @@ internal fun interface WifiAutomaticConnector {
     suspend fun open(identifier: String, scope: CoroutineScope, onPhase: (WifiRemotePhase) -> Unit): WifiRemoteConnection
 }
 
+internal interface WifiManualSetupConnector {
+    suspend fun prepare(identifier: String): CameraWifiCredentials?
+    suspend fun open(
+        credentials: CameraWifiCredentials,
+        scope: CoroutineScope
+    ): WifiRemoteConnection
+}
+
 internal class WifiRemoteConnectException(val failure: WifiRemoteFailure) : Exception("Wi-Fi remote connection failed")
 
 /** App-owned, Main.immediate-confined. Images stay separate from per-camera session state. */
@@ -66,10 +76,12 @@ class WifiRemoteController internal constructor(
     private val claimControls: suspend (String) -> Unit,
     private val releaseControls: (String) -> Unit,
     private val automaticConnector: WifiAutomaticConnector? = null,
+    private val manualSetupConnector: WifiManualSetupConnector? = null,
 ) {
     private val log = logging()
     private var attempt = 0
     val supportsAutomaticConnection get() = automaticConnector != null
+    val supportsManualSetup get() = manualSetupConnector != null
     val sessions = registry.sessions
     private val _image = MutableStateFlow<ImageBitmap?>(null)
     val image = _image.asStateFlow()
@@ -83,6 +95,7 @@ class WifiRemoteController internal constructor(
     private var previewJob: Job? = null
     private var photoJob: Job? = null
     private var captureRequests: Channel<Unit>? = null
+    private var manualJoin: CompletableDeferred<Unit>? = null
 
     fun connect(identifier: String, host: String) {
         start(identifier, WifiRemotePhase.OpeningSession) { _, sessionScope ->
@@ -99,6 +112,48 @@ class WifiRemoteController internal constructor(
                     registry.updateWifiRemote(id, WifiRemoteState(phase = phase))
                 }
             }
+        }
+    }
+
+    fun prepareManualConnection(identifier: String) {
+        val setup = manualSetupConnector ?: return
+        start(identifier, WifiRemotePhase.PreparingCamera) { id, sessionScope ->
+            val credentials = setup.prepare(id)
+                ?: throw WifiRemoteConnectException(WifiRemoteFailure.CameraSetupFailed)
+            currentCoroutineContext().ensureActive()
+            val joined = CompletableDeferred<Unit>()
+            manualJoin = joined
+            try {
+                registry.updateWifiRemote(
+                    id, WifiRemoteState(
+                        phase = WifiRemotePhase.AwaitingManualNetwork, manualNetwork = credentials
+                    )
+                )
+                log.i { "Wi-Fi remote attempt=$attempt waiting for manual network join" }
+                joined.await()
+                setup.open(credentials, sessionScope)
+            } finally {
+                manualJoin = null
+            }
+        }
+    }
+
+    fun continueManualConnection(identifier: String) {
+        if (_owner.value.equals(identifier, true) &&
+            registry.get(identifier)?.wifiRemote?.phase == WifiRemotePhase.AwaitingManualNetwork
+        ) {
+            registry.updateWifiRemote(
+                identifier,
+                WifiRemoteState(phase = WifiRemotePhase.OpeningSession)
+            )
+            manualJoin?.complete(Unit)
+        }
+    }
+
+    fun onAppBackgrounded(identifier: String) {
+        // A manual join opens Android Settings before any camera sockets exist.
+        if (registry.get(identifier)?.wifiRemote?.phase != WifiRemotePhase.AwaitingManualNetwork) {
+            disconnect(identifier)
         }
     }
 
@@ -147,21 +202,23 @@ class WifiRemoteController internal constructor(
         if (captureRequests?.trySend(Unit)?.isSuccess != true) registry.updateWifiRemote(id, state)
     }
 
-    fun browsePhotos(identifier: String, offset: Int? = null) {
+    fun browsePhotos(identifier: String, offset: Int? = null, preferredPhotoIndex: Int? = null) {
         photoWork(identifier, { state ->
             state.copy(
                 photoBrowser = state.photoBrowser.copy(
-                    open = true, loading = true, failed = false, photos = emptyList()
+                    open = true, loading = true, failed = false,
+                    photos = if (offset == null) emptyList() else state.photoBrowser.photos
                 )
             )
         }) { id, connection ->
             previewJob?.cancelAndJoin()
             previewJob = null
             _image.value = null
-            _thumbnails.value = emptyMap()
+            if (offset == null) _thumbnails.value = emptyMap()
             updateReady(id) { it.copy(hasLiveView = false) }
             val page =
                 if (offset == null) connection.openPhotoBrowser() else connection.photoPage(offset)
+            _thumbnails.value = emptyMap()
             updateReady(id) {
                 it.copy(
                     photoBrowser = it.photoBrowser.copy(
@@ -172,7 +229,11 @@ class WifiRemoteController internal constructor(
                     )
                 )
             }
-            for (capture in groupCameraPhotos(page.photos)) {
+            val captures = groupCameraPhotos(page.photos)
+            val previewOrder = if (preferredPhotoIndex == null) captures.indices.toList()
+            else captures.indices.sortedBy { abs(page.offset + it - preferredPhotoIndex) }
+            for (index in previewOrder) {
+                val capture = captures[index]
                 val photo = capture.preview
                 connection.photoThumbnail(photo.handle)
                     ?.let { _thumbnails.value += photo.handle to it }
@@ -181,28 +242,66 @@ class WifiRemoteController internal constructor(
     }
 
     fun downloadPhoto(identifier: String, handle: Long, format: WifiPhotoDownloadFormat = WifiPhotoDownloadFormat.Original) {
+        downloadPhotos(identifier, listOf(WifiPhotoDownload(handle, format)))
+    }
+
+    fun downloadPhotos(identifier: String, downloads: List<WifiPhotoDownload>) {
         val state = registry.get(identifier)?.wifiRemote ?: return
-        val download = WifiPhotoDownload(handle, format)
-        if (format == WifiPhotoDownloadFormat.Jpeg && (!state.canConvertHeif ||
-            state.photoBrowser.photos.none { it.handle == handle && it.mimeType == "image/heif" })) return
-        if (!state.photoBrowser.open || download in state.photoBrowser.savedDownloads ||
-            state.photoBrowser.photos.none { it.handle == handle && it.downloadable }
-        ) return
+        if (!state.photoBrowser.open) return
+        val photos = state.photoBrowser.photos.associateBy { it.handle }
+        val pending = downloads.distinct().filter { download ->
+            val photo = photos[download.handle]
+            photo != null && photo.downloadable && download !in state.photoBrowser.savedDownloads &&
+                    (download.format == WifiPhotoDownloadFormat.Original ||
+                            (state.canConvertHeif && photo.mimeType == "image/heif"))
+        }
+        if (pending.isEmpty()) return
         photoWork(
             identifier,
-            { it.copy(imageTransfer = WifiImageTransferState(WifiImageTransferStatus.Downloading)) }) { id, connection ->
-            val result = connection.downloadPhoto(handle, format) { progress ->
-                updateReady(id) {
-                    it.copy(imageTransfer = progress)
-                }
-            }
-            updateReady(id) {
+            {
                 it.copy(
-                    imageTransfer = result, photoBrowser = it.photoBrowser.copy(
-                        savedDownloads = if (result.status == WifiImageTransferStatus.Saved) it.photoBrowser.savedDownloads + download
-                        else it.photoBrowser.savedDownloads
+                    imageTransfer = WifiImageTransferState(
+                        WifiImageTransferStatus.Downloading,
+                        totalFiles = pending.size
                     )
                 )
+            }) { id, connection ->
+            for ((index, download) in pending.withIndex()) {
+                currentCoroutineContext().ensureActive()
+                updateReady(id) {
+                    it.copy(
+                        imageTransfer = WifiImageTransferState(
+                            WifiImageTransferStatus.Downloading,
+                            filename = photos.getValue(download.handle).filename,
+                            completedFiles = index, totalFiles = pending.size
+                        )
+                    )
+                }
+                val result =
+                    connection.downloadPhoto(download.handle, download.format) { progress ->
+                        updateReady(id) {
+                            it.copy(
+                                imageTransfer = progress.copy(
+                                    completedFiles = index,
+                                    totalFiles = pending.size
+                                )
+                            )
+                        }
+                    }
+                val saved = result.status == WifiImageTransferStatus.Saved
+                updateReady(id) {
+                    it.copy(
+                        imageTransfer = result.copy(
+                            status = if (saved && index < pending.lastIndex) WifiImageTransferStatus.Downloading else result.status,
+                            completedFiles = index + if (saved) 1 else 0, totalFiles = pending.size
+                        ),
+                        photoBrowser = it.photoBrowser.copy(
+                            savedDownloads = if (saved) it.photoBrowser.savedDownloads + download
+                            else it.photoBrowser.savedDownloads
+                        )
+                    )
+                }
+                if (!saved) break
             }
         }
     }
@@ -265,8 +364,8 @@ class WifiRemoteController internal constructor(
                 updateReady(id) {
                     it.copy(
                         photoBrowser = it.photoBrowser.copy(failed = true),
-                        imageTransfer = if (it.imageTransfer.busy) WifiImageTransferState(
-                            WifiImageTransferStatus.Failed
+                        imageTransfer = if (it.imageTransfer.busy) it.imageTransfer.copy(
+                            status = WifiImageTransferStatus.Failed
                         ) else it.imageTransfer
                     )
                 }
@@ -276,15 +375,15 @@ class WifiRemoteController internal constructor(
                     it.copy(
                         photoBrowser = it.photoBrowser.copy(failed = it.photoBrowser.loading),
                         imageTransfer = if (it.imageTransfer.busy)
-                            WifiImageTransferState(WifiImageTransferStatus.Cancelled) else it.imageTransfer
+                            it.imageTransfer.copy(status = WifiImageTransferStatus.Cancelled) else it.imageTransfer
                     )
                 }
             } catch (_: Exception) {
                 updateReady(id) {
                     it.copy(
                         photoBrowser = it.photoBrowser.copy(failed = true),
-                        imageTransfer = if (it.imageTransfer.busy) WifiImageTransferState(
-                            WifiImageTransferStatus.Failed
+                        imageTransfer = if (it.imageTransfer.busy) it.imageTransfer.copy(
+                            status = WifiImageTransferStatus.Failed
                         ) else it.imageTransfer
                     )
                 }
@@ -299,8 +398,8 @@ class WifiRemoteController internal constructor(
                 updateReady(id) {
                     it.copy(
                         photoBrowser = it.photoBrowser.copy(loading = false),
-                        imageTransfer = if (it.imageTransfer.busy) WifiImageTransferState(
-                            WifiImageTransferStatus.Cancelled
+                        imageTransfer = if (it.imageTransfer.busy) it.imageTransfer.copy(
+                            status = WifiImageTransferStatus.Cancelled
                         ) else it.imageTransfer
                     )
                 }

@@ -2,12 +2,16 @@ package com.sasch.cameragps.sharednew.remote.wifi
 
 import android.content.Context
 import android.location.LocationManager
-import android.net.*
+import android.net.ConnectivityManager
+import android.net.LinkProperties
+import android.net.MacAddress
+import android.net.Network
+import android.net.NetworkCapabilities
+import android.net.NetworkRequest
 import android.net.wifi.WifiManager
 import android.net.wifi.WifiNetworkSpecifier
 import android.os.Build
 import androidx.annotation.RequiresApi
-import java.net.Inet4Address
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.receiveAsFlow
 
@@ -68,13 +72,4 @@ internal class AndroidCameraNetworkRequest(context: Context, credentials: Camera
             finally { channel.close() }
         }
     }
-}
-
-/** The camera is the gateway on its own AP, as in Creators' App's DHCP route lookup. */
-internal fun cameraGateway(properties: LinkProperties): String? {
-    val local = properties.linkAddresses.filter { it.address is Inet4Address }
-    return properties.routes.filter { it.isDefaultRoute }.mapNotNull { it.gateway as? Inet4Address }
-        .filter { gateway -> !gateway.isAnyLocalAddress && !gateway.isLoopbackAddress && !gateway.isMulticastAddress &&
-            local.none { it.address == gateway } && local.any { IpPrefix(it.address, it.prefixLength).contains(gateway) } }
-        .mapNotNull { it.hostAddress }.distinct().singleOrNull()
 }

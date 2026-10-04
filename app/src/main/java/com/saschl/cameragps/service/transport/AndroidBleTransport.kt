@@ -51,6 +51,9 @@ class AndroidBleTransport(
     private class Connection(val gatt: BluetoothGatt) {
         @Volatile
         var isActive = false
+
+        @Volatile
+        var mtu = 23
     }
 
     /** Uppercased MAC → connection. Entries survive disconnects (autoConnect). */
@@ -158,6 +161,18 @@ class AndroidBleTransport(
     override fun isConnected(identifier: String): Boolean =
         connections[identifier.uppercase()]?.isActive == true
 
+    override fun wifiMtuRequest(identifier: String): Int? {
+        val connection = connections[identifier.uppercase()] ?: return null
+        // SSID/password values include a three-byte header; avoid fragmented credential reads.
+        return if (Build.VERSION.SDK_INT < Build.VERSION_CODES.CINNAMON_BUN && connection.mtu < 67) 517 else null
+    }
+
+    @SuppressLint("MissingPermission")
+    override fun initiateMtuRequest(identifier: String, mtu: Int): Boolean {
+        val connection = connections[identifier.uppercase()] ?: return false
+        return connection.isActive && connection.gatt.requestMtu(mtu)
+    }
+
     override fun hasCharacteristic(identifier: String, characteristicUuid: String): Boolean {
         val connection = connections[identifier.uppercase()] ?: return false
         return findCharacteristic(connection.gatt, characteristicUuid) != null
@@ -247,23 +262,13 @@ class AndroidBleTransport(
                 if (!gatt.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_HIGH)) {
                     Timber.w("Could not request high connection priority for %s", address)
                 }
-                // Android 14+ grants 517 to the FIRST client that requests an MTU
-                // and ignores every later request — ask ourselves right away so
-                // another app's value can't win. Fire-and-forget: discovery is not
-                // gated on the exchange (result arrives in onMtuChanged). On API
-                // 37+ the connection settings negotiate the MTU automatically.
-                //  if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.CINNAMON_BUN) {
-                /*    Timber.e("Requesting MTU 23 for %s (API %d)", address, Build.VERSION.SDK_INT)
-                    if (!gatt.requestMtu(153)) {
-                        Timber.w("Could not request MTU for %s", address)
-                    }*/
-                //   }
                 eventChannel.trySend(BleTransportEvent.Connected(address))
                 return
             }
 
             if (newState == BluetoothProfile.STATE_DISCONNECTED || status != BluetoothGatt.GATT_SUCCESS) {
                 connections[address]?.isActive = false
+                connections[address]?.mtu = 23
                 if (status == 19 || status == 8 || status == 0) {
                     Timber.i("Device disconnected in callback with status: $status")
                 } else {
@@ -298,6 +303,9 @@ class AndroidBleTransport(
 
         override fun onMtuChanged(gatt: BluetoothGatt, mtu: Int, status: Int) {
             Timber.i("MTU changed for %s: mtu=%d status=%d", gatt.device.address, mtu, status)
+            val address = gatt.device.address.uppercase()
+            if (status == BluetoothGatt.GATT_SUCCESS) connections[address]?.mtu = mtu
+            eventChannel.trySend(BleTransportEvent.MtuChanged(address, mtu, statusOf(status)))
         }
 
         override fun onServicesDiscovered(gatt: BluetoothGatt, status: Int) {
@@ -393,6 +401,12 @@ class AndroidBleTransport(
             status: Int,
         ) {
             Timber.d("Read response for %s with status %d", characteristic.uuid, status)
+            if (status != BluetoothGatt.GATT_SUCCESS) {
+                Timber.w(
+                    "BLE read failed: characteristic=%s status=%d mtu=%d", characteristic.uuid,
+                    status, connections[gatt.device.address.uppercase()]?.mtu ?: 23
+                )
+            }
             eventChannel.trySend(
                 BleTransportEvent.CharacteristicRead(
                     gatt.device.address.uppercase(),

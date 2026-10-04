@@ -50,6 +50,12 @@ sealed interface BleTransportEvent {
         val success: Boolean,
     ) : BleTransportEvent
 
+    data class MtuChanged(
+        override val identifier: String,
+        val mtu: Int,
+        val status: BleOperationStatus,
+    ) : BleTransportEvent
+
     /** A characteristic read completed (read response). */
     data class CharacteristicRead(
         override val identifier: String,
@@ -110,6 +116,11 @@ interface BlePeripheralTransport {
 
     /** Clear read/notification bookkeeping after success, timeout or cancellation. No BLE I/O. */
     fun finishRead(identifier: String, characteristicUuid: String) = Unit
+
+    /** Null when the platform negotiates automatically or the link is already large enough. */
+    fun wifiMtuRequest(identifier: String): Int? = null
+
+    fun initiateMtuRequest(identifier: String, mtu: Int): Boolean = false
 
     // ---- Operation initiation. Completion arrives via [events]. ----
     // Returning false means the operation could not even be started
