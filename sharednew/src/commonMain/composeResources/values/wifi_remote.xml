@@ -15,7 +15,6 @@
     <string name="wifi_remote_shutdown_unavailable">Disconnected. The camera did not allow Wi-Fi shutdown; you may need to turn it off on the camera.</string>
     <string name="wifi_remote_shutdown_unconfirmed">Disconnected. Could not confirm the Wi-Fi shutdown request. Check the camera if Wi-Fi remains on.</string>
     <string name="wifi_remote_connected">Connected to %1$s</string>
-    <string name="wifi_remote_capture_hint">Select still-photo and single-shot drive mode on the camera. Photos stay on the camera. Remote control stops when you leave this screen or put the app in the background.</string>
     <string name="wifi_remote_capture">Take photo</string>
     <string name="wifi_remote_shooting">Taking photo…</string>
     <string name="wifi_remote_captured">Camera confirmed capture.</string>

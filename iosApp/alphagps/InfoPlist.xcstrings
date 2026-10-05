@@ -29,10 +29,34 @@
       "comment" : "Privacy - Bluetooth Always Usage Description",
       "extractionState" : "extracted_with_value",
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese App kommuniziert fortlaufend mit deiner Kamera über Bluetooth, um die Standortdaten zu übertragen."
+          }
+        },
         "en" : {
           "stringUnit" : {
             "state" : "new",
             "value" : "This app needs access to Bluetooth to connect to your cameras and transmit location data for geotagging your photos."
+          }
+        }
+      }
+    },
+    "NSLocalNetworkUsageDescription" : {
+      "comment" : "Privacy - Local Network Usage Description",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verbindet deine Kamera über WiFi für die Übertragung von Fotos und der Echtzeitansicht."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Connect to your Sony camera for live view and photo downloads."
           }
         }
       }
@@ -69,6 +93,24 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "This app needs constant access to location services to send GPS coordinates to your connected camera, enabling automatic geotagging of your photos."
+          }
+        }
+      }
+    },
+    "NSPhotoLibraryAddUsageDescription" : {
+      "comment" : "Privacy - Photo Library Additions Usage Description",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Speichere deine Fotos in deiner Fotobibliothek auf deinem Gerät."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Save photos downloaded from your Sony camera to your photo library."
           }
         }
       }

@@ -35,22 +35,25 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -101,6 +104,7 @@ import com.sasch.cameragps.sharednew.remote.wifi.WifiRemoteState
 import com.sasch.cameragps.sharednew.remote.wifi.formatLabel
 import com.sasch.cameragps.sharednew.remote.wifi.groupCameraPhotos
 import com.sasch.cameragps.sharednew.ui.components.verticalScrollbar
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
@@ -326,14 +330,21 @@ internal fun PhotoDetailsSheet(
     var selectedFormat by rememberSaveable(capture.id) { mutableStateOf(WifiPhotoDownloadFormat.Original) }
     val selected = capture.files.firstOrNull { it.handle == selectedHandle }
     val selectedDownload = selected?.let { WifiPhotoDownload(it.handle, selectedFormat) }
+    val sheetState = rememberBottomSheetState(
+        initialValue = SheetValue.Hidden,
+        enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded),
+    )
+    val scope = rememberCoroutineScope()
     ModalBottomSheet(
-        onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        modifier = Modifier.fillMaxHeight(0.9f)
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
     ) {
         val scrollState = rememberScrollState()
-        Column(Modifier.fillMaxSize()) {
+        // Keep the sheet's hidden anchor at the full window height.
+        Column(Modifier.fillMaxWidth().fillMaxHeight(0.9f)) {
             Column(
                 Modifier.weight(1f).fillMaxWidth()
+                    .nestedScroll(PhotoSheetScrollConnection)
                     .verticalScrollbar(scrollState.scrollIndicatorState)
                     .verticalScroll(scrollState).padding(20.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -434,7 +445,12 @@ internal fun PhotoDetailsSheet(
                         )
                     )
                 }
-                TextButton(onClick = onDismiss) {
+                TextButton(onClick = {
+                    scope.launch {
+                        sheetState.hide()
+                        if (!sheetState.isVisible) onDismiss()
+                    }
+                }) {
                     Text(stringResource(Res.string.wifi_remote_photo_close))
                 }
             }
