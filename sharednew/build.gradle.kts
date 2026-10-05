@@ -1,4 +1,8 @@
 import java.util.Locale
+import java.util.Base64
+import groovy.json.JsonSlurper
+import groovy.json.JsonOutput
+import java.security.MessageDigest
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
@@ -118,16 +122,140 @@ sentryKmp {
     linker.frameworkPath.set(providers.gradleProperty("sentry.cocoa.frameworkPath"))
 }
 
-kotlin {
-
-    androidLibrary {
-        androidResources.enable = true
+val heifTestFixturesDir = layout.buildDirectory.dir("generated/heifTestFixtures/kotlin")
+// Opt-in originals stay outside the repository and are packaged only in the test APK.
+val sonyImageFixtures = providers.gradleProperty("sonyImageFixtures").map { rootProject.file(it) }
+val sonyImageFixtureSources = layout.buildDirectory.dir("generated/sonyImageFixtures/kotlin")
+val generateSonyImageFixtures = tasks.register("generateSonyImageFixtures") {
+    inputs.dir(sonyImageFixtures)
+    outputs.dir(sonyImageFixtureSources)
+    doLast {
+        val directory = sonyImageFixtures.get().canonicalFile
+        val manifest = JsonSlurper().parse(directory.resolve("manifest.json")) as Map<*, *>
+        val fixtures = manifest["fixtures"] as List<*>
+        require(fixtures.isNotEmpty()) { "Sony image manifest contains no fixtures" }
+        fun literal(value: Any?) = JsonOutput.toJson(value).replace("$", "\\$")
+        val entries = fixtures.map { entry ->
+            val fixture = entry as Map<*, *>
+            val name = fixture["file"] as String
+            require(
+                File(name).name == name && name !in listOf(
+                    ".",
+                    ".."
+                )
+            ) { "Use a plain fixture filename: $name" }
+            val file = directory.resolve(name)
+            require(file.isFile && file.canonicalFile.parentFile == directory) { "Missing fixture: $name" }
+            val digest = MessageDigest.getInstance("SHA-256")
+            file.inputStream().use { input ->
+                val buffer = ByteArray(65536)
+                var count = input.read(buffer)
+                while (count != -1) {
+                    digest.update(buffer, 0, count)
+                    count = input.read(buffer)
+                }
+            }
+            val hash = digest.digest().joinToString("") { "%02x".format(it) }
+            require(hash == fixture["sha256"]) { "Fixture checksum changed: $name" }
+            val width = (fixture["width"] as Number).toInt()
+            val height = (fixture["height"] as Number).toInt()
+            val orientation = (fixture["orientation"] as Number).toInt()
+            require(width > 0 && height > 0 && orientation in 1..8) { "Invalid dimensions/orientation: $name" }
+            val format = fixture["format"] as String
+            require(format in listOf("heif", "jpeg")) { "Unsupported fixture format: $format" }
+            val metadata = fixture["metadata"] as Map<*, *>
+            require(metadata["make"] == "SONY" && !(metadata["model"] as? String).isNullOrBlank()) { "Expected Sony camera metadata: $name" }
+            require(metadata.keys.all {
+                it in setOf(
+                    "make",
+                    "model",
+                    "lensModel",
+                    "dateTimeOriginal",
+                    "iso"
+                )
+            }) { "Unsupported metadata key: $name" }
+            val bitDepth = (fixture["bitDepth"] as? Number)?.toInt() ?: 0
+            val chroma = (fixture["chroma"] as? Number)?.toInt() ?: 0
+            require(
+                format != "heif" || (bitDepth in 8..16 && chroma in listOf(
+                    420,
+                    422,
+                    444
+                ))
+            ) { "HEIF fixtures need bitDepth and chroma: $name" }
+            val tags =
+                metadata.entries.joinToString { "${literal(it.key)} to ${literal(it.value as String)}" }
+            "SonyImageFixture(${literal(name)}, ${literal(format)}, $width, $height, $orientation, mapOf($tags), $bitDepth, $chroma)"
+        }.joinToString(",\n        ")
+        val output = sonyImageFixtureSources.get()
+            .file("com/sasch/cameragps/sharednew/remote/wifi/SonyImageFixtures.kt").asFile
+        output.parentFile.mkdirs()
+        output.writeText(
+            """
+            package com.sasch.cameragps.sharednew.remote.wifi
+            internal object SonyImageFixtures {
+                const val directory = ${literal(directory.path)}
+                val all = listOf(
+                    $entries
+                )
+            }
+        """.trimIndent()
+        )
     }
+}
+
+androidComponents {
+    onVariants { variant ->
+        variant.deviceTests.values.forEach { test ->
+            test.sources.assets?.addStaticSourceDirectory("src/commonTest/resources")
+        }
+        if (sonyImageFixtures.isPresent) {
+            variant.deviceTests.values.forEach { test ->
+                test.sources.assets?.addStaticSourceDirectory(sonyImageFixtures.get().path)
+            }
+        }
+    }
+}
+
+val generateHeifTestFixtures = tasks.register("generateHeifTestFixtures") {
+    val fixtures = rootProject.layout.projectDirectory.dir("heif/src/androidTest/assets")
+    val arwPrefix =
+        layout.projectDirectory.file("src/commonTest/resources/sony/DSC04175-preview-prefix.bin")
+    inputs.file(arwPrefix)
+    inputs.files(
+        fixtures.file("red-422-10bit.hif"), fixtures.file("red-422-10bit-rotated.hif"),
+        fixtures.file("red-422-preview.hif")
+    )
+    outputs.dir(heifTestFixturesDir)
+    doLast {
+        val entries = mapOf(
+            "original" to "red-422-10bit.hif", "rotated" to "red-422-10bit-rotated.hif",
+            "preview" to "red-422-preview.hif"
+        )
+            .map { (name, file) ->
+                val encoded = Base64.getEncoder().encodeToString(fixtures.file(file).asFile.readBytes())
+                "    val $name: ByteArray get() = kotlin.io.encoding.Base64.decode(\"$encoded\")"
+            }.joinToString("\n")
+        val output = heifTestFixturesDir.get().file("com/sasch/cameragps/sharednew/remote/wifi/HeifTestFixtures.kt").asFile
+        output.parentFile.mkdirs()
+        output.writeText("package com.sasch.cameragps.sharednew.remote.wifi\n\ninternal object HeifTestFixtures {\n$entries\n}\n")
+        output.appendText(
+            "\ninternal object SonyArwTestFixture { const val path = ${
+                JsonOutput.toJson(
+                    arwPrefix.asFile.absolutePath
+                ).replace("$", "\\$")
+            } }\n"
+        )
+    }
+}
+
+kotlin {
 
     // Target declarations - add or remove as needed below. These define
     // which platforms this KMP module supports.
     // See: https://kotlinlang.org/docs/multiplatform-discover-project.html#targets
     android {
+        androidResources.enable = true
         namespace = "com.sasch.cameragps.sharednew"
         compileSdk {
             version = release(37) {
@@ -193,7 +321,6 @@ kotlin {
                 //implementation(libs.androidx.sqlite.bundled)
                 implementation(libs.androidx.room.runtime)
                 implementation(libs.components.resources)
-                implementation(libs.androidx.activity.compose)
                 implementation(libs.androidx.sqlite.bundled)
                 implementation(libs.logging)
                 implementation(libs.kotlinx.datetime)
@@ -218,6 +345,9 @@ kotlin {
                 // dependencies declared in commonMain.
                 // LanguagePreference.android.kt: per-app language below API 33.
                 implementation(libs.androidx.appcompat)
+                implementation(libs.androidx.activity.compose)
+                implementation(libs.androidx.exifinterface)
+                implementation(project(":heif"))
 
             }
         }
@@ -227,6 +357,20 @@ kotlin {
                 implementation(libs.androidx.runner)
                 implementation(libs.androidx.core)
                 implementation(libs.androidx.junit)
+            }
+        }
+
+        iosTest {
+            kotlin.srcDir(generateHeifTestFixtures)
+        }
+
+        if (sonyImageFixtures.isPresent) {
+            for (target in listOf("iosTest", "androidDeviceTest")) {
+                getByName(target) {
+                    kotlin.srcDir("src/cameraImageTest/kotlin")
+                    kotlin.srcDir("src/${target.removeSuffix("Test")}CameraImageTest/kotlin")
+                    kotlin.srcDir(generateSonyImageFixtures)
+                }
             }
         }
 

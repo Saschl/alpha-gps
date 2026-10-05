@@ -108,7 +108,6 @@ class IosAccessoryCameraNamePersistenceTest {
             deviceEnabled = false,
             alwaysOnEnabled = true,
             remoteControlEnabled = true,
-            handshakeDelayMs = 2_000,
         )
     }
 }

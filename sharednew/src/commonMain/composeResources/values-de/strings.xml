@@ -300,10 +300,6 @@
     <string name="scan_timeout_creators_app_hint">Kamera nicht gefunden? Stelle sicher, dass sie im Kopplungsmodus ist. Wurde sie zuvor mit Sonys Creators' App oder Imaging Edge Mobile eingerichtet, entferne die alte Kopplung an der Kamera und in den Bluetooth-Einstellungen deines Telefons — die Fehlerbehebung führt dich durch die Schritte.</string>
     <!-- Hint below the remote-control toggle on the device detail screen -->
     <string name="remote_control_hint">Bei manchen Kameramodellen kann die Fernbedienung nicht gleichzeitig mit der Standortverknüpfung genutzt werden. Falls die Verbindung oder GPS-Übertragung nicht mehr funktioniert, schalte diese Option aus.</string>
-    <string name="handshake_delay_title">Verbindungsaufbau verzögern</string>
-    <string name="handshake_delay_description">Wartet nach dem Verbinden der Kamera, bevor die App die GPS-Einrichtung startet. Versuche ein paar Sekunden, wenn diese Kamera langsam startet oder der Bildschirm schwarz bleibt, während die App aktiviert ist.</string>
-    <string name="handshake_delay_off">Aus</string>
-    <string name="handshake_delay_seconds">%1$d s</string>
     <string name="trigger_shutter">Fernauslöser</string>
     <string name="remote_feature_inactive">Verbunden. Fernauslöser deaktiviert in der Kamera oder in der App</string>
     <string name="haptic_feedback">Haptisches Feedback</string>
@@ -322,7 +318,23 @@
     <string name="whats_new_version">Version %1$s</string>
     <string name="whats_new_close">Verstanden</string>
     <string name="whats_new_open">Versionshinweise anzeigen</string>
+    <string name="whats_new_170_wifi_remote">Neue experimentelle WLAN-Fernsteuerung mit Livebild, Fotoauslösung sowie Bildanzeige und Downloads. Bisher nur mit der Sony α6700 getestet.\n\nTippe zum Öffnen in der Geräteliste auf deine Kamera und anschließend auf „Wi-Fi remote (experimental)“.</string>
     <string name="whats_new_162_time">Du kannst die automatische Zeitkorrektur jetzt in den Kameradetails ansehen und ändern. Diese Einstellung steuert, ob die Kamera Datum und Uhrzeit anhand deines Smartphones anpasst.</string>
     <string name="whats_new_162_notifications">Benachrichtigungen zur Standortübertragung werden jetzt zuverlässiger aktualisiert.</string>
     <string name="whats_new_162_pairing">Die Kamera-Kopplung unter iOS nutzt jetzt die Zubehörauswahl des Systems. Bereits gekoppelte Kameras müssen möglicherweise erneut autorisiert werden. Die App führt dich durch die Schritte.</string>
+    <string name="welcome_next">Weiter</string>
+    <string name="welcome_skip">Überspringen</string>
+    <string name="welcome_page_position">Seite %1$d von %2$d</string>
+    <string name="welcome_gps_label">Standort</string>
+    <string name="welcome_gps_title">Deine Fotos. \n Mit Standortdaten.</string>
+    <string name="welcome_gps_body">Alpha GPS überträgt den Standort deines Handys per Bluetooth an deine Sony-Kamera. Die Kamera speichert ihn zusammen mit deinen Fotos.</string>
+    <string name="welcome_remote_label">Fernsteuerung</string>
+    <string name="welcome_remote_title">Kamera fernsteuern</string>
+    <string name="welcome_remote_body">Nutze dein Handy als Fernauslöser. Bei unterstützten Kameras kannst du über WLAN auch das Livebild ansehen und Fotos übertragen.</string>
+    <string name="welcome_pair_label">Einrichtung · 1 von 2</string>
+    <string name="welcome_pair_title">Kamera koppeln</string>
+    <string name="welcome_pair_body">Aktiviere Bluetooth an deiner Kamera und starte den Kopplungsmodus. Füge sie dann in Alpha GPS hinzu und bestätige die Kopplung.</string>
+    <string name="welcome_ready_label">Einrichtung · 2 von 2</string>
+    <string name="welcome_ready_title">Standortzugriff erlauben</string>
+    <string name="welcome_ready_body">Erlaube den genauen Standortzugriff, auch im Hintergrund, damit die Übertragung bei gesperrtem Handy weiterläuft. Aktiviere bei älteren Kameras zusätzlich die Standortverknüpfung.</string>
 </resources>

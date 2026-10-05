@@ -273,10 +273,6 @@
     <string name="enable_remote_control">Aktifkan kontrol jarak jauh</string>
     <string name="haptic_feedback">Umpan balik haptik</string>
     <string name="haptic_feedback_description">Getar saat tombol rana remote ditekan dan saat foto diambil</string>
-    <string name="handshake_delay_title">Tunda penyiapan koneksi</string>
-    <string name="handshake_delay_description">Menunggu setelah kamera terhubung sebelum aplikasi memulai penyiapan GPS. Coba beberapa detik jika kamera ini mulai lambat atau layarnya tetap hitam saat aplikasi diaktifkan.</string>
-    <string name="handshake_delay_off">Mati</string>
-    <string name="handshake_delay_seconds">%1$d d</string>
     <string name="enable_pairing_mode_title">Aktifkan Mode Pemasangan</string>
     <string name="enable_pairing_mode_message">Jika ini pertama kalinya Anda menghubungkan kamera ini ke ponsel, pastikan untuk mengaktifkan mode pemasangan Bluetooth di pengaturan kamera sebelum melanjutkan. Jika tidak, cukup lanjutkan</string>
     <string name="enable_pairing_mode_continue">Lanjutkan</string>

@@ -1,6 +1,7 @@
 package com.sasch.cameragps.sharednew.bluetooth.transport
 
 import com.diamondedge.logging.logging
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -17,6 +18,7 @@ sealed interface BleOperation {
     data class Read(val characteristicUuid: String) : BleOperation
     data class Subscribe(val characteristicUuid: String, val enable: Boolean) : BleOperation
     data object DiscoverServices : BleOperation
+    data class RequestMtu(val mtu: Int) : BleOperation
 }
 
 sealed interface BleOperationResult {
@@ -103,10 +105,16 @@ class BleOperationQueue(
      */
     suspend fun execute(identifier: String, op: BleOperation): BleOperationResult {
         val queued = QueuedOperation(op)
-        if (!laneFor(identifier).channel.trySend(queued).isSuccess) {
+        val lane = laneFor(identifier)
+        if (!lane.channel.trySend(queued).isSuccess) {
             return BleOperationResult.Cancelled
         }
-        return queued.result.await()
+        return try { queued.result.await() }
+        catch (cancelled: CancellationException) {
+            // Drop parked work, but drain an in-flight GATT response before advancing the lane.
+            if (lane.pending !== queued) queued.result.cancel()
+            throw cancelled
+        }
     }
 
     /**
@@ -172,6 +180,7 @@ class BleOperationQueue(
 
         is BleOperation.DiscoverServices ->
             transport.initiateDiscoverServices(identifier)
+        is BleOperation.RequestMtu -> transport.initiateMtuRequest(identifier, op.mtu)
     }
 
     private fun timeoutFor(op: BleOperation): Long = when (op) {
@@ -183,6 +192,9 @@ class BleOperationQueue(
         pending: BleOperation,
         event: BleTransportEvent,
     ): BleOperationResult? = when {
+        pending is BleOperation.RequestMtu && event is BleTransportEvent.MtuChanged ->
+            event.status.toResult()
+
         pending is BleOperation.Write && event is BleTransportEvent.CharacteristicWritten &&
                 pending.characteristicUuid.equals(event.characteristicUuid, ignoreCase = true) ->
             event.status.toResult()
@@ -219,6 +231,7 @@ class BleOperationQueue(
         is BleOperation.Read -> "Read($characteristicUuid)"
         is BleOperation.Subscribe -> "Subscribe($characteristicUuid, enable=$enable)"
         is BleOperation.DiscoverServices -> "DiscoverServices"
+        is BleOperation.RequestMtu -> "RequestMtu($mtu)"
     }
 
     private fun BleOperationResult.describe(): String = when (this) {

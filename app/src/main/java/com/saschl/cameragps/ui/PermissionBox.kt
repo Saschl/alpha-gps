@@ -125,17 +125,18 @@ fun EnhancedLocationPermissionBox(
         }
     }
 
-    // Background location permission (separate for Android 10+)
-    val backgroundLocationPermission = rememberPermissionState(
-        permission = Manifest.permission.ACCESS_BACKGROUND_LOCATION
-    ) { granted ->
-        if (!granted) {
-            hasUserDeniedPermission = true
+    val backgroundLocationPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        rememberPermissionState(Manifest.permission.ACCESS_BACKGROUND_LOCATION) { granted ->
+            if (!granted) {
+                hasUserDeniedPermission = true
+            }
         }
+    } else {
+        null
     }
 
     val allForegroundGranted = foregroundPermissionState.allPermissionsGranted
-    val backgroundGranted = backgroundLocationPermission.status.isGranted
+    val backgroundGranted = backgroundLocationPermission?.status?.isGranted != false
     val allPermissionsGranted = allForegroundGranted && backgroundGranted
     val shouldAllowContent = allPermissionsGranted || ignorePermissions
 
@@ -170,7 +171,7 @@ fun EnhancedLocationPermissionBox(
 @Composable
 private fun EnhancedPermissionScreen(
     foregroundPermissionState: MultiplePermissionsState,
-    backgroundLocationPermission: PermissionState,
+    backgroundLocationPermission: PermissionState?,
     allForegroundGranted: Boolean,
     hasUserDeniedPermission: Boolean,
     onContinueAnyway: () -> Unit,
@@ -189,7 +190,7 @@ private fun EnhancedPermissionScreen(
             rejectedPermissionDescriptions.joinToString()
         )
 
-        allForegroundGranted && !backgroundLocationPermission.status.isGranted ->
+        allForegroundGranted && backgroundLocationPermission?.status?.isGranted == false ->
             stringResource(Res.string.background_location_required_error)
 
         else -> ""
@@ -272,8 +273,8 @@ private fun EnhancedPermissionScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Step 2: Background Location Permission (only show if foreground is granted)
-        if (allForegroundGranted) {
+        // Step 2: Background location is a separate permission only on Android 10+.
+        if (allForegroundGranted && backgroundLocationPermission != null) {
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(
@@ -383,7 +384,7 @@ private fun EnhancedPermissionScreen(
         )
     }
 
-    if (showBackgroundRationale) {
+    if (showBackgroundRationale && backgroundLocationPermission != null) {
         AlertDialog(
             onDismissRequest = { showBackgroundRationale = false },
             title = { Text(stringResource(Res.string.background_location_access_title)) },

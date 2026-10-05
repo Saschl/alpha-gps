@@ -6,13 +6,15 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -35,6 +37,7 @@ import cameragps.sharednew.generated.resources.auto_area_adjustment
 import cameragps.sharednew.generated.resources.auto_area_adjustment_hint
 import cameragps.sharednew.generated.resources.auto_time_correction
 import cameragps.sharednew.generated.resources.auto_time_correction_hint
+import cameragps.sharednew.generated.resources.camera_24px
 import cameragps.sharednew.generated.resources.camera_setting_connect
 import cameragps.sharednew.generated.resources.camera_setting_failed
 import cameragps.sharednew.generated.resources.camera_setting_pending
@@ -45,18 +48,17 @@ import cameragps.sharednew.generated.resources.dialog_ok
 import cameragps.sharednew.generated.resources.enableConstantly
 import cameragps.sharednew.generated.resources.enable_device
 import cameragps.sharednew.generated.resources.enable_remote_control
-import cameragps.sharednew.generated.resources.handshake_delay_description
-import cameragps.sharednew.generated.resources.handshake_delay_off
-import cameragps.sharednew.generated.resources.handshake_delay_seconds
-import cameragps.sharednew.generated.resources.handshake_delay_title
 import cameragps.sharednew.generated.resources.hint_if_issues_after_switching
 import cameragps.sharednew.generated.resources.info_24px
+import cameragps.sharednew.generated.resources.keyboard_arrow_right_24px
 import cameragps.sharednew.generated.resources.remote_control_hint
 import cameragps.sharednew.generated.resources.rename_camera_hint
 import cameragps.sharednew.generated.resources.rename_camera_label
 import cameragps.sharednew.generated.resources.rename_camera_save
 import cameragps.sharednew.generated.resources.rename_camera_title
 import cameragps.sharednew.generated.resources.setting_info
+import cameragps.sharednew.generated.resources.wifi_remote_entry_hint
+import cameragps.sharednew.generated.resources.wifi_remote_title
 import com.sasch.cameragps.sharednew.bluetooth.BleSessionPhase
 import com.sasch.cameragps.sharednew.bluetooth.session.CameraAutoCorrectionSetting
 import com.sasch.cameragps.sharednew.bluetooth.session.CameraSettingState
@@ -65,7 +67,6 @@ import com.sasch.cameragps.sharednew.util.KotlinPlatform
 import com.sasch.cameragps.sharednew.util.currentPlatform
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
-import kotlin.math.roundToInt
 
 /**
  * Shared device detail content that displays toggle rows for device settings.
@@ -81,6 +82,7 @@ fun DeviceDetailContent(
     onDeviceEnabledChanged: ((Boolean) -> Unit)? = null,
     onPresentSystemRename: (() -> Unit)? = null,
     renameEnabled: Boolean = true,
+    onWifiRemote: (() -> Unit)? = null,
 ) {
     val state = viewModel.uiState.collectAsState().value
     val sessions by viewModel.sessions.collectAsState()
@@ -106,6 +108,45 @@ fun DeviceDetailContent(
     ) {
         if (headerContent != null) {
             item { headerContent(state.deviceName.ifEmpty { deviceName.orEmpty() }) }
+        }
+
+        if (onWifiRemote != null) {
+            item {
+                Button(
+                    onClick = onWifiRemote,
+                    enabled = state.isDeviceEnabled,
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 88.dp),
+                    shape = MaterialTheme.shapes.large,
+                    contentPadding = PaddingValues(20.dp),
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    ) {
+                        Icon(
+                            painterResource(Res.drawable.camera_24px), contentDescription = null,
+                            modifier = Modifier.size(28.dp)
+                        )
+                        Column(
+                            Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(
+                                stringResource(Res.string.wifi_remote_title),
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                            Text(
+                                stringResource(Res.string.wifi_remote_entry_hint),
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                        Icon(
+                            painterResource(Res.drawable.keyboard_arrow_right_24px),
+                            contentDescription = null
+                        )
+                    }
+                }
+            }
         }
 
         if (renameEnabled) {
@@ -154,17 +195,6 @@ fun DeviceDetailContent(
                     viewModel.setRemoteControlStatus(enabled, deviceId)
                 },
                 infoText = stringResource(Res.string.remote_control_hint),
-            )
-        }
-
-        item {
-            HandshakeDelaySlider(
-                delayMs = state.handshakeDelayMs,
-                enabled = state.isDeviceEnabled && state.buttonEnabled,
-                onDelayChanged = { delayMs ->
-                    viewModel.setHandshakeDelay(delayMs, deviceId)
-                },
-                infoText = stringResource(Res.string.handshake_delay_description),
             )
         }
 
@@ -346,55 +376,6 @@ private fun SettingInfoButton(title: String, text: String) {
                     Text(stringResource(Res.string.dialog_ok))
                 }
             },
-        )
-    }
-}
-
-@Composable
-private fun HandshakeDelaySlider(
-    delayMs: Long,
-    enabled: Boolean,
-    onDelayChanged: (Long) -> Unit,
-    infoText: String? = null,
-) {
-    // Local value while dragging; persisted only on release
-    var sliderSeconds by remember(delayMs) { mutableStateOf((delayMs / 1000L).toFloat()) }
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = stringResource(Res.string.handshake_delay_title),
-                style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier.weight(1f),
-            )
-            if (infoText != null) {
-                SettingInfoButton(
-                    title = stringResource(Res.string.handshake_delay_title),
-                    text = infoText,
-                )
-            }
-            val seconds = sliderSeconds.roundToInt()
-            Text(
-                text = if (seconds == 0) {
-                    stringResource(Res.string.handshake_delay_off)
-                } else {
-                    stringResource(Res.string.handshake_delay_seconds, seconds)
-                },
-                style = MaterialTheme.typography.bodyLarge,
-            )
-        }
-        Slider(
-            value = sliderSeconds,
-            onValueChange = { sliderSeconds = it },
-            onValueChangeFinished = {
-                onDelayChanged(sliderSeconds.roundToInt() * 1000L)
-            },
-            valueRange = 0f..10f,
-            steps = 9,
-            enabled = enabled,
         )
     }
 }

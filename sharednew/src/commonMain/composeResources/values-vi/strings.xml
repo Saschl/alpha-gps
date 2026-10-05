@@ -180,10 +180,6 @@
     <string name="pairing_failed_hint_phone_pairing">• Xóa the máy ảnh from your phone's Bluetooth Cài đặt (Settings → Bluetooth), then try again.</string>
     <string name="scan_timeout_creators_app_hint">Máy ảnh not found? Make sure it is in ghép nối mode. If it was set up with Sony's Creators' App or Imaging Edge Mobile before, Xóa the Cũ ghép nối from the máy ảnh and from your phone's Bluetooth Cài đặt — the troubleshooting guide walks you through it.</string>
     <string name="remote_control_hint">On some máy ảnh models, remote control cannot be used while location linking is đang hoạt động. If the kết nối or GPS transfer stops working, turn this off.</string>
-    <string name="handshake_delay_title">Trì hoãn kết nối setup</string>
-    <string name="handshake_delay_description">Waits after the máy ảnh connects before the app starts the GPS setup. Try a few seconds if this máy ảnh starts slowly or its screen stays black while the app is đã bật.</string>
-    <string name="handshake_delay_off">Tắt</string>
-    <string name="handshake_delay_seconds">%1$d s</string>
     <string name="help_menu_item">Tr� giúp</string>
     <string name="associated_devices">Đã ghép nối Devices</string>
     <string name="nearby_cameras">Nearby Máy ảnh</string>

@@ -1,0 +1,21 @@
+{
+  "fixtures": [
+    {
+      "bitDepth": 10,
+      "chroma": 422,
+      "file": "DSC04119.HIF",
+      "format": "heif",
+      "height": 4128,
+      "metadata": {
+        "dateTimeOriginal": "2026:09:25 22:25:51",
+        "iso": "1250",
+        "lensModel": "16mm F1.4 DC DN | Contemporary 017",
+        "make": "SONY",
+        "model": "ILCE-6700"
+      },
+      "orientation": 1,
+      "sha256": "4d75c15854380b85bc6f27e36526ea2e5e85d0df94c41383e176a5af9f6390b7",
+      "width": 6192
+    }
+  ]
+}

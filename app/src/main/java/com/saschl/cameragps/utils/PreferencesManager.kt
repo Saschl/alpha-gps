@@ -14,6 +14,7 @@ import java.time.temporal.ChronoUnit
 object PreferencesManager {
     private const val PREFS_NAME = "camera_gps_prefs"
     private const val KEY_FIRST_LAUNCH = "is_first_launch"
+    private const val KEY_WIFI_REMOTE_NOTICE_ACKNOWLEDGED = "wifi_remote_notice_acknowledged"
     private const val KEY_APP_ENABLED = "app_enabled"
     private const val KEY_BATTERY_OPTIMIZATION_DIALOG_DISMISSED = "battery_optimization_dialog_dismissed"
     private const val KEY_LOG_LEVEL = "log_level"
@@ -53,6 +54,13 @@ object PreferencesManager {
 
     fun getLastSeenReleaseVersion(context: Context): String? =
         getPreferences(context).getString("last_seen_release_version", null)
+
+    fun isWifiRemoteNoticeAcknowledged(context: Context): Boolean =
+        getPreferences(context).getBoolean(KEY_WIFI_REMOTE_NOTICE_ACKNOWLEDGED, false)
+
+    fun acknowledgeWifiRemoteNotice(context: Context) {
+        getPreferences(context).edit { putBoolean(KEY_WIFI_REMOTE_NOTICE_ACKNOWLEDGED, true) }
+    }
 
     fun setLastSeenReleaseVersion(context: Context, version: String) {
         getPreferences(context).edit { putString("last_seen_release_version", version) }

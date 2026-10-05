@@ -1,5 +1,7 @@
 package com.sasch.cameragps.sharednew.bluetooth
 
+import com.sasch.cameragps.sharednew.remote.wifi.createIosWifiRemoteController
+
 import com.diamondedge.logging.LogLevel
 import com.diamondedge.logging.logging
 import com.sasch.cameragps.sharednew.IosAppPreferences
@@ -330,6 +332,8 @@ object IosBluetoothController : BluetoothController {
         isTransmissionAllowed = { appEnabled },
     )
 
+    internal val wifiRemote = createIosWifiRemoteController(controllerScope, orchestrator)
+
     private val transmissionNotifications = IosTransmissionNotifications(
         controllerScope, orchestrator.sessions, orchestrator.locationManager.isTransmitting,
     )
@@ -486,6 +490,7 @@ object IosBluetoothController : BluetoothController {
 
     override suspend fun forgetDevice(identifier: String) {
         val resolvedIdentifier = resolved(identifier)
+        wifiRemote.closeAndJoin(resolvedIdentifier)
         disconnect(identifier)
         shell?.forget(resolvedIdentifier)
         // Also drop the AccessorySetupKit authorization, which removes the
@@ -521,6 +526,7 @@ object IosBluetoothController : BluetoothController {
         if (!enabled) {
             orchestrator.setRemoteMonitoring(normalized, false)
             controllerScope.launch {
+                wifiRemote.closeAndJoin(normalized)
                 disconnectInternal(identifier, removeFromAutoReconnect = false)
             }
             return
@@ -546,6 +552,7 @@ object IosBluetoothController : BluetoothController {
             refreshDeviceListFrom(shell)
             return
         }
+        wifiRemote.closeAndJoin()
         forceShutdownAllConnections()
     }
 
@@ -554,6 +561,7 @@ object IosBluetoothController : BluetoothController {
     // ---------------------------------------------------------------------------
 
     private fun forceShutdownAllConnections() {
+        wifiRemote.disconnect()
         shell?.stopScanIfNeeded()
         shell?.cancelAllKnownConnections()
         orchestrator.shutdownAll()

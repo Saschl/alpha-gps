@@ -15,6 +15,7 @@ import com.sasch.cameragps.sharednew.database.devices.CameraDeviceDAO
 import com.sasch.cameragps.sharednew.notification.TransmissionNotificationCoordinator
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.receiveAsFlow
@@ -40,6 +41,91 @@ class CameraLocationLinkingTest {
     @AfterTest
     fun restorePlatformLogging() {
         KmLogging.setLoggers(PlatformLogger(FixedLogLevel(true)))
+    }
+
+    @Test
+    fun wifiCredentialsWaitForQueuedMtuCompletion() = runTest {
+        val f = Fixture(backgroundScope)
+        f.connect("A")
+        runCurrent()
+        f.transport.operations.clear()
+        f.transport.wifiMtu = 517
+        val setup = async { f.orchestrator.prepareCameraWifi("A") }
+        runCurrent()
+        assertEquals<List<Pair<String, BleOperation>>>(
+            listOf("A" to BleOperation.RequestMtu(517)),
+            f.transport.operations
+        )
+        // An unrelated device's callback must not unblock credential reads.
+        f.transport.emit(BleTransportEvent.MtuChanged("B", 517, BleOperationStatus.Success))
+        runCurrent()
+        assertEquals(1, f.transport.operations.size)
+        f.transport.emit(BleTransportEvent.MtuChanged("A", 185, BleOperationStatus.Success))
+        runCurrent()
+        assertEquals("DIRECT-camera", setup.await()?.ssid)
+        assertTrue(f.transport.operations.drop(1).any { it.second is BleOperation.Read })
+    }
+
+    @Test
+    fun refusedMtuStillAllowsCamerasSupportingLongReads() = runTest {
+        val f = Fixture(backgroundScope)
+        f.connect("A")
+        runCurrent()
+        f.transport.wifiMtu = 517
+        val setup = async { f.orchestrator.prepareCameraWifi("A") }
+        runCurrent()
+        f.transport.emit(BleTransportEvent.MtuChanged("A", 23, BleOperationStatus.Failure))
+        runCurrent()
+        assertEquals("DIRECT-camera", setup.await()?.ssid)
+    }
+
+    @Test
+    fun wifiWithoutManualMtuNegotiationKeepsExistingSequence() = runTest {
+        val f = Fixture(backgroundScope)
+        f.connect("A")
+        runCurrent()
+        f.transport.operations.clear()
+        val setup = async { f.orchestrator.prepareCameraWifi("A") }
+        runCurrent()
+        assertEquals("DIRECT-camera", setup.await()?.ssid)
+        assertTrue(f.transport.operations.first().second is BleOperation.Write)
+        assertTrue(f.transport.operations.none { it.second is BleOperation.RequestMtu })
+    }
+
+    @Test
+    fun cancelledMtuWaitNeverStartsCameraWifi() = runTest {
+        val f = Fixture(backgroundScope)
+        f.connect("A")
+        runCurrent()
+        f.transport.operations.clear()
+        f.transport.wifiMtu = 517
+        val setup = async { f.orchestrator.prepareCameraWifi("A") }
+        runCurrent()
+        setup.cancel()
+        f.transport.emit(BleTransportEvent.MtuChanged("A", 185, BleOperationStatus.Success))
+        runCurrent()
+        assertEquals<List<Pair<String, BleOperation>>>(
+            listOf("A" to BleOperation.RequestMtu(517)),
+            f.transport.operations
+        )
+    }
+
+    @Test
+    fun connectionAndReconnectionStartDiscoveryWithoutAdvancingTime() = runTest {
+        val f = Fixture(backgroundScope)
+        repeat(2) {
+            f.connect("A")
+            runCurrent()
+
+            assertEquals("A" to BleOperation.DiscoverServices, f.transport.operations.first())
+            assertTrue(f.session("A").isLocationReady)
+            assertEquals(0L, testScheduler.currentTime)
+
+            f.transport.connected.remove("A")
+            f.transport.emit(BleTransportEvent.Disconnected("A", null))
+            runCurrent()
+            f.transport.operations.clear()
+        }
     }
 
     @Test
@@ -702,6 +788,12 @@ class CameraLocationLinkingTest {
         var holdReads = false
         var holdLocationWrites = false
         var holdGpsUnlockWrites = false
+        var wifiMtu: Int? = null
+        override fun wifiMtuRequest(identifier: String) = wifiMtu
+        override fun initiateMtuRequest(identifier: String, mtu: Int): Boolean {
+            operations += identifier to BleOperation.RequestMtu(mtu)
+            return true
+        }
         fun emit(event: BleTransportEvent) {
             channel.trySend(event)
         }
@@ -734,6 +826,23 @@ class CameraLocationLinkingTest {
 
         override fun initiateRead(identifier: String, characteristicUuid: String): Boolean {
             operations += identifier to BleOperation.Read(characteristicUuid)
+            val credential = when (characteristicUuid) {
+                Sony.WIFI_SSID_UUID -> "DIRECT-camera"
+                Sony.WIFI_PASSWORD_UUID -> "password"
+                Sony.WIFI_BSSID_UUID -> ""
+                else -> null
+            }
+            if (credential != null) {
+                emit(
+                    BleTransportEvent.CharacteristicRead(
+                        identifier,
+                        characteristicUuid,
+                        byteArrayOf(3, 0, 0) + credential.encodeToByteArray(),
+                        BleOperationStatus.Success
+                    )
+                )
+                return true
+            }
             if (CameraAutoCorrectionSetting.fromUuid(characteristicUuid) != null) {
                 if (holdSettingReads) return true
                 emit(
@@ -815,7 +924,5 @@ class CameraLocationLinkingTest {
         override suspend fun getAlwaysOnEnabledDeviceCount() = 0
         override suspend fun setRemoteControlEnabled(deviceId: String, enabled: Boolean) = 0
         override suspend fun isRemoteControlEnabled(address: String) = remoteEnabled
-        override suspend fun getHandshakeDelayMs(address: String): Long? = 0
-        override suspend fun setHandshakeDelayMs(deviceId: String, delayMs: Long) = Unit
     }
 }

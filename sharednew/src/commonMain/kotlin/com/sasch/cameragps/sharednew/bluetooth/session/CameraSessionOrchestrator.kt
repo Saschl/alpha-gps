@@ -17,6 +17,10 @@ import com.sasch.cameragps.sharednew.bluetooth.transport.BleOperationStatus
 import com.sasch.cameragps.sharednew.bluetooth.transport.BlePeripheralTransport
 import com.sasch.cameragps.sharednew.bluetooth.transport.BleTransportEvent
 import com.sasch.cameragps.sharednew.database.devices.CameraDeviceDAO
+import com.sasch.cameragps.sharednew.remote.wifi.CameraWifiCredentials
+import com.sasch.cameragps.sharednew.remote.wifi.SonyWifiBootstrap
+import com.sasch.cameragps.sharednew.remote.wifi.WifiRemoteConnectException
+import com.sasch.cameragps.sharednew.remote.wifi.WifiRemoteFailure
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.delay
@@ -65,6 +69,13 @@ class CameraSessionOrchestrator(
             // location status is advisory and does not gate transmission.
             when {
                 operation !is BleOperation.Write -> true
+                operation.characteristicUuid.equals(SonyBluetoothConstants.REMOTE_CHARACTERISTIC_UUID, true) &&
+                    registry.get(id)?.wifiRemote?.phase?.let {
+                        it != com.sasch.cameragps.sharednew.remote.wifi.WifiRemotePhase.Idle &&
+                            it != com.sasch.cameragps.sharednew.remote.wifi.WifiRemotePhase.Failed
+                    } == true -> listOf(SonyBluetoothConstants.FULL_SHUTTER_UP_COMMAND,
+                        SonyBluetoothConstants.HALF_SHUTTER_UP_COMMAND, SonyBluetoothConstants.AF_ON_UP_COMMAND)
+                        .any { it.contentEquals(operation.value) }
                 operation.characteristicUuid.equals(
                     SonyBluetoothConstants.CHARACTERISTIC_UUID,
                     true
@@ -158,6 +169,20 @@ class CameraSessionOrchestrator(
     fun triggerRemoteShutter(identifier: String): Boolean =
         sendRemoteCommand(identifier, RemoteCommand.ShutterFullPress)
 
+    suspend fun claimWifiControls(identifier: String) = remoteControl.claimWifiControls(identifier)
+
+    internal suspend fun prepareCameraWifi(identifier: String): CameraWifiCredentials? {
+        if (registry.get(identifier)?.phase != BleSessionPhase.Transmitting) {
+            throw WifiRemoteConnectException(WifiRemoteFailure.BluetoothRequired)
+        }
+        transport.wifiMtuRequest(identifier)?.let { mtu ->
+            val result = queue.execute(identifier, BleOperation.RequestMtu(mtu))
+            log.i { "Wi-Fi BLE MTU request=$mtu result=$result" }
+        }
+        return SonyWifiBootstrap(port).prepare(identifier)
+    }
+    fun releaseWifiControls(identifier: String) = remoteControl.releaseWifiControls(identifier)
+
     /**
      * Send a remote-control command. The coordinator gates on an active
      * connection and remote feature; the write is serialized via the queue.
@@ -188,7 +213,7 @@ class CameraSessionOrchestrator(
         autoCorrection.clear(id)
         queue.cancelOperations(id, "session cleared")
         sessionCoordinator.clearSession(id)
-        registry.remove(id)
+        registry.markBleDisconnected(id)
         locationManager.updateTracking()
     }
 
@@ -239,6 +264,7 @@ class CameraSessionOrchestrator(
             is BleTransportEvent.CharacteristicChanged -> handleCharacteristicChanged(event)
 
             is BleTransportEvent.ServicesDiscovered -> Unit // consumed by the queue
+            is BleTransportEvent.MtuChanged -> Unit // consumed by the queue
         }
     }
 
@@ -267,14 +293,6 @@ class CameraSessionOrchestrator(
         _events.tryEmit(OrchestratorEvent.DeviceConnected(id))
 
         scope.launch {
-            val delayMs = runCatching { deviceDao.getHandshakeDelayMs(id) }.getOrNull() ?: 0L
-            if (delayMs > 0) {
-                // Some cameras stall their own boot while servicing BLE traffic;
-                // the per-device delay lets them finish starting first
-                log.i { "Delaying connection setup for $id by ${delayMs}ms" }
-                delay(delayMs.milliseconds)
-                if (registry.get(id) == null || !transport.isConnected(id)) return@launch
-            }
             runDiscoveryAndHandshake(id)
         }
     }

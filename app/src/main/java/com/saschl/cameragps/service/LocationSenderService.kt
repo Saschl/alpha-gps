@@ -117,6 +117,7 @@ class LocationSenderService : LifecycleService() {
             Timber.e(e, "Failed to unregister Bluetooth state receiver")
         }
         if (hasForegroundSession) {
+            com.saschl.cameragps.AppServices.from(this).wifiRemote.disconnect()
             orchestrator.shutdownAll()
             transport.disconnectAll()
         }
@@ -143,6 +144,7 @@ class LocationSenderService : LifecycleService() {
 
         if (!bluetoothManager.adapter.isEnabled) {
             Timber.w("Bluetooth is disabled, will shutdown service")
+            startAsForegroundService()
             requestShutdown(startId)
             return START_NOT_STICKY
         }

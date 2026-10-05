@@ -1,0 +1,76 @@
+package com.sasch.cameragps.sharednew.remote.wifi
+
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.lifecycle.viewmodel.compose.viewModel
+import cameragps.sharednew.generated.resources.Res
+import cameragps.sharednew.generated.resources.wifi_remote_ios_opening
+import cameragps.sharednew.generated.resources.wifi_remote_ios_permission
+import cameragps.sharednew.generated.resources.wifi_remote_ios_settings
+import com.sasch.cameragps.sharednew.IosAppPreferences
+import com.sasch.cameragps.sharednew.bluetooth.IosBluetoothController
+import com.sasch.cameragps.sharednew.logging.logIosLifecycle
+import com.sasch.cameragps.sharednew.ui.remote.WifiRemoteScreen
+import com.sasch.cameragps.sharednew.ui.remote.WifiRemoteViewModel
+import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
+import platform.Foundation.NSURL
+import platform.UIKit.UIApplication
+import platform.UIKit.UIApplicationOpenSettingsURLString
+import platform.UIKit.UIApplicationState
+
+@Composable
+internal fun IosWifiRemoteScreen(identifier: String, onClose: () -> Unit) {
+    val controller = IosBluetoothController.wifiRemote
+    val scope = rememberCoroutineScope()
+    val owner by controller.owner.collectAsState()
+    val model = viewModel(key = "wifi-remote-${identifier.uppercase()}") {
+        WifiRemoteViewModel(identifier.uppercase(), controller)
+    }
+    DisposableEffect(identifier) {
+        logIosLifecycle("Wi-Fi remote screen attached")
+        onDispose {
+            logIosLifecycle("Wi-Fi remote screen disposed -> Wi-Fi disconnect requested")
+            controller.disconnect(identifier)
+        }
+    }
+    if (owner.equals(identifier, ignoreCase = true)) {
+        DisposableEffect(Unit) {
+            val app = UIApplication.sharedApplication
+            val previous = app.idleTimerDisabled
+            app.idleTimerDisabled = true
+            onDispose { app.idleTimerDisabled = previous }
+        }
+    }
+    WifiRemoteScreen(
+        model,
+        isExperimentalNoticeAcknowledged = IosAppPreferences::isWifiRemoteNoticeAcknowledged,
+        onAcknowledgeExperimentalNotice = IosAppPreferences::acknowledgeWifiRemoteNotice,
+        onConnect = { controller.connect(identifier, it) },
+        onConnectAutomatically = { controller.connectAutomatically(identifier) },
+        onWifiSettings = {
+            NSURL.URLWithString(UIApplicationOpenSettingsURLString)?.let {
+                UIApplication.sharedApplication.openURL(it, emptyMap<Any?, Any>(), null)
+            }
+        },
+        openingSessionMessage = stringResource(Res.string.wifi_remote_ios_opening),
+        networkPermissionMessage = stringResource(Res.string.wifi_remote_ios_permission),
+        wifiSettingsLabel = stringResource(Res.string.wifi_remote_ios_settings),
+        onDownloadPhotos = { downloads ->
+            scope.launch {
+                if (requestIosPhotoSavePermission()) {
+                    if (UIApplication.sharedApplication.applicationState != UIApplicationState.UIApplicationStateBackground)
+                        controller.downloadPhotos(identifier, downloads)
+                } else controller.imageStoragePermissionDenied(identifier)
+            }
+        },
+        onClose = {
+            logIosLifecycle("Wi-Fi remote screen closed by user -> Wi-Fi disconnect requested")
+            controller.disconnect(identifier)
+            onClose()
+        },
+    )
+}

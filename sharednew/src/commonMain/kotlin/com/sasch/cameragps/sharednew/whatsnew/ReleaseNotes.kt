@@ -4,6 +4,7 @@ import cameragps.sharednew.generated.resources.Res
 import cameragps.sharednew.generated.resources.whats_new_162_notifications
 import cameragps.sharednew.generated.resources.whats_new_162_pairing
 import cameragps.sharednew.generated.resources.whats_new_162_time
+import cameragps.sharednew.generated.resources.whats_new_170_wifi_remote
 import org.jetbrains.compose.resources.StringResource
 
 enum class ReleasePlatform { Android, Ios }
@@ -14,6 +15,11 @@ data class ReleaseNotes(val version: String, val highlights: List<StringResource
 object ReleaseNotesCatalog {
     fun forVersion(version: String, platform: ReleasePlatform): ReleaseNotes? =
         when (version.removePrefix("v")) {
+            "1.7.0" -> ReleaseNotes(
+                version = "1.7.0",
+                highlights = listOf(Res.string.whats_new_170_wifi_remote),
+            )
+
             "1.6.2" -> ReleaseNotes(
                 version = "1.6.2",
                 highlights = buildList {

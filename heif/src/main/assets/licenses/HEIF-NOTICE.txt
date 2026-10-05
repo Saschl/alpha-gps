@@ -1,0 +1,17 @@
+Alpha GPS uses libheif 1.23.5 and libde265 1.1.3, under LGPL-3.0-or-later.
+Copyright notices and full license texts are in the accompanying COPYING files.
+The libraries are built from source and dynamically linked as separate .so files.
+Only HEVC decoding is enabled; HEVC encoders are not included.
+
+Unmodified upstream source archives are bundled in heif/src/main/cpp/vendor:
+https://github.com/strukturag/libheif/archive/refs/tags/v1.23.5.tar.gz
+SHA-256: 3be49950c75d3fd9318ba775e8253248dd9e08c61ea955fca81b6b89c02d6b2b
+https://github.com/strukturag/libde265/archive/refs/tags/v1.1.3.tar.gz
+SHA-256: 189baa08fd6d2dd34db099de411bd6b2e6bd5eb88e81236a3d0fa3826b9715c4
+
+The CMake build extracts these archives locally and does not download dependencies.
+For Android, build :heif:assembleRelease with Gradle (NDK 29, CMake 3.22.1).
+For host decoder tests:
+  cmake -S heif/src/main/cpp -B /tmp/alpha-heif-test -DCMAKE_BUILD_TYPE=Release
+  cmake --build /tmp/alpha-heif-test --target heif_decoder_test -j 4
+  ctest --test-dir /tmp/alpha-heif-test --output-on-failure

@@ -22,7 +22,11 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
@@ -79,13 +83,6 @@ private fun createAndroidDataSource(dao: CameraDeviceDAO): DeviceDetailDataSourc
             dao.setRemoteControlEnabled(deviceId, enabled)
         }
 
-        override suspend fun getHandshakeDelayMs(deviceId: String) =
-            dao.getHandshakeDelayMs(deviceId) ?: 0L
-
-        override suspend fun setHandshakeDelayMs(deviceId: String, delayMs: Long) {
-            dao.setHandshakeDelayMs(deviceId, delayMs)
-        }
-
         override suspend fun getDeviceName(deviceId: String) = dao.getDeviceName(deviceId)
 
         // Database only: the CompanionDeviceManager association keeps its own
@@ -109,6 +106,11 @@ fun DeviceDetailScreen(
 ) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    var wifiRemoteOpen by rememberSaveable(device.address) { mutableStateOf(false) }
+    if (wifiRemoteOpen) {
+        AndroidWifiRemoteScreen(device.address, onClose = { wifiRemoteOpen = false })
+        return
+    }
 
     val viewModel: DeviceDetailViewModel = viewModel(key = device.address) {
         val dao = LogDatabase.getRoomDatabase(getDatabaseBuilder(context)).cameraDeviceDao()
@@ -155,6 +157,7 @@ fun DeviceDetailScreen(
         BackHandler { onClose() }
 
         DeviceDetailContent(
+            onWifiRemote = { wifiRemoteOpen = true },
             viewModel = viewModel,
             deviceId = device.address,
             modifier = Modifier.padding(innerPadding),
@@ -191,6 +194,7 @@ fun DeviceDetailScreen(
             },
             onDeviceEnabledChanged = { enabled ->
                 if (!enabled) {
+                    AppServices.from(context).wifiRemote.disconnect(device.address)
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA) {
                         deviceManager.stopObservingDevicePresence(
                             ObservingDevicePresenceRequest.Builder()

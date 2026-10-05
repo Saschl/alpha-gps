@@ -2,10 +2,8 @@ package com.sasch.cameragps.sharednew
 
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -26,10 +24,6 @@ import cameragps.sharednew.generated.resources.info_24px
 import cameragps.sharednew.generated.resources.settings
 import cameragps.sharednew.generated.resources.settings_24px
 import cameragps.sharednew.generated.resources.view_logs
-import cameragps.sharednew.generated.resources.welcome_get_started_button
-import cameragps.sharednew.generated.resources.welcome_settings_note
-import cameragps.sharednew.generated.resources.welcome_subtitle
-import cameragps.sharednew.generated.resources.welcome_title
 import com.diamondedge.logging.LogLevel
 import com.sasch.cameragps.sharednew.bluetooth.IosBluetoothController
 import com.sasch.cameragps.sharednew.crash.IosCrashReporting
@@ -38,6 +32,7 @@ import com.sasch.cameragps.sharednew.database.logging.LogRepository
 import com.sasch.cameragps.sharednew.language.appLanguagePreference
 import com.sasch.cameragps.sharednew.logging.IosLogFormatter
 import com.sasch.cameragps.sharednew.logging.IosLogging
+import com.sasch.cameragps.sharednew.logging.logIosLifecycle
 import com.sasch.cameragps.sharednew.review.IosReviewPromptEffect
 import com.sasch.cameragps.sharednew.ui.device.SharedDevicesScreen
 import com.sasch.cameragps.sharednew.ui.devicelist.DeviceListViewModel
@@ -57,6 +52,15 @@ import platform.UIKit.UIApplication
 import platform.UIKit.UIApplicationDidBecomeActiveNotification
 import platform.UIKit.UIApplicationDidEnterBackgroundNotification
 import platform.UIKit.UIApplicationState.UIApplicationStateActive
+import platform.UIKit.UIApplicationWillEnterForegroundNotification
+import platform.UIKit.UIApplicationWillResignActiveNotification
+import platform.UIKit.UIApplicationWillTerminateNotification
+import platform.UIKit.UIScene
+import platform.UIKit.UISceneDidActivateNotification
+import platform.UIKit.UISceneDidDisconnectNotification
+import platform.UIKit.UISceneDidEnterBackgroundNotification
+import platform.UIKit.UISceneWillDeactivateNotification
+import platform.UIKit.UISceneWillEnterForegroundNotification
 import platform.UIKit.UIViewController
 
 internal enum class IosScreen {
@@ -126,11 +130,13 @@ internal fun CameraGpsIosApp(
 
     DisposableEffect(Unit) {
         val center = NSNotificationCenter.defaultCenter
+        logIosLifecycle("app UI attached; registering lifecycle observers")
         val backgroundObserver = center.addObserverForName(
             name = UIApplicationDidEnterBackgroundNotification,
             `object` = null,
             queue = null
         ) { _ ->
+            logIosLifecycle("UIApplication.didEnterBackground; keeping Wi-Fi session active")
             isAppInForeground = false
         }
         val activeObserver = center.addObserverForName(
@@ -138,12 +144,32 @@ internal fun CameraGpsIosApp(
             `object` = null,
             queue = null
         ) { _ ->
+            logIosLifecycle("UIApplication.didBecomeActive")
             isAppInForeground = true
+        }
+        val lifecycleObservers = listOf(
+            UIApplicationWillResignActiveNotification to "UIApplication.willResignActive",
+            UIApplicationWillEnterForegroundNotification to "UIApplication.willEnterForeground",
+            UIApplicationWillTerminateNotification to "UIApplication.willTerminate",
+            UISceneWillDeactivateNotification to "UIScene.willDeactivate",
+            UISceneDidEnterBackgroundNotification to "UIScene.didEnterBackground",
+            UISceneWillEnterForegroundNotification to "UIScene.willEnterForeground",
+            UISceneDidActivateNotification to "UIScene.didActivate",
+            UISceneDidDisconnectNotification to "UIScene.didDisconnect",
+        ).map { (name, event) ->
+            center.addObserverForName(name, `object` = null, queue = null) { notification ->
+                logIosLifecycle(event, notification?.`object` as? UIScene)
+                if (name == UIApplicationWillTerminateNotification) {
+                    IosBluetoothController.wifiRemote.disconnect()
+                }
+            }
         }
 
         onDispose {
+            logIosLifecycle("app UI disposed; removing lifecycle observers")
             center.removeObserver(backgroundObserver)
             center.removeObserver(activeObserver)
+            lifecycleObservers.forEach(center::removeObserver)
         }
     }
 
@@ -152,6 +178,7 @@ internal fun CameraGpsIosApp(
     }
 
     LaunchedEffect(lifecycleState) {
+        logIosLifecycle("Compose lifecycle=$lifecycleState")
         if (lifecycleState == Lifecycle.State.RESUMED) appLanguagePreference.refresh()
     }
     val migrationCandidates by bluetoothController.migrationCandidates.collectAsState()
@@ -193,21 +220,9 @@ internal fun CameraGpsIosApp(
         when (currentScreen) {
             IosScreen.Welcome -> {
                 SharedWelcomeScreen(
-                    title = stringResource(Res.string.welcome_title),
-                    subtitle = stringResource(Res.string.welcome_subtitle),
-                    getStartedText = stringResource(Res.string.welcome_get_started_button),
-                    settingsNote = stringResource(Res.string.welcome_settings_note),
-                    firstStepFeatures = firstStepFeatures(),
-                    secondStepFeatures = emptyList(),
                     onGetStarted = {
                         IosAppPreferences.setShowWelcomeOnLaunch(false)
                         currentScreen = IosScreen.Devices
-                    },
-                    iconContent = {
-                        Text(
-                            text = "📷",
-                            style = MaterialTheme.typography.headlineSmall,
-                        )
                     },
                 )
             }

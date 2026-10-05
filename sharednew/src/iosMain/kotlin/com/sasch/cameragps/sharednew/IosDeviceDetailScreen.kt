@@ -4,6 +4,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import com.sasch.cameragps.sharednew.remote.wifi.IosWifiRemoteScreen
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import cameragps.sharednew.generated.resources.Res
@@ -26,6 +31,12 @@ internal fun IosDeviceDetailScreen(
     device: BluetoothDeviceInfo,
     onBackClick: () -> Unit,
 ) {
+
+    var wifiOpen by rememberSaveable(device.identifier) { mutableStateOf(false) }
+    if (wifiOpen) {
+        IosWifiRemoteScreen(device.identifier) { wifiOpen = false }
+        return
+    }
 
     val deviceDao = remember(Unit) { IosBluetoothController.deviceDao }
 
@@ -56,14 +67,6 @@ internal fun IosDeviceDetailScreen(
 
         override suspend fun setRemoteControlEnabled(deviceId: String, enabled: Boolean) {
             deviceDao.setRemoteControlEnabled(deviceId.uppercase(), enabled)
-        }
-
-        override suspend fun getHandshakeDelayMs(deviceId: String): Long {
-            return deviceDao.getHandshakeDelayMs(deviceId.uppercase()) ?: 0L
-        }
-
-        override suspend fun setHandshakeDelayMs(deviceId: String, delayMs: Long) {
-            deviceDao.setHandshakeDelayMs(deviceId.uppercase(), delayMs)
         }
 
         override suspend fun getDeviceName(deviceId: String): String? {
@@ -103,6 +106,7 @@ internal fun IosDeviceDetailScreen(
             deviceId = device.identifier,
             deviceName = device.name,
             modifier = Modifier.padding(paddingValues),
+            onWifiRemote = { wifiOpen = true },
             onDeviceEnabledChanged = { enabled ->
                 IosBluetoothController.applyDeviceEnabledState(device.identifier, enabled)
             },
