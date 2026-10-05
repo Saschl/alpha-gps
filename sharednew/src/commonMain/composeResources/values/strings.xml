@@ -339,6 +339,7 @@
     <string name="whats_new_version">Version %1$s</string>
     <string name="whats_new_close">Got it</string>
     <string name="whats_new_open">View release notes</string>
+    <string name="whats_new_170_wifi_remote">New experimental Wi-Fi remote with live view, shutter control, and photo browsing and downloads. Currently validated only with the Sony α6700.\n\nTo open it, tap your camera in the device list, then tap “Wi-Fi remote (experimental)”.</string>
     <string name="whats_new_162_time">View and change automatic time correction in your camera’s details. This setting controls whether the camera adjusts its date and time using your phone.</string>
     <string name="whats_new_162_notifications">Location transmission notifications now update more reliably.</string>
     <string name="whats_new_162_pairing">Updated camera pairing on iOS uses the system accessory picker. Previously paired cameras may need to be authorized again; the app will guide you through it.</string>

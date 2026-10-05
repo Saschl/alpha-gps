@@ -320,6 +320,7 @@
     <string name="whats_new_version">Version %1$s</string>
     <string name="whats_new_close">Verstanden</string>
     <string name="whats_new_open">Versionshinweise anzeigen</string>
+    <string name="whats_new_170_wifi_remote">Neue experimentelle WLAN-Fernsteuerung mit Livebild, Fotoauslösung sowie Bildanzeige und Downloads. Bisher nur mit der Sony α6700 getestet.\n\nTippe zum Öffnen in der Geräteliste auf deine Kamera und anschließend auf „Wi-Fi remote (experimental)“.</string>
     <string name="whats_new_162_time">Du kannst die automatische Zeitkorrektur jetzt in den Kameradetails ansehen und ändern. Diese Einstellung steuert, ob die Kamera Datum und Uhrzeit anhand deines Smartphones anpasst.</string>
     <string name="whats_new_162_notifications">Benachrichtigungen zur Standortübertragung werden jetzt zuverlässiger aktualisiert.</string>
     <string name="whats_new_162_pairing">Die Kamera-Kopplung unter iOS nutzt jetzt die Zubehörauswahl des Systems. Bereits gekoppelte Kameras müssen möglicherweise erneut autorisiert werden. Die App führt dich durch die Schritte.</string>

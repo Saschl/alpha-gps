@@ -8,6 +8,7 @@ import kotlin.math.floor
 
 internal object IosAppPreferences {
     private const val keyShowWelcome = "ios.showWelcome"
+    private const val keyWifiRemoteNoticeAcknowledged = "ios.wifiRemoteNoticeAcknowledged"
     private const val keyAppEnabled = "ios.appEnabled"
     private const val keyAutoScanEnabled = "ios.autoScanEnabled"
     private const val keyTransmissionNotifications = "ios.transmissionNotifications"
@@ -38,6 +39,13 @@ internal object IosAppPreferences {
         get() = NSUserDefaults.standardUserDefaults
 
     fun lastSeenReleaseVersion(): String? = defaults.stringForKey("ios.lastSeenReleaseVersion")
+
+    fun isWifiRemoteNoticeAcknowledged(): Boolean =
+        defaults.boolForKey(keyWifiRemoteNoticeAcknowledged)
+
+    fun acknowledgeWifiRemoteNotice() {
+        defaults.setBool(true, forKey = keyWifiRemoteNoticeAcknowledged)
+    }
 
     fun setLastSeenReleaseVersion(version: String) {
         defaults.setObject(version, forKey = "ios.lastSeenReleaseVersion")

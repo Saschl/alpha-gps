@@ -36,9 +36,11 @@ class WhatsNewStateTest {
 
     @Test
     fun skippedVersionsShowCurrentRelease() {
-        val state = WhatsNewState("1.6.2", ReleasePlatform.Android, "1.4.0", false) {}
-        assertTrue(state.pending)
-        assertEquals("1.6.2", state.release?.version)
+        for (platform in ReleasePlatform.entries) {
+            val state = WhatsNewState("1.7.0", platform, "1.4.0", false) {}
+            assertTrue(state.pending)
+            assertEquals("1.7.0", state.release?.version)
+        }
     }
 
     @Test
@@ -54,11 +56,11 @@ class WhatsNewStateTest {
     @Test
     fun releaseWithoutNotesDoesNotReuseOldContent() {
         var stored = "1.6.2"
-        val state = WhatsNewState("1.6.3", ReleasePlatform.Android, stored, false) { stored = it }
+        val state = WhatsNewState("1.6.4", ReleasePlatform.Android, stored, false) { stored = it }
         state.initialize()
         assertNull(state.release)
         assertFalse(state.pending)
-        assertEquals("1.6.3", stored)
+        assertEquals("1.6.4", stored)
     }
 
     @Test

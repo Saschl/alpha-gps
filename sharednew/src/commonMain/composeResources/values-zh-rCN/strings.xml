@@ -309,6 +309,7 @@
     <string name="whats_new_close">知道了</string>
     <string name="whats_new_open">查看更新日志</string>
     <string name="whats_new_title">更新日志</string>
+    <string name="whats_new_170_wifi_remote">新增实验性 Wi-Fi 遥控功能，支持实时取景、快门控制，以及浏览和下载图像。目前仅在索尼 α6700 上验证过。\n\n打开方式：在设备列表中点击你的相机，然后点击“Wi-Fi remote (experimental)”。</string>
     <string name="whats_new_162_time">在相机的详细信息中查看并切换自动时间校正。该设置决定相机是否使用手机调整其日期和时间。</string>
     <string name="whats_new_162_notifications">位置传输通知现已能更稳定地更新。</string>
     <string name="whats_new_162_pairing">iOS 上的相机配对已更新，现改用系统配件选择器。此前已配对的相机可能需要重新授权，应用将引导您完成操作。</string>

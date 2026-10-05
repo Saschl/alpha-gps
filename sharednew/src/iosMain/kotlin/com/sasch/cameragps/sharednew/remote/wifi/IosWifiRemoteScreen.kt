@@ -10,6 +10,7 @@ import cameragps.sharednew.generated.resources.Res
 import cameragps.sharednew.generated.resources.wifi_remote_ios_opening
 import cameragps.sharednew.generated.resources.wifi_remote_ios_permission
 import cameragps.sharednew.generated.resources.wifi_remote_ios_settings
+import com.sasch.cameragps.sharednew.IosAppPreferences
 import com.sasch.cameragps.sharednew.bluetooth.IosBluetoothController
 import com.sasch.cameragps.sharednew.logging.logIosLifecycle
 import com.sasch.cameragps.sharednew.ui.remote.WifiRemoteScreen
@@ -46,6 +47,8 @@ internal fun IosWifiRemoteScreen(identifier: String, onClose: () -> Unit) {
     }
     WifiRemoteScreen(
         model,
+        isExperimentalNoticeAcknowledged = IosAppPreferences::isWifiRemoteNoticeAcknowledged,
+        onAcknowledgeExperimentalNotice = IosAppPreferences::acknowledgeWifiRemoteNotice,
         onConnect = { controller.connect(identifier, it) },
         onConnectAutomatically = { controller.connectAutomatically(identifier) },
         onWifiSettings = {

@@ -29,6 +29,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -99,6 +100,7 @@ import com.sasch.cameragps.sharednew.remote.wifi.WifiPhotoDownloadFormat
 import com.sasch.cameragps.sharednew.remote.wifi.WifiRemoteState
 import com.sasch.cameragps.sharednew.remote.wifi.formatLabel
 import com.sasch.cameragps.sharednew.remote.wifi.groupCameraPhotos
+import com.sasch.cameragps.sharednew.ui.components.verticalScrollbar
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
@@ -328,65 +330,113 @@ internal fun PhotoDetailsSheet(
         onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         modifier = Modifier.fillMaxHeight(0.9f)
     ) {
-        Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            Text(capture.name, style = MaterialTheme.typography.headlineSmall)
-            PhotoPreview(image, browser.loading || previewLoading)
-            if (capture.preview.capturedAt.isNotBlank()) {
-                Text(stringResource(Res.string.wifi_remote_photo_captured, capture.preview.capturedAt.replace('T', ' ')))
-            }
-            Text(stringResource(Res.string.wifi_remote_photo_format), style = MaterialTheme.typography.titleMedium)
-            Column(Modifier.selectableGroup()) {
-                capture.files.forEach { file ->
-                    val formats = if (state.canConvertHeif && file.mimeType == "image/heif")
-                        WifiPhotoDownloadFormat.entries else listOf(WifiPhotoDownloadFormat.Original)
-                    formats.forEach { format ->
-                        val converted = format == WifiPhotoDownloadFormat.Jpeg
-                        val saved = WifiPhotoDownload(file.handle, format) in browser.savedDownloads
-                        val isSelected = file.handle == selectedHandle && format == selectedFormat
-                        Row(
-                            Modifier.fillMaxWidth().selectable(
-                                selected = isSelected,
-                                enabled = !transfer.busy && file.downloadable && !saved,
-                                role = Role.RadioButton, onClick = { selectedHandle = file.handle; selectedFormat = format }
-                            ).padding(vertical = 10.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            RadioButton(selected = isSelected, onClick = null,
-                                enabled = !transfer.busy && file.downloadable && !saved)
-                            Column(Modifier.weight(1f)) {
-                                Text(if (converted) stringResource(Res.string.wifi_remote_jpeg_copy) else file.formatLabel,
-                                    style = MaterialTheme.typography.titleSmall)
-                                Text(if (converted) file.filename.substringBeforeLast('.') + ".jpg" else file.filename,
-                                    style = MaterialTheme.typography.bodySmall)
-                                if (converted) Text(stringResource(Res.string.wifi_remote_jpeg_copy_hint),
-                                    style = MaterialTheme.typography.bodySmall)
-                                else Text(stringResource(Res.string.wifi_remote_photo_size, (file.size + 1023) / 1024),
-                                    style = MaterialTheme.typography.bodySmall)
-                                if (saved) Text(stringResource(Res.string.wifi_remote_download_saved))
-                                if (!file.downloadable) Text(stringResource(Res.string.wifi_remote_download_too_large))
+        val scrollState = rememberScrollState()
+        Column(Modifier.fillMaxSize()) {
+            Column(
+                Modifier.weight(1f).fillMaxWidth()
+                    .verticalScrollbar(scrollState.scrollIndicatorState)
+                    .verticalScroll(scrollState).padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text(capture.name, style = MaterialTheme.typography.headlineSmall)
+                PhotoPreview(image, browser.loading || previewLoading)
+                if (capture.preview.capturedAt.isNotBlank()) {
+                    Text(
+                        stringResource(
+                            Res.string.wifi_remote_photo_captured,
+                            capture.preview.capturedAt.replace('T', ' ')
+                        )
+                    )
+                }
+                Text(
+                    stringResource(Res.string.wifi_remote_photo_format),
+                    style = MaterialTheme.typography.titleMedium
+                )
+                Column(Modifier.selectableGroup()) {
+                    capture.files.forEach { file ->
+                        val formats = if (state.canConvertHeif && file.mimeType == "image/heif")
+                            WifiPhotoDownloadFormat.entries else listOf(WifiPhotoDownloadFormat.Original)
+                        formats.forEach { format ->
+                            val converted = format == WifiPhotoDownloadFormat.Jpeg
+                            val saved =
+                                WifiPhotoDownload(file.handle, format) in browser.savedDownloads
+                            val isSelected =
+                                file.handle == selectedHandle && format == selectedFormat
+                            Row(
+                                Modifier.fillMaxWidth().selectable(
+                                    selected = isSelected,
+                                    enabled = !transfer.busy && file.downloadable && !saved,
+                                    role = Role.RadioButton,
+                                    onClick = {
+                                        selectedHandle = file.handle; selectedFormat = format
+                                    }
+                                ).padding(vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                RadioButton(
+                                    selected = isSelected, onClick = null,
+                                    enabled = !transfer.busy && file.downloadable && !saved
+                                )
+                                Column(Modifier.weight(1f)) {
+                                    Text(
+                                        if (converted) stringResource(Res.string.wifi_remote_jpeg_copy) else file.formatLabel,
+                                        style = MaterialTheme.typography.titleSmall
+                                    )
+                                    Text(
+                                        if (converted) file.filename.substringBeforeLast('.') + ".jpg" else file.filename,
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                    if (converted) Text(
+                                        stringResource(Res.string.wifi_remote_jpeg_copy_hint),
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                    else Text(
+                                        stringResource(
+                                            Res.string.wifi_remote_photo_size,
+                                            (file.size + 1023) / 1024
+                                        ),
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                    if (saved) Text(stringResource(Res.string.wifi_remote_download_saved))
+                                    if (!file.downloadable) Text(stringResource(Res.string.wifi_remote_download_too_large))
+                                }
                             }
                         }
                     }
                 }
+                PhotoTransferStatus(transfer)
+                if (transfer.busy) TextButton(onClick = onCancel) {
+                    Text(stringResource(Res.string.wifi_remote_transfer_cancel))
+                }
+                Text(
+                    stringResource(Res.string.wifi_remote_photo_download_hint),
+                    style = MaterialTheme.typography.bodySmall
+                )
             }
-            PhotoTransferStatus(transfer)
-            if (transfer.busy) TextButton(onClick = onCancel) {
-                Text(stringResource(Res.string.wifi_remote_transfer_cancel))
-            }
-            Button(
-                onClick = { selected?.let { onDownload(it.handle, selectedFormat) } }, modifier = Modifier.fillMaxWidth(),
-                enabled = !browser.loading && !transfer.busy && selected != null && selected.downloadable &&
-                    selectedDownload !in browser.savedDownloads
+            HorizontalDivider()
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text(if (selected == null) stringResource(Res.string.wifi_remote_download)
-                    else stringResource(Res.string.wifi_remote_download_format,
-                        if (selectedFormat == WifiPhotoDownloadFormat.Jpeg) "JPEG" else selected.formatLabel))
-            }
-            Text(stringResource(Res.string.wifi_remote_photo_download_hint), style = MaterialTheme.typography.bodySmall)
-            TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) {
-                Text(stringResource(Res.string.wifi_remote_photo_close))
+                Button(
+                    onClick = { selected?.let { onDownload(it.handle, selectedFormat) } },
+                    modifier = Modifier.weight(1f),
+                    enabled = !browser.loading && !transfer.busy && selected != null && selected.downloadable &&
+                            selectedDownload !in browser.savedDownloads
+                ) {
+                    Text(
+                        if (selected == null) stringResource(Res.string.wifi_remote_download)
+                        else stringResource(
+                            Res.string.wifi_remote_download_format,
+                            if (selectedFormat == WifiPhotoDownloadFormat.Jpeg) "JPEG" else selected.formatLabel
+                        )
+                    )
+                }
+                TextButton(onClick = onDismiss) {
+                    Text(stringResource(Res.string.wifi_remote_photo_close))
+                }
             }
         }
     }

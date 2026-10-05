@@ -3,7 +3,16 @@ package com.sasch.cameragps.sharednew.ui.remote
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -16,12 +25,23 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
-import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import cameragps.sharednew.generated.resources.*
+import cameragps.sharednew.generated.resources.Res
+import cameragps.sharednew.generated.resources.fullscreen_24px
+import cameragps.sharednew.generated.resources.fullscreen_exit_24px
+import cameragps.sharednew.generated.resources.wifi_remote_capture
+import cameragps.sharednew.generated.resources.wifi_remote_captured
+import cameragps.sharednew.generated.resources.wifi_remote_fullscreen
+import cameragps.sharednew.generated.resources.wifi_remote_minimize
+import cameragps.sharednew.generated.resources.wifi_remote_preview_failed
+import cameragps.sharednew.generated.resources.wifi_remote_preview_waiting
+import cameragps.sharednew.generated.resources.wifi_remote_rejected
+import cameragps.sharednew.generated.resources.wifi_remote_shooting
+import cameragps.sharednew.generated.resources.wifi_remote_uncertain
 import com.sasch.cameragps.sharednew.remote.wifi.WifiCaptureStatus
 import com.sasch.cameragps.sharednew.remote.wifi.WifiPreviewStatus
 import com.sasch.cameragps.sharednew.remote.wifi.WifiRemoteState
@@ -34,6 +54,7 @@ internal fun WifiLiveViewPreview(
     state: WifiRemoteState,
     modifier: Modifier = Modifier,
     onExpand: (() -> Unit)? = null,
+    placeholder: (@Composable () -> Unit)? = null,
 ) {
     Box(modifier.background(Color.Black), contentAlignment = Alignment.Center) {
         if (image != null) {
@@ -45,6 +66,8 @@ internal fun WifiLiveViewPreview(
                 Icon(painterResource(Res.drawable.fullscreen_24px),
                     contentDescription = stringResource(Res.string.wifi_remote_fullscreen), tint = Color.White)
             }
+        } else if (placeholder != null) {
+            Box(Modifier.padding(16.dp), contentAlignment = Alignment.Center) { placeholder() }
         } else Text(
             stringResource(if (state.preview == WifiPreviewStatus.Failed)
                 Res.string.wifi_remote_preview_failed else Res.string.wifi_remote_preview_waiting),

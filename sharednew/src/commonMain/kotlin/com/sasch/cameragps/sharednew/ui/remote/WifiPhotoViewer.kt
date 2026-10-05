@@ -21,6 +21,7 @@ import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
@@ -101,7 +102,7 @@ internal fun WifiPhotoViewer(
                 }
             }
         }
-        CompositionLocalProvider(LocalContentColor provides Color.White) {
+        PhotoViewerTheme {
             Column(
                 Modifier.fillMaxSize().background(Color.Black)
                     .windowInsetsPadding(WindowInsets.safeDrawing)
@@ -205,7 +206,10 @@ internal fun WifiPhotoViewer(
                     ) {
                         Text(stringResource(Res.string.wifi_remote_browser_previous))
                     }
-                    TextButton(onClick = { showDetails = true }, enabled = current != null) {
+                    TextButton(onClick = {
+                        viewModel.controller.clearPhotoTransferResult(viewModel.identifier)
+                        showDetails = true
+                    }, enabled = current != null) {
                         Text(stringResource(Res.string.wifi_remote_viewer_details))
                     }
                     TextButton(
@@ -224,7 +228,10 @@ internal fun WifiPhotoViewer(
                 image = screenPreview?.image ?: thumbnails[current.thumbnail.handle],
                 state = state,
                 previewLoading = screenPreview?.loading == true,
-                onDismiss = { showDetails = false },
+                onDismiss = {
+                    viewModel.controller.clearPhotoTransferResult(viewModel.identifier)
+                    showDetails = false
+                },
                 onDownload = { handle, format ->
                     onDownload(
                         listOf(
@@ -237,5 +244,24 @@ internal fun WifiPhotoViewer(
                 },
                 onCancel = { viewModel.controller.cancelPhotoOperation(viewModel.identifier) })
         }
+    }
+}
+
+private val PhotoViewerColors = darkColorScheme(
+    primary = Color.White,
+    onPrimary = Color.Black,
+    background = Color.Black,
+    onBackground = Color.White,
+    surface = Color.Black,
+    onSurface = Color.White,
+)
+
+@Composable
+private fun PhotoViewerTheme(content: @Composable () -> Unit) {
+    MaterialTheme(colorScheme = PhotoViewerColors) {
+        CompositionLocalProvider(
+            LocalContentColor provides PhotoViewerColors.onSurface,
+            content = content
+        )
     }
 }

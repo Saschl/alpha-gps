@@ -1,5 +1,8 @@
 <resources>
+    <string name="wifi_remote_experimental_title">Experimental Wi-Fi remote</string>
+    <string name="wifi_remote_experimental_message">Wi-Fi remote is experimental and has currently only been validated with the developer’s Sony α6700. Other camera models may behave differently.\n\nPlease report any issues by email or on GitHub. Include your camera model and your phone’s operating system and version (Android or iOS).</string>
     <string name="wifi_remote_title">Wi-Fi remote (experimental)</string>
+    <string name="wifi_remote_entry_hint">Live view, shutter and photo downloads</string>
     <string name="wifi_remote_setup">Start the camera’s smartphone Wi-Fi connection, disconnect Creators’ App, then join the camera’s Wi-Fi in phone settings. Enter the camera IP address.</string>
     <string name="wifi_remote_ip">Camera IP address</string>
     <string name="wifi_remote_settings">Open Wi-Fi settings</string>
@@ -29,7 +32,7 @@
     <string name="wifi_remote_lost">The camera connection was lost. Join its Wi-Fi again and reconnect.</string>
     <string name="wifi_remote_other_camera">Another Wi-Fi remote session is open. Close it before connecting this camera.</string>
     <string name="wifi_remote_auto_setup">Keep the camera connected by Bluetooth and close Creators’ App. Alpha GPS will start camera Wi-Fi and ask your phone to connect.</string>
-    <string name="wifi_remote_auto_connect">Connect automatically</string>
+    <string name="wifi_remote_auto_connect">Tap To Connect automatically</string>
     <string name="wifi_remote_prepare_only_hint">Enable the camera’s Wi-Fi over Bluetooth, then join its network in phone settings. The camera IP will be detected after you join.</string>
     <string name="wifi_remote_prepare_only">Enable camera Wi-Fi</string>
     <string name="wifi_remote_manual_join_hint">Camera Wi-Fi is ready. Join the network below in phone settings, then return here and connect. If Android warns that this network has no internet, stay connected.</string>

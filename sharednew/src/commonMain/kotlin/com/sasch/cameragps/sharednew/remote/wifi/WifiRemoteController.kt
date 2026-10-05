@@ -16,6 +16,7 @@ import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -382,6 +383,13 @@ class WifiRemoteController internal constructor(
         if (_owner.value.equals(identifier, true)) photoJob?.cancel()
     }
 
+    fun clearPhotoTransferResult(identifier: String) {
+        if (!_owner.value.equals(identifier, true)) return
+        updateReady(identifier.uppercase()) {
+            if (it.imageTransfer.busy) it else it.copy(imageTransfer = WifiImageTransferState())
+        }
+    }
+
     fun imageStoragePermissionDenied(identifier: String) {
         updateReady(identifier.uppercase()) {
             it.copy(
@@ -508,11 +516,20 @@ class WifiRemoteController internal constructor(
                 activeConnection = opened
                 startPreview(id, opened, this)
                 launch(start = CoroutineStart.UNDISPATCHED) {
+                    var confirmationTimer: Job? = null
                     for (ignored in requests) {
+                        confirmationTimer?.cancel()
                         val result = try { opened.capture() }
                         catch (cancelled: CancellationException) { throw cancelled }
                         catch (_: Exception) { WifiCaptureStatus.Uncertain }
                         updateReady(id) { it.copy(capture = result) }
+                        confirmationTimer = if (result == WifiCaptureStatus.Captured) launch {
+                            delay(3.seconds)
+                            updateReady(id) {
+                                if (it.capture == WifiCaptureStatus.Captured) it.copy(capture = WifiCaptureStatus.Idle)
+                                else it
+                            }
+                        } else null
                     }
                 }
                 awaitCancellation()

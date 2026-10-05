@@ -29,6 +29,7 @@ import com.sasch.cameragps.sharednew.remote.wifi.WifiPhotoDownloadFormat
 import com.sasch.cameragps.sharednew.ui.remote.WifiRemoteScreen
 import com.sasch.cameragps.sharednew.ui.remote.WifiRemoteViewModel
 import com.saschl.cameragps.AppServices
+import com.saschl.cameragps.utils.PreferencesManager
 
 @Composable
 fun AndroidWifiRemoteScreen(identifier: String, onClose: () -> Unit) {
@@ -104,6 +105,12 @@ fun AndroidWifiRemoteScreen(identifier: String, onClose: () -> Unit) {
         } else if (host == null) startCameraSetup() else controller.connect(identifier, host)
     }
     WifiRemoteScreen(model, onConnect = { connect(it) }, onConnectAutomatically = { connect(null) },
+        isExperimentalNoticeAcknowledged = {
+            PreferencesManager.isWifiRemoteNoticeAcknowledged(
+                context
+            )
+        },
+        onAcknowledgeExperimentalNotice = { PreferencesManager.acknowledgeWifiRemoteNotice(context) },
         onDownloadPhotos = { downloads ->
             if (Build.VERSION.SDK_INT <= 28 && ContextCompat.checkSelfPermission(
                     context,

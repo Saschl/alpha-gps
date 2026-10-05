@@ -33,7 +33,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
-import com.diamondedge.logging.logging
 import androidx.navigationevent.NavigationEventInfo
 import androidx.navigationevent.compose.NavigationBackHandler
 import androidx.navigationevent.compose.rememberNavigationEventState
@@ -82,6 +81,7 @@ import cameragps.sharednew.generated.resources.wifi_remote_shutdown_unconfirmed
 import cameragps.sharednew.generated.resources.wifi_remote_title
 import cameragps.sharednew.generated.resources.wifi_remote_uncertain
 import cameragps.sharednew.generated.resources.wifi_remote_wifi_disabled
+import com.diamondedge.logging.logging
 import com.sasch.cameragps.sharednew.remote.wifi.SonyImageTransfer
 import com.sasch.cameragps.sharednew.remote.wifi.WifiCaptureStatus
 import com.sasch.cameragps.sharednew.remote.wifi.WifiPhotoDownload
@@ -109,12 +109,14 @@ class WifiRemoteViewModel(val identifier: String, val controller: WifiRemoteCont
         if (!state.photoBrowser.open || selectedPhotoIds.isNotEmpty()) return
         val index = groupCameraPhotos(state.photoBrowser.photos).indexOfFirst { it.id == captureId }
         if (index >= 0) {
+            controller.clearPhotoTransferResult(identifier)
             viewedPhotoIndex = state.photoBrowser.offset + index
             viewPhotoAt(viewedPhotoIndex!!)
         }
     }
 
     fun closePhoto() {
+        controller.clearPhotoTransferResult(identifier)
         viewedPhotoIndex = null
         controller.clearPhotoPreview(identifier)
     }
@@ -127,6 +129,7 @@ class WifiRemoteViewModel(val identifier: String, val controller: WifiRemoteCont
         val captures = groupCameraPhotos(browser.photos)
         val count = captures.size
         if (index in browser.offset until browser.offset + count) {
+            if (viewedPhotoIndex != index) controller.clearPhotoTransferResult(identifier)
             viewedPhotoIndex = index
             controller.showPhotoPreview(identifier, captures[index - browser.offset].preview.handle)
         } else if (!browser.loading && !state.imageTransfer.busy) {
@@ -139,6 +142,7 @@ class WifiRemoteViewModel(val identifier: String, val controller: WifiRemoteCont
                 index == browser.offset + count && browser.hasMore -> browser.offset + SonyImageTransfer.PAGE_SIZE
                 else -> return
             }
+            controller.clearPhotoTransferResult(identifier)
             viewedPhotoIndex = index
             controller.browsePhotos(identifier, offset, preferredPhotoIndex = index)
         }
@@ -204,6 +208,8 @@ class WifiRemoteViewModel(val identifier: String, val controller: WifiRemoteCont
 fun WifiRemoteScreen(viewModel: WifiRemoteViewModel, onConnect: (String) -> Unit,
                      onWifiSettings: () -> Unit,
                      onClose: () -> Unit,
+                     isExperimentalNoticeAcknowledged: () -> Boolean,
+                     onAcknowledgeExperimentalNotice: () -> Unit,
                      onConnectAutomatically: () -> Unit = {},
                      wifiSettingsLabel: String = stringResource(Res.string.wifi_remote_settings),
                      networkPermissionMessage: String = stringResource(Res.string.wifi_remote_permission),
@@ -212,6 +218,16 @@ fun WifiRemoteScreen(viewModel: WifiRemoteViewModel, onConnect: (String) -> Unit
                          viewModel.controller.downloadPhotos(viewModel.identifier, downloads)
                      }
 ) {
+    var noticeAcknowledged by remember { mutableStateOf(isExperimentalNoticeAcknowledged()) }
+    if (!noticeAcknowledged) {
+        WifiRemoteExperimentalNotice(
+            onContinue = {
+                onAcknowledgeExperimentalNotice()
+                noticeAcknowledged = true
+            },
+            onCancel = onClose,
+        )
+    }
     val controller = viewModel.controller
     val sessions by controller.sessions.collectAsState()
     val owner by controller.owner.collectAsState()
@@ -271,8 +287,22 @@ fun WifiRemoteScreen(viewModel: WifiRemoteViewModel, onConnect: (String) -> Unit
                 return@BoxWithConstraints
             }
             val preview: @Composable (Modifier) -> Unit = { modifier ->
-                WifiLiveViewPreview(image = image.takeIf { owner == id }, state = state,
-                    modifier = modifier, onExpand = viewModel::expandPreview)
+                WifiLiveViewPreview(
+                    image = image.takeIf { owner == id }, state = state,
+                    modifier = modifier, onExpand = viewModel::expandPreview,
+                    placeholder = if (!busy && (controller.supportsAutomaticConnection || controller.supportsManualSetup)) {
+                        {
+                            Button(onClick = onConnectAutomatically, enabled = !otherCamera) {
+                                Text(
+                                    stringResource(
+                                        if (controller.supportsAutomaticConnection) Res.string.wifi_remote_auto_connect
+                                        else Res.string.wifi_remote_prepare_only
+                                    )
+                                )
+                            }
+                        }
+                    } else null,
+                )
             }
             val controls: @Composable (Modifier) -> Unit = { modifier ->
                 Column(modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -284,14 +314,6 @@ fun WifiRemoteScreen(viewModel: WifiRemoteViewModel, onConnect: (String) -> Unit
                                     else Res.string.wifi_remote_prepare_only_hint
                                 )
                             )
-                            Button(onClick = onConnectAutomatically, enabled = !otherCamera) {
-                                Text(
-                                    stringResource(
-                                        if (controller.supportsAutomaticConnection) Res.string.wifi_remote_auto_connect
-                                        else Res.string.wifi_remote_prepare_only
-                                    )
-                                )
-                            }
                             TextButton(onClick = { manual = !manual }) {
                                 Text(stringResource(Res.string.wifi_remote_manual))
                             }
