@@ -323,4 +323,19 @@
     <string name="whats_new_162_time">Du kannst die automatische Zeitkorrektur jetzt in den Kameradetails ansehen und ändern. Diese Einstellung steuert, ob die Kamera Datum und Uhrzeit anhand deines Smartphones anpasst.</string>
     <string name="whats_new_162_notifications">Benachrichtigungen zur Standortübertragung werden jetzt zuverlässiger aktualisiert.</string>
     <string name="whats_new_162_pairing">Die Kamera-Kopplung unter iOS nutzt jetzt die Zubehörauswahl des Systems. Bereits gekoppelte Kameras müssen möglicherweise erneut autorisiert werden. Die App führt dich durch die Schritte.</string>
+    <string name="welcome_next">Weiter</string>
+    <string name="welcome_skip">Überspringen</string>
+    <string name="welcome_page_position">Seite %1$d von %2$d</string>
+    <string name="welcome_gps_label">Standort</string>
+    <string name="welcome_gps_title">Deine Fotos. \n Mit Standortdaten.</string>
+    <string name="welcome_gps_body">Alpha GPS überträgt den Standort deines Handys per Bluetooth an deine Sony-Kamera. Die Kamera speichert ihn zusammen mit deinen Fotos.</string>
+    <string name="welcome_remote_label">Fernsteuerung</string>
+    <string name="welcome_remote_title">Kamera fernsteuern</string>
+    <string name="welcome_remote_body">Nutze dein Handy als Fernauslöser. Bei unterstützten Kameras kannst du über WLAN auch das Livebild ansehen und Fotos übertragen.</string>
+    <string name="welcome_pair_label">Einrichtung · 1 von 2</string>
+    <string name="welcome_pair_title">Kamera koppeln</string>
+    <string name="welcome_pair_body">Aktiviere Bluetooth an deiner Kamera und starte den Kopplungsmodus. Füge sie dann in Alpha GPS hinzu und bestätige die Kopplung.</string>
+    <string name="welcome_ready_label">Einrichtung · 2 von 2</string>
+    <string name="welcome_ready_title">Standortzugriff erlauben</string>
+    <string name="welcome_ready_body">Erlaube den genauen Standortzugriff, auch im Hintergrund, damit die Übertragung bei gesperrtem Handy weiterläuft. Aktiviere bei älteren Kameras zusätzlich die Standortverknüpfung.</string>
 </resources>

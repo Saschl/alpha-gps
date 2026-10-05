@@ -342,4 +342,19 @@
     <string name="whats_new_162_time">View and change automatic time correction in your camera’s details. This setting controls whether the camera adjusts its date and time using your phone.</string>
     <string name="whats_new_162_notifications">Location transmission notifications now update more reliably.</string>
     <string name="whats_new_162_pairing">Updated camera pairing on iOS uses the system accessory picker. Previously paired cameras may need to be authorized again; the app will guide you through it.</string>
+    <string name="welcome_next">Next</string>
+    <string name="welcome_skip">Skip</string>
+    <string name="welcome_page_position">Page %1$d of %2$d</string>
+    <string name="welcome_gps_label">Location</string>
+    <string name="welcome_gps_title">Geotag your photos</string>
+    <string name="welcome_gps_body">Alpha GPS sends your phone’s location to your Sony camera over Bluetooth. The camera saves it with each photo.</string>
+    <string name="welcome_remote_label">Remote control</string>
+    <string name="welcome_remote_title">Shoot from your phone</string>
+    <string name="welcome_remote_body">Use your phone as a remote shutter. On supported cameras, you can also use Wi-Fi to view the live image and transfer photos.</string>
+    <string name="welcome_pair_label">Setup · 1 of 2</string>
+    <string name="welcome_pair_title">Pair your camera</string>
+    <string name="welcome_pair_body">Enable Bluetooth on your camera and start pairing mode. Then add it in Alpha GPS and confirm the pairing prompts.</string>
+    <string name="welcome_ready_label">Setup · 2 of 2</string>
+    <string name="welcome_ready_title">Allow location access</string>
+    <string name="welcome_ready_body">Allow precise location access, including in the background, to keep sending GPS data while your phone is locked. On older cameras, also enable Location Info. Link.</string>
 </resources>

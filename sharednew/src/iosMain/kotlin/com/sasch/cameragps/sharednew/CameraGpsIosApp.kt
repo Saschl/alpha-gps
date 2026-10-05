@@ -2,10 +2,8 @@ package com.sasch.cameragps.sharednew
 
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -26,10 +24,6 @@ import cameragps.sharednew.generated.resources.info_24px
 import cameragps.sharednew.generated.resources.settings
 import cameragps.sharednew.generated.resources.settings_24px
 import cameragps.sharednew.generated.resources.view_logs
-import cameragps.sharednew.generated.resources.welcome_get_started_button
-import cameragps.sharednew.generated.resources.welcome_settings_note
-import cameragps.sharednew.generated.resources.welcome_subtitle
-import cameragps.sharednew.generated.resources.welcome_title
 import com.diamondedge.logging.LogLevel
 import com.sasch.cameragps.sharednew.bluetooth.IosBluetoothController
 import com.sasch.cameragps.sharednew.crash.IosCrashReporting
@@ -226,21 +220,9 @@ internal fun CameraGpsIosApp(
         when (currentScreen) {
             IosScreen.Welcome -> {
                 SharedWelcomeScreen(
-                    title = stringResource(Res.string.welcome_title),
-                    subtitle = stringResource(Res.string.welcome_subtitle),
-                    getStartedText = stringResource(Res.string.welcome_get_started_button),
-                    settingsNote = stringResource(Res.string.welcome_settings_note),
-                    firstStepFeatures = firstStepFeatures(),
-                    secondStepFeatures = emptyList(),
                     onGetStarted = {
                         IosAppPreferences.setShowWelcomeOnLaunch(false)
                         currentScreen = IosScreen.Devices
-                    },
-                    iconContent = {
-                        Text(
-                            text = "📷",
-                            style = MaterialTheme.typography.headlineSmall,
-                        )
                     },
                 )
             }
