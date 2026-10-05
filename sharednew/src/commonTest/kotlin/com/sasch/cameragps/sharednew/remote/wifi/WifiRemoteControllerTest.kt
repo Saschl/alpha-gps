@@ -8,19 +8,21 @@ import com.sasch.cameragps.sharednew.ui.remote.WifiRemoteViewModel
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.NonCancellable
-import kotlinx.coroutines.withContext
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withContext
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlin.time.Duration.Companion.seconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class WifiRemoteControllerTest : WifiLoggingTest() {
@@ -422,6 +424,7 @@ class WifiRemoteControllerTest : WifiLoggingTest() {
         var preparations = 0
         var opens = 0
         var prepareGate: CompletableDeferred<Unit>? = null
+        var openGate: CompletableDeferred<Unit>? = null
         var missingCredentials = false
         var openFailure: WifiRemoteFailure? = null
         override suspend fun prepare(identifier: String): CameraWifiCredentials? {
@@ -436,6 +439,7 @@ class WifiRemoteControllerTest : WifiLoggingTest() {
         ): WifiRemoteConnection {
             assertTrue(credentials === this.credentials)
             opens++
+            openGate?.await()
             openFailure?.let { throw WifiRemoteConnectException(it) }
             return connection
         }
@@ -467,8 +471,8 @@ class WifiRemoteControllerTest : WifiLoggingTest() {
         assertFalse(waiting.toString().contains("secret-pass"))
         assertFalse(waiting.toString().contains("DIRECT-camera"))
         controller.prepareManualConnection("camera")
-        controller.onAppBackgrounded("camera")
         controller.continueManualConnection("other-camera")
+        advanceTimeBy(30.seconds)
         runCurrent()
         assertEquals(1, setup.preparations)
         assertEquals(0, setup.opens)
@@ -482,8 +486,7 @@ class WifiRemoteControllerTest : WifiLoggingTest() {
         assertEquals(1, setup.opens)
         assertEquals(WifiRemotePhase.Ready, registry.get("camera")!!.wifiRemote.phase)
         assertNull(registry.get("camera")!!.wifiRemote.manualNetwork)
-        controller.onAppBackgrounded("camera")
-        runCurrent()
+        controller.closeAndJoin()
         assertNull(controller.owner.value)
         assertEquals(listOf("claim", "release"), controls)
         assertTrue("connection" in connection.cleanup)
@@ -570,7 +573,7 @@ class WifiRemoteControllerTest : WifiLoggingTest() {
     }
 
     @Test
-    fun backgroundDuringPreparationOrSessionOpeningStillCancelsTheAttempt() = runTest {
+    fun preparationAndSessionOpeningWaitUntilExplicitlyCancelled() = runTest {
         val registry = CameraSessionRegistry()
         val setup = ManualSetup(Connection()).apply { prepareGate = CompletableDeferred() }
         val controller = WifiRemoteController(
@@ -583,18 +586,42 @@ class WifiRemoteControllerTest : WifiLoggingTest() {
         )
         controller.prepareManualConnection("camera")
         runCurrent()
-        controller.onAppBackgrounded("camera")
+        advanceTimeBy(60.seconds)
         runCurrent()
+        assertEquals("CAMERA", controller.owner.value)
+        controller.closeAndJoin()
         assertNull(controller.owner.value)
         setup.prepareGate = null
+        setup.openGate = CompletableDeferred()
         controller.prepareManualConnection("camera")
         runCurrent()
         controller.continueManualConnection("camera")
-        controller.onAppBackgrounded("camera")
+        advanceTimeBy(60.seconds)
         runCurrent()
-        assertEquals(0, setup.opens)
+        assertEquals("CAMERA", controller.owner.value)
+        controller.closeAndJoin()
+        assertEquals(1, setup.opens)
         assertNull(controller.owner.value)
         assertNull(registry.get("camera")?.wifiRemote?.manualNetwork)
+    }
+
+    @Test
+    fun sessionStaysOpenUntilExplicitlyDisconnected() = runTest {
+        val connection = Connection().apply { shutdownEnabled = true }
+        val registry = CameraSessionRegistry()
+        val controller =
+            WifiRemoteController(backgroundScope, registry, { _, _ -> connection }, {}, {})
+        controller.connect("camera", "127.0.0.1")
+        runCurrent()
+        advanceTimeBy(60.seconds)
+        runCurrent()
+        assertEquals("CAMERA", controller.owner.value)
+        assertEquals(WifiRemotePhase.Ready, registry.get("camera")!!.wifiRemote.phase)
+        assertEquals(1, connection.previewStarts)
+        assertTrue(connection.cleanup.isEmpty())
+        controller.closeAndJoin()
+        assertNull(controller.owner.value)
+        assertEquals(listOf("preview", "wifi-off", "connection"), connection.cleanup)
     }
 
     @Test

@@ -160,13 +160,6 @@ class WifiRemoteController internal constructor(
         }
     }
 
-    fun onAppBackgrounded(identifier: String) {
-        // A manual join opens Android Settings before any camera sockets exist.
-        if (registry.get(identifier)?.wifiRemote?.phase != WifiRemotePhase.AwaitingManualNetwork) {
-            disconnect(identifier)
-        }
-    }
-
     private fun start(identifier: String, phase: WifiRemotePhase,
                       open: suspend (String, CoroutineScope) -> WifiRemoteConnection) {
         if (job != null) {

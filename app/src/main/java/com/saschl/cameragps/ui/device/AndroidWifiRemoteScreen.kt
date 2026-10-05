@@ -78,9 +78,9 @@ fun AndroidWifiRemoteScreen(identifier: String, onClose: () -> Unit) {
         if (activity?.isChangingConfigurations != true) {
             pendingHost = null
             pendingAutomatic = false
-            controller.onAppBackgrounded(identifier)
         }
     }
+    // Backgrounding keeps Wi-Fi alive; leaving remote or stopping the FGS closes it.
     DisposableEffect(identifier) {
         onDispose { if (activity?.isChangingConfigurations != true) controller.disconnect(identifier) }
     }

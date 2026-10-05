@@ -4,13 +4,31 @@ package com.sasch.cameragps.sharednew.remote.wifi
 
 import com.diamondedge.logging.logging
 import kotlinx.cinterop.toKString
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import platform.Network.*
-import platform.NetworkExtension.*
+import kotlinx.coroutines.withTimeoutOrNull
+import platform.Network.nw_endpoint_get_hostname
+import platform.Network.nw_interface_type_wifi
+import platform.Network.nw_path_enumerate_gateways
+import platform.Network.nw_path_get_status
+import platform.Network.nw_path_monitor_cancel
+import platform.Network.nw_path_monitor_create_with_type
+import platform.Network.nw_path_monitor_set_queue
+import platform.Network.nw_path_monitor_set_update_handler
+import platform.Network.nw_path_monitor_start
+import platform.Network.nw_path_status_satisfied
+import platform.NetworkExtension.NEHotspotConfiguration
+import platform.NetworkExtension.NEHotspotConfigurationErrorAlreadyAssociated
+import platform.NetworkExtension.NEHotspotConfigurationManager
+import platform.NetworkExtension.NEHotspotNetwork
 import platform.UIKit.UIApplication
 import platform.UIKit.UIApplicationState.UIApplicationStateActive
 import platform.darwin.dispatch_get_main_queue
@@ -36,7 +54,14 @@ internal class IosCameraNetworkRequest(
 
     init {
         require(ssid.isNotEmpty() && ssid.encodeToByteArray().size <= 32 && credentials.password.length in 8..63)
-        val configuration = NEHotspotConfiguration(sSID = ssid, passphrase = credentials.password, isWEP = false).apply { joinOnce = true }
+        val configuration = NEHotspotConfiguration(
+            sSID = ssid,
+            passphrase = credentials.password,
+            isWEP = false
+        ).apply {
+            // joinOnce disconnects after 15 seconds in the background or when the phone sleeps.
+            joinOnce = false
+        }
         nw_path_monitor_set_queue(monitor, dispatch_get_main_queue())
         nw_path_monitor_set_update_handler(monitor) { path ->
             val gateways = mutableListOf<String>()
@@ -55,7 +80,7 @@ internal class IosCameraNetworkRequest(
                 joinMutex.withLock {
                     if (closed) return@launch
                     val completion = Channel<Long?>(1)
-                    log.i { "Wi-Fi iOS requesting temporary camera network join" }
+                    log.i { "Wi-Fi iOS requesting camera network join; removed on session cleanup" }
                     manager.applyConfiguration(configuration) { error -> completion.trySend(error?.code) }
                     val code = completion.receive()
                     completion.close()

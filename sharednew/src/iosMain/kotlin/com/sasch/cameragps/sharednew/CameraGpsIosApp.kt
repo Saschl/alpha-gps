@@ -57,10 +57,10 @@ import platform.Foundation.NSNotificationCenter
 import platform.UIKit.UIApplication
 import platform.UIKit.UIApplicationDidBecomeActiveNotification
 import platform.UIKit.UIApplicationDidEnterBackgroundNotification
+import platform.UIKit.UIApplicationState.UIApplicationStateActive
 import platform.UIKit.UIApplicationWillEnterForegroundNotification
 import platform.UIKit.UIApplicationWillResignActiveNotification
 import platform.UIKit.UIApplicationWillTerminateNotification
-import platform.UIKit.UIApplicationState.UIApplicationStateActive
 import platform.UIKit.UIScene
 import platform.UIKit.UISceneDidActivateNotification
 import platform.UIKit.UISceneDidDisconnectNotification
@@ -142,9 +142,8 @@ internal fun CameraGpsIosApp(
             `object` = null,
             queue = null
         ) { _ ->
-            logIosLifecycle("UIApplication.didEnterBackground -> Wi-Fi disconnect requested")
+            logIosLifecycle("UIApplication.didEnterBackground; keeping Wi-Fi session active")
             isAppInForeground = false
-            IosBluetoothController.wifiRemote.disconnect()
         }
         val activeObserver = center.addObserverForName(
             name = UIApplicationDidBecomeActiveNotification,
@@ -154,7 +153,7 @@ internal fun CameraGpsIosApp(
             logIosLifecycle("UIApplication.didBecomeActive")
             isAppInForeground = true
         }
-        val diagnosticObservers = listOf(
+        val lifecycleObservers = listOf(
             UIApplicationWillResignActiveNotification to "UIApplication.willResignActive",
             UIApplicationWillEnterForegroundNotification to "UIApplication.willEnterForeground",
             UIApplicationWillTerminateNotification to "UIApplication.willTerminate",
@@ -166,6 +165,9 @@ internal fun CameraGpsIosApp(
         ).map { (name, event) ->
             center.addObserverForName(name, `object` = null, queue = null) { notification ->
                 logIosLifecycle(event, notification?.`object` as? UIScene)
+                if (name == UIApplicationWillTerminateNotification) {
+                    IosBluetoothController.wifiRemote.disconnect()
+                }
             }
         }
 
@@ -173,7 +175,7 @@ internal fun CameraGpsIosApp(
             logIosLifecycle("app UI disposed; removing lifecycle observers")
             center.removeObserver(backgroundObserver)
             center.removeObserver(activeObserver)
-            diagnosticObservers.forEach(center::removeObserver)
+            lifecycleObservers.forEach(center::removeObserver)
         }
     }
 
