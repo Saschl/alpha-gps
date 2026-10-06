@@ -4,6 +4,8 @@
     "config:best-practices",
     "helpers:pinGitHubActionDigests"
   ],
+  "prConcurrentLimit": 5,
+  "repositoryTableCache": "enabled",
   "packageRules": [
     {
       "description": "The KMP SDK is compiled against one exact Sentry Cocoa version, pinned in Xcode (not visible to Renovate).",
