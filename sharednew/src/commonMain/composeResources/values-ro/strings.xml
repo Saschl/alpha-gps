@@ -14,4 +14,9 @@
     <string name="step1_title">Pasul 1: Acces la Locație și la Bluetooth</string>
     <string name="step1_desc">Necesar pentru a te conecta la camera Sony și să accesezi datele despre locație.</string>
     <string name="step1_missing">Permisiuni refuzate:</string>
+    <string name="add_camera">Adaugă o cameră</string>
+    <string name="device_list_need_help">Aveți nevoie de ajutor?</string>
+    <string name="location_linking_disabled_by_camera">Legarea locației este dezactivată de către cameră. Activează Informațiile Locației. Leagă în setările camerei pentru a continua.</string>
+    <string name="pairing_preparation_title">Pune-ți camera în modul asociere</string>
+    <string name="pairing_preparation_step_bluetooth">Pornește-ți camera și activează Bluetooth în setările ei.</string>
 </resources>
