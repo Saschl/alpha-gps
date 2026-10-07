@@ -14,7 +14,11 @@ android {
         externalNativeBuild {
             cmake {
                 arguments += "-DANDROID_STL=c++_shared"
-                targets += listOf("alpha_heif", "heif", "de265")
+                targets += listOf(
+                    "alpha_heif",
+                    "heif",
+                    "de265"
+                ) // cmake target names, not library names
             }
         }
     }
