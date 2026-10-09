@@ -3,6 +3,12 @@ project(alpha_heif LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
+if (ANDROID)
+    # Apply F-Droid reproducibility options to all native libraries.
+    add_compile_options("-ffile-prefix-map=${CMAKE_CURRENT_SOURCE_DIR}=.")
+    add_link_options("LINKER:--build-id=none")
+endif ()
+
 # Pinned source submodules keep native builds offline and sources scannable.
 foreach (library libde265 libheif)
     if (NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/vendor/${library}/CMakeLists.txt")
