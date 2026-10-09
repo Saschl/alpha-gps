@@ -3,7 +3,12 @@ project(alpha_heif LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-# Vendored, unmodified source archives keep Android/F-Droid builds offline.
+# Pinned source submodules keep native builds offline and sources scannable.
+foreach (library libde265 libheif)
+    if (NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/vendor/${library}/CMakeLists.txt")
+        message(FATAL_ERROR "Missing ${library} submodule. Run: git submodule update --init --recursive")
+    endif ()
+endforeach ()
 include(FetchContent)
 set(BUILD_SHARED_LIBS ON CACHE BOOL "" FORCE)
 foreach(flag ENABLE_DECODER ENABLE_ENCODER ENABLE_SHERLOCK265 ENABLE_SDL
@@ -11,8 +16,7 @@ foreach(flag ENABLE_DECODER ENABLE_ENCODER ENABLE_SHERLOCK265 ENABLE_SDL
     set(${flag} OFF CACHE BOOL "" FORCE)
 endforeach()
 FetchContent_Declare(libde265
-    URL "${CMAKE_CURRENT_SOURCE_DIR}/vendor/libde265-1.1.3.tar.gz"
-    URL_HASH SHA256=189baa08fd6d2dd34db099de411bd6b2e6bd5eb88e81236a3d0fa3826b9715c4)
+        SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/vendor/libde265")
 FetchContent_MakeAvailable(libde265)
 target_include_directories(de265 PUBLIC "$<BUILD_INTERFACE:${libde265_SOURCE_DIR}>" "$<BUILD_INTERFACE:${libde265_BINARY_DIR}>")
 set(LIBDE265_INCLUDE_DIR "${libde265_SOURCE_DIR}" CACHE PATH "" FORCE)
@@ -30,8 +34,7 @@ endforeach()
 set(WITH_LIBDE265 ON CACHE BOOL "" FORCE)
 set(WITH_LIBDE265_PLUGIN OFF CACHE BOOL "" FORCE)
 FetchContent_Declare(libheif
-    URL "${CMAKE_CURRENT_SOURCE_DIR}/vendor/libheif-1.23.5.tar.gz"
-    URL_HASH SHA256=3be49950c75d3fd9318ba775e8253248dd9e08c61ea955fca81b6b89c02d6b2b)
+        SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/vendor/libheif")
 FetchContent_MakeAvailable(libheif)
 target_include_directories(heif PUBLIC "$<BUILD_INTERFACE:${libheif_SOURCE_DIR}/libheif/api>" "$<BUILD_INTERFACE:${libheif_BINARY_DIR}>")
 

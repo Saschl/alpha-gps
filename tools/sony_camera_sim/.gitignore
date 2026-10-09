@@ -1,4 +1,0 @@
-# Pairing keys created at runtime (--keystore)
-*keys.json
-.venv/
-__pycache__/

@@ -3,13 +3,14 @@ Copyright notices and full license texts are in the accompanying COPYING files.
 The libraries are built from source and dynamically linked as separate .so files.
 Only HEVC decoding is enabled; HEVC encoders are not included.
 
-Unmodified upstream source archives are bundled in heif/src/main/cpp/vendor:
-https://github.com/strukturag/libheif/archive/refs/tags/v1.23.5.tar.gz
-SHA-256: 3be49950c75d3fd9318ba775e8253248dd9e08c61ea955fca81b6b89c02d6b2b
-https://github.com/strukturag/libde265/archive/refs/tags/v1.1.3.tar.gz
-SHA-256: 189baa08fd6d2dd34db099de411bd6b2e6bd5eb88e81236a3d0fa3826b9715c4
+Unmodified upstream sources are pinned as submodules in heif/src/main/cpp/vendor:
+libheif: https://github.com/strukturag/libheif
+Version: v1.23.5, commit: 413e2a87e6a70b3eccc3a3adc5801179dd2d9e00
+libde265: https://github.com/strukturag/libde265
+Version: v1.1.3, commit: ba62bf4cfb3242f3bf0a45617ff09e35236e4d82
 
-The CMake build extracts these archives locally and does not download dependencies.
+Initialize sources with: git submodule update --init --recursive
+The CMake build uses these local sources and does not download dependencies.
 For Android, build :heif:assembleRelease with Gradle (NDK 29, CMake 3.22.1).
 For host decoder tests:
   cmake -S heif/src/main/cpp -B /tmp/alpha-heif-test -DCMAKE_BUILD_TYPE=Release

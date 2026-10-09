@@ -23,12 +23,54 @@ It makes use of the companion device manager APIs of Android which *should* prov
 
 
 You can also get the APK for Android from the releases and install it directly on your phone. Or use Obtainium and enter the repo URL for a more seamless experience.
-  
+
+## Prepare a source checkout
+
+Before building Android, initialize the pinned libheif and libde265 source submodules:
+
+```bash
+git submodule update --init --recursive
+```
+
+Run this again after pulling changes that update the dependencies. Native builds use these local
+sources without downloading dependencies. F-Droid build recipes must enable `submodules: true`.
+
+## Build a Google Play bundle
+
+```bash
+./tools/build-play-aab.sh
+```
+
+Builds `app/build/outputs/bundle/gplayRelease/app-gplay-release.aab` with Sentry mapping,
+source-context and native-symbol uploads disabled. Runtime crash reporting still follows the app's
+consent settings. Extra Gradle arguments can be passed to the script, for example `--offline`.
+
+For a signed bundle:
+
+```bash
+./tools/build-play-aab.sh --keystore /path/to/release.jks --alias your-key-alias
+```
+
+Relative keystore paths are resolved from the directory where you run the script. The path defaults
+to `app/keystore.jks` in the repository. You can also set
+`SIGNING_KEYSTORE_PATH` and `SIGNING_KEY_ALIAS` in the environment; command-line options take
+priority. The script reads the keystore password from stdin without echoing it, unless
+`SIGNING_STORE_PASSWORD` is already set. The key password defaults to the keystore password; set
+`SIGNING_KEY_PASSWORD` if it differs. With no signing options or signing path/alias environment
+variables, the build produces an unsigned bundle. Explicit signing requests fail if the keystore or
+alias is missing.
 
 ## How can I contribute?
 As the project is open source, contributions are welcome! Just check out the repo, open Android Studio and create a Pull Request.
 If you wish to improve the translations, the project is also available on Weblate. Check it
 out [here](https://hosted.weblate.org/engage/alpha-gps/)
+
+iOS permission messages use the String Catalog `iosApp/alphagps/InfoPlist.xcstrings`. A separate
+Weblate component can translate `localization/ios/*.xliff` using **XLIFF 1.2 with Apple
+extensions**. The local bridge exports/imports these files with Xcode while preserving the catalog
+format; no legacy `.strings` files are needed.
+See [the iOS localization bridge](tools/ios_localization/README.md) for commands, Weblate settings,
+source-update ordering and adding languages.
 
 If you want to contribute financially, consider supporting my work via [Buy Me A Coffee](https://buymeacoffee.com/wj8tism4dq)
 

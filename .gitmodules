@@ -1,0 +1,6 @@
+[submodule "heif/src/main/cpp/vendor/libde265"]
+	path = heif/src/main/cpp/vendor/libde265
+	url = https://github.com/strukturag/libde265.git
+[submodule "heif/src/main/cpp/vendor/libheif"]
+	path = heif/src/main/cpp/vendor/libheif
+	url = https://github.com/strukturag/libheif.git
