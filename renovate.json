@@ -18,6 +18,10 @@
       "prBodyNotes": [
         "⚠️ Incomplete on its own: bump the Sentry Cocoa SPM pin in `iosApp/alphagps.xcodeproj` + `Package.resolved` to the version this release was compiled against (see CLAUDE.md → \"Bumping Sentry\"), and update `sentryCocoa` in `gradle/libs.versions.toml`. Until then the iOS link fails with undefined symbols."
       ]
+    },
+    {
+      "matchPackageNames": ["/alpha-heif:heif/"],
+      "enabled": false
     }
   ]
 }
