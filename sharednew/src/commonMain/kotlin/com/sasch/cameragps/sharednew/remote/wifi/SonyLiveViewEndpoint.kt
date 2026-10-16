@@ -21,15 +21,19 @@ internal class SonyLiveViewEndpoint private constructor(val url: String) {
             return SonyLiveViewEndpoint(url)
         }
 
-        fun fromDeviceDescription(dd: ByteArray, cameraHost: String): SonyLiveViewEndpoint {
+        fun fromDeviceDescription(dd: ByteArray, cameraHost: String): SonyLiveViewEndpoint =
+            requireNotNull(findInDeviceDescription(dd, cameraHost)) { "No live-view URL in DD" }
+
+        fun findInDeviceDescription(dd: ByteArray, cameraHost: String): SonyLiveViewEndpoint? {
             require(dd.size <= 64 * 1024) { "DD XML is too large" }
             val xml = dd.decodeToString(throwOnInvalidSequence = true)
                 .replace(Regex("<!--.*?-->", RegexOption.DOT_MATCHES_ALL), "")
             require(!xml.contains("<!")) { "Unsupported DD XML declaration" }
             val tag = Regex("""<((?:[A-Za-z_][\w.-]*:)?X_ScalarWebAPI_LiveView_URL)(?:\s+[^<>]*)?>([^<]*)</\1\s*>""")
             val matches = tag.findAll(xml).toList()
-            require(matches.size == 1) { "No unambiguous live-view URL in DD" }
-            val text = matches.single().groupValues[2].trim()
+            require(matches.size <= 1) { "No unambiguous live-view URL in DD" }
+            val text = matches.singleOrNull()?.groupValues?.get(2)?.trim()
+                ?.takeIf { it.isNotEmpty() } ?: return null
             require(!Regex("&(?!amp;|lt;|gt;|quot;|apos;)").containsMatchIn(text)) { "Unsupported URL entity" }
             val url = text.replace("&lt;", "<").replace("&gt;", ">")
                 .replace("&quot;", "\"").replace("&apos;", "'").replace("&amp;", "&")

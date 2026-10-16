@@ -51,18 +51,64 @@ class SonyLiveViewStreamTest : WifiLoggingTest() {
         }
     }
 
-    private class Fixture(scope: TestScope, http: SonyLiveViewHttpTransport) {
+    private class Fixture(
+        scope: TestScope,
+        version: String? = "4.00",
+        controls: Set<Int> = setOf(0xd312, 0xd313),
+        http: SonyLiveViewHttpTransport,
+    ) {
         val camera = Camera()
         val queue = PtpIpCommandQueue(camera, scope.backgroundScope)
         val monitor = PtpIpEventMonitor(camera.events, scope.backgroundScope)
-        val preview = SonyLiveViewStream(queue, SonyPtpInitializationResult.Ready("4.00", 310,
-            SonyExtendedDeviceInfo(300, emptySet(), setOf(0xd312, 0xd313)),
-            PtpDeviceInfo(setOf(SonyPtpOperation.SDIO_CONTROL_DEVICE)), null), monitor, http,
+        val preview = SonyLiveViewStream(queue, SonyPtpInitializationResult.Ready(version, 310,
+            SonyExtendedDeviceInfo(300, emptySet(), controls),
+            PtpDeviceInfo(if (controls.isEmpty()) emptySet() else setOf(SonyPtpOperation.SDIO_CONTROL_DEVICE)), null), monitor, http,
             StandardTestDispatcher(scope.testScheduler))
         fun close() { queue.close(); monitor.close() }
     }
 
     private val endpoint = SonyLiveViewEndpoint.fromUrl("http://127.0.0.1/live", "127.0.0.1")
+
+    @Test
+    fun legacySessionsStreamWithoutEnableCommandsEvenWhenAdvertised() = runTest {
+        for (version in listOf(null, "3.00")) {
+            for (controls in listOf(emptySet(), setOf(0xd312, 0xd313))) {
+                val stream = Stream().apply { frame() }
+                val fixture = Fixture(this, version, controls) { stream }
+                assertContentEquals(testJpeg(), fixture.preview.frames(endpoint).first().imageBytes)
+                assertTrue(stream.closed)
+                assertTrue(fixture.camera.controls.isEmpty())
+                fixture.close()
+            }
+        }
+    }
+
+    @Test
+    fun modernSessionWithoutEnableControlDoesNotFallBackToLegacyStartup() = runTest {
+        var opens = 0
+        val fixture = Fixture(this, controls = emptySet()) { opens++; Stream() }
+        assertFailsWith<IllegalArgumentException> { fixture.preview.frames(endpoint).first() }
+        assertEquals(0, opens)
+        assertTrue(fixture.camera.controls.isEmpty())
+        fixture.close()
+    }
+
+    @Test
+    fun legacyCancellationAndEventLossCloseStreamWithoutDisableCommands() = runTest {
+        for (eventLoss in listOf(false, true)) {
+            val stream = Stream()
+            val fixture = Fixture(this, version = "3.00", controls = emptySet()) { stream }
+            val reading = async { runCatching { fixture.preview.frames(endpoint).first() } }
+            runCurrent()
+            if (eventLoss) fixture.camera.events.close() else reading.cancel()
+            runCurrent()
+            reading.join()
+            if (eventLoss) assertTrue(reading.await().isFailure)
+            assertTrue(stream.closed)
+            assertTrue(fixture.camera.controls.isEmpty())
+            fixture.close()
+        }
+    }
 
     @Test
     fun retriesOnlyHttpAndReleasesControlsAfterReceivingFrame() = runTest {

@@ -1,14 +1,17 @@
 package com.sasch.cameragps.sharednew.remote.wifi
 
-/** Unselected strings and arrays are consumed without decoding. */
-internal data class SonyScalarProperty(val enabled: Boolean, val value: Long?)
+internal data class SonyCameraProperty(val enabled: Boolean, val value: Long?, val stringValue: String? = null) {
+    override fun toString() = "SonyCameraProperty(enabled=$enabled, value=$value, stringValue=redacted)"
+}
 
+/** Unselected strings and arrays are consumed without decoding. */
 internal object SonyCameraProperties {
     fun parse(
         data: ByteArray,
         controlCodes: Set<Int>,
-        selected: Set<Int>
-    ): Map<Int, SonyScalarProperty> {
+        selected: Set<Int>,
+        selectedStrings: Set<Int> = emptySet(),
+    ): Map<Int, SonyCameraProperty> {
         var offset = 0
         fun take(size: Int): Int {
             require(size >= 0 && size <= data.size - offset) { "Truncated camera properties" }
@@ -27,6 +30,14 @@ internal object SonyCameraProperties {
             7, 8 -> 8
             9, 10 -> 16
             else -> error("Unsupported camera property type")
+        }
+
+        fun stringValue(): String {
+            val count = number(1).toInt()
+            if (count == 0) return ""
+            val text = buildString { repeat(count - 1) { append(number(2).toInt().toChar()) } }
+            require(number(2) == 0L && '\u0000' !in text) { "Malformed camera property string" }
+            return text
         }
 
         fun value(kind: Int): Long? = when {
@@ -49,7 +60,7 @@ internal object SonyCameraProperties {
 
         val count = number(8)
         require(count in 0..4096) { "Too many camera properties" }
-        val properties = mutableMapOf<Int, SonyScalarProperty>()
+        val properties = mutableMapOf<Int, SonyCameraProperty>()
         val seen = mutableSetOf<Int>()
         repeat(count.toInt()) {
             val code = number(2).toInt()
@@ -61,7 +72,8 @@ internal object SonyCameraProperties {
                 require(number(1) == 0L) { "Unsupported camera control form" }
             } else {
                 value(kind)
-                val current = value(kind)
+                val text = if (kind == 0xffff && code in selectedStrings) stringValue() else null
+                val current = if (text == null) value(kind) else null
                 when (number(1).toInt()) {
                     0 -> Unit
                     1 -> repeat(3) { value(kind) }
@@ -73,9 +85,9 @@ internal object SonyCameraProperties {
 
                     else -> error("Unsupported camera property form")
                 }
-                if (code in selected) {
+                if (code in selected || code in selectedStrings) {
                     require(seen.add(code)) { "Duplicate camera property" }
-                    properties[code] = SonyScalarProperty(enabled in 1L..2L, current)
+                    properties[code] = SonyCameraProperty(enabled in 1L..2L, current, text)
                 }
             }
         }

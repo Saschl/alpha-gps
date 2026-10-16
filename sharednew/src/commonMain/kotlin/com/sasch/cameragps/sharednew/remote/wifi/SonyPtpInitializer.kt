@@ -47,6 +47,9 @@ internal object SonyExtendedDeviceInfoParser {
 }
 
 internal object SonyDidVersion {
+    fun supportsRemoteWithTransfer(version: String?): Boolean =
+        version?.substringBefore('.')?.toIntOrNull()?.let { it >= 4 } ?: false
+
     private val serverVersionTag = Regex(
         """<((?:[A-Za-z_][\w.-]*:)?X_ServerVersion)(?:\s+[^<>]*)?>([^<]*)</\1\s*>"""
     )
@@ -73,6 +76,8 @@ internal sealed interface SonyPtpInitializationResult {
         /** Held in memory only for later live-view endpoint discovery. */
         val deviceDescription: ByteArray?,
     ) : SonyPtpInitializationResult {
+        val isRemoteWithTransfer: Boolean get() = SonyDidVersion.supportsRemoteWithTransfer(serverVersion)
+
         override fun toString() = "SonyPtpReady(serverVersion=$serverVersion, vendorCodeVersion=$vendorCodeVersion)"
     }
 
@@ -141,7 +146,7 @@ internal class SonyPtpInitializer(private val commands: PtpIpCommandQueue) {
                     throw Failure("get_did_xml")
                 }
             }
-            val remoteWithTransfer = serverVersion?.substringBefore('.')?.toIntOrNull()?.let { it >= 4 } ?: false
+            val remoteWithTransfer = SonyDidVersion.supportsRemoteWithTransfer(serverVersion)
             if (remoteWithTransfer) {
                 if (!deviceInfo.supports(SonyPtpOperation.SDIO_OPEN_SESSION)) throw Failure("unsupported_session")
                 operation("open_session", SonyPtpOperation.SDIO_OPEN_SESSION, listOf(1, 2))

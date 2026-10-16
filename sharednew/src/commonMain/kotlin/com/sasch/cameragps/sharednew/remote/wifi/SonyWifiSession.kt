@@ -45,6 +45,7 @@ internal suspend fun openSonyWifiSession(
         val shutter = SonyPtpShutter(opened.commands, ready, opened.events)
         val preview = SonyLiveViewStream(opened.commands, ready, opened.events,
             http)
+        val previewEndpoint = SonyLiveViewEndpointResolver(opened.commands, ready)
         return object : WifiRemoteConnection {
             override val cameraName = opened.camera.cameraName
             override val canTransferImages = transfer.supported
@@ -66,8 +67,7 @@ internal suspend fun openSonyWifiSession(
                 ready.extendedInfo.supportsControl(SonyPtpControlCode.FULL_PRESS)
             override val images = flow {
                 log.i { "Wi-Fi live view resolving camera endpoint" }
-                val dd = ready.deviceDescription ?: error("Camera has no preview endpoint")
-                emitAll(preview.images(SonyLiveViewEndpoint.fromDeviceDescription(dd, host)))
+                emitAll(preview.images(previewEndpoint.resolve(host)))
             }
             override val lost = merge(networkLost, opened.events.isClosed.filter { it }.map { Unit })
             override suspend fun capture() = when (shutter.captureStill()) {

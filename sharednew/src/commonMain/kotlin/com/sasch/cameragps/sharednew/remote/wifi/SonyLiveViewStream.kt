@@ -55,8 +55,9 @@ internal class SonyLiveViewStream(
     fun frames(endpoint: SonyLiveViewEndpoint): Flow<SonyLiveViewFrame> = flow {
         coroutineScope {
             check(!collecting) { "Live view is already running" }
-            require(capabilities.deviceInfo.supports(SonyPtpOperation.SDIO_CONTROL_DEVICE) &&
-                capabilities.extendedInfo.supportsControl(SonyPtpControlCode.LIVE_VIEW_ENABLE)) {
+            val enableControls = capabilities.isRemoteWithTransfer
+            require(!enableControls || (capabilities.deviceInfo.supports(SonyPtpOperation.SDIO_CONTROL_DEVICE) &&
+                capabilities.extendedInfo.supportsControl(SonyPtpControlCode.LIVE_VIEW_ENABLE))) {
                 "Camera does not advertise live view"
             }
             collecting = true
@@ -68,7 +69,7 @@ internal class SonyLiveViewStream(
                 error("Live-view event channel closed")
             }
             try {
-                if (capabilities.extendedInfo.supportsControl(POSTVIEW_ENABLE)) {
+                if (enableControls && capabilities.extendedInfo.supportsControl(POSTVIEW_ENABLE)) {
                     postviewAttempted = true
                     coroutineScope {
                         val result = async(start = CoroutineStart.UNDISPATCHED) {
@@ -81,9 +82,11 @@ internal class SonyLiveViewStream(
                         }
                     }
                 }
-                liveviewAttempted = true
-                check(accepted(control(SonyPtpControlCode.LIVE_VIEW_ENABLE, true))) { "Live-view enable failed" }
-                log.i { "Wi-Fi live view enabled; opening HTTP stream" }
+                if (enableControls) {
+                    liveviewAttempted = true
+                    check(accepted(control(SonyPtpControlCode.LIVE_VIEW_ENABLE, true))) { "Live-view enable failed" }
+                }
+                log.i { "Wi-Fi live view opening HTTP stream; enableControls=$enableControls" }
                 val opened = openWithRetry(endpoint)
                 stream = opened
                 log.i { "Wi-Fi live-view HTTP ready; waiting for first frame" }

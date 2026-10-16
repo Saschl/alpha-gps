@@ -35,8 +35,9 @@ class SonyPtpInitializerTest : WifiLoggingTest() {
         }
     }
 
-    private fun deviceInfo(): ByteArray {
-        val operations = listOf(0x1001, 0x1003, 0x9201, 0x9202, 0x9210, 0x9216, 0x923a, 0x9207)
+    private fun deviceInfo(
+        operations: List<Int> = listOf(0x1001, 0x1003, 0x9201, 0x9202, 0x9210, 0x9216, 0x923a, 0x9207),
+    ): ByteArray {
         return byteArrayOf(100, 0, 6, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0,
             operations.size.toByte(), 0, 0, 0) +
             operations.flatMap { listOf(it.toByte(), (it ushr 8).toByte()) }.toByteArray()
@@ -67,6 +68,7 @@ class SonyPtpInitializerTest : WifiLoggingTest() {
         runCurrent()
         val ready = assertIs<SonyPtpInitializationResult.Ready>(initialized.await())
         assertEquals("4.00", ready.serverVersion)
+        assertTrue(ready.isRemoteWithTransfer)
         assertEquals(310L, ready.vendorCodeVersion)
         assertIs<SonyPtpInitializationResult.Failed>(initializer.initialize())
         assertEquals(9, transport.sent.size)
@@ -88,6 +90,29 @@ class SonyPtpInitializerTest : WifiLoggingTest() {
         close.await()
         assertEquals(0x1003, (transport.sent.last().body[4].toInt() and 0xff) or
             ((transport.sent.last().body[5].toInt() and 0xff) shl 8))
+        queue.close()
+    }
+
+    @Test
+    fun legacyCameraWithoutDescriptionsOpensStandardSession() = runTest {
+        val transport = Transport()
+        val queue = PtpIpCommandQueue(transport, backgroundScope)
+        val initializer = SonyPtpInitializer(queue)
+        transport.reply(1, deviceInfo(listOf(0x1001, 0x1002, 0x1003, 0x9201, 0x9202, 0x9207, 0x9209)))
+        transport.reply(2)
+        transport.reply(3, ByteArray(8))
+        transport.reply(4, ByteArray(8))
+        transport.reply(5, extendedInfo())
+        transport.reply(6, ByteArray(8))
+        val ready = assertIs<SonyPtpInitializationResult.Ready>(initializer.initialize())
+        assertEquals(null, ready.deviceDescription)
+        assertEquals(null, ready.serverVersion)
+        assertEquals(false, ready.isRemoteWithTransfer)
+        assertTrue(ready.extendedInfo.supportsProperty(0xd278))
+        assertContentEquals(byteArrayOf(2, 0x10, 2, 0, 0, 0, 1, 0, 0, 0),
+            transport.sent[1].body.copyOfRange(4, 14))
+        transport.reply(7)
+        initializer.closeRemoteSession()
         queue.close()
     }
 
