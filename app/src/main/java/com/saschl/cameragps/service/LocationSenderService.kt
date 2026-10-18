@@ -20,6 +20,7 @@ import com.sasch.cameragps.sharednew.notification.TransmissionNotificationCoordi
 import com.saschl.cameragps.AppServices
 import com.saschl.cameragps.notification.AndroidTransmissionNotificationPublisher
 import com.saschl.cameragps.notification.NotificationsHelper
+import com.saschl.cameragps.service.coordinator.ServicePresenceCoordinator
 import com.saschl.cameragps.service.coordinator.ServiceShutdownCoordinator
 import com.saschl.cameragps.service.transport.AndroidBleTransport
 import kotlinx.coroutines.Job
@@ -43,6 +44,7 @@ class LocationSenderService : LifecycleService() {
     private val commandMutex = Mutex()
     private val commandRouter = ServiceCommandRouter()
     private var transmissionNotificationJob: Job? = null
+    private var lastHandledStartId = 0
 
     // The BLE/location graph is app-scoped (see [AppServices]); the service
     // borrows it for the duration of a foreground session.
@@ -55,6 +57,17 @@ class LocationSenderService : LifecycleService() {
         ServiceShutdownCoordinator(services.deviceDao, services.transport) { startId ->
             requestShutdown(startId)
         }
+    }
+
+    private val presenceCoordinator by lazy {
+        ServicePresenceCoordinator(
+            hasConnectedDevices = { transport.connectedCount() > 0 },
+            hasAlwaysOnDevices = { services.deviceDao.getAlwaysOnEnabledDeviceCount() > 0 },
+            onShutdownRequested = {
+                Timber.i("No connected or always-on cameras remain after presence loss; stopping service")
+                requestShutdown(lastHandledStartId)
+            },
+        )
     }
 
     companion object {
@@ -130,10 +143,12 @@ class LocationSenderService : LifecycleService() {
         super.onStartCommand(intent, flags, startId)
 
         val command = commandRouter.route(intent)
-        // startService(shutdownIntent) can create a new instance. There is no
+        // A stop-related startService intent can create a new instance. There is no
         // foreground session to shut down in that case, so don't promote it.
-        if (command is ServiceCommand.Shutdown && !hasForegroundSession) {
-            Timber.i("Ignoring shutdown request because no foreground session is running")
+        if ((command is ServiceCommand.Shutdown || command is ServiceCommand.DeviceDisappeared)
+            && !hasForegroundSession
+        ) {
+            Timber.i("Ignoring stop-related request because no foreground session is running")
             stopSelf(startId)
             return START_NOT_STICKY
         }
@@ -151,6 +166,7 @@ class LocationSenderService : LifecycleService() {
 
         lifecycleScope.launch {
             commandMutex.withLock {
+                lastHandledStartId = startId
                 handleStartCommand(command, startId)
                 Timber.i(
                     "processed start command $startId with intent action ${intent?.action} and address ${
@@ -173,6 +189,11 @@ class LocationSenderService : LifecycleService() {
 
             is OrchestratorEvent.DeviceDisconnected -> {
                 eventSoundPlayer.play(TransmissionSoundEvent.CAMERA_DISCONNECTED)
+                lifecycleScope.launch {
+                    commandMutex.withLock {
+                        presenceCoordinator.onDeviceDisconnected(event.identifier)
+                    }
+                }
             }
 
             is OrchestratorEvent.HandshakeCompleted -> {
@@ -213,6 +234,17 @@ class LocationSenderService : LifecycleService() {
                 shutdownCoordinator.handleShutdownRequest(command.address, startId)
             }
 
+            is ServiceCommand.DeviceDisappeared -> {
+                Timber.i(
+                    "Device presence lost for ${command.address}; GATT connected=${
+                        transport.isConnected(
+                            command.address
+                        )
+                    }"
+                )
+                presenceCoordinator.onDeviceDisappeared(command.address)
+            }
+
             is ServiceCommand.TriggerRemoteShutter -> {
                 val success = orchestrator.triggerRemoteShutter(command.address)
                 if (!success) {
@@ -239,6 +271,7 @@ class LocationSenderService : LifecycleService() {
             }
 
             is ServiceCommand.Connect -> {
+                presenceCoordinator.onDeviceAppeared(command.address)
                 ensureBluetoothStateReceiver()
                 if (!transport.hasConnection(command.address)) {
                     Timber.i("Service initialized")

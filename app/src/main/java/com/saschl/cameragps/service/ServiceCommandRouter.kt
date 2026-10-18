@@ -7,6 +7,7 @@ import java.util.Locale
 
 class ServiceCommandRouter {
     companion object {
+        const val ACTION_DEVICE_DISAPPEARED = "com.saschl.cameragps.ACTION_DEVICE_DISAPPEARED"
         const val EXTRA_REMOTE_CONTROL_ENABLED = "remoteControlEnabled"
 
         /** Extra holding a [RemoteCommand] enum name for [SonyBluetoothConstants.ACTION_SEND_REMOTE_COMMAND]. */
@@ -16,6 +17,14 @@ class ServiceCommandRouter {
     fun route(intent: Intent?): ServiceCommand {
         val action = intent?.action
         val address = intent?.getStringExtra("address")?.uppercase(Locale.getDefault())
+
+        if (action == ACTION_DEVICE_DISAPPEARED) {
+            return if (address == null) {
+                ServiceCommand.Ignore("Device disappearance ignored because address is missing")
+            } else {
+                ServiceCommand.DeviceDisappeared(address)
+            }
+        }
 
         if (action == SonyBluetoothConstants.ACTION_SET_REMOTE_CONTROL_MONITORING) {
             val enabled = intent.getBooleanExtra(EXTRA_REMOTE_CONTROL_ENABLED, false)

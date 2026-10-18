@@ -12,7 +12,6 @@ import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.core.app.ActivityCompat
 import androidx.core.content.getSystemService
-import com.sasch.cameragps.sharednew.bluetooth.SonyBluetoothConstants
 import com.saschl.cameragps.utils.PreferencesManager
 import timber.log.Timber
 import java.util.Locale
@@ -74,6 +73,10 @@ class CameraDeviceCompanionService : CompanionDeviceService() {
     override fun onDevicePresenceEvent(event: DevicePresenceEvent) {
         super.onDevicePresenceEvent(event)
 
+        Timber.i(
+            "CDM presence event: ${presenceEventName(event.event)} (${event.event}), association=${event.associationId}"
+        )
+
         // when bluetooth is not permitted, we're done
         if (missingPermissions()) {
             Timber.e("Missing bluetooth permissions in  ${CameraDeviceCompanionService::class.java}")
@@ -96,27 +99,23 @@ class CameraDeviceCompanionService : CompanionDeviceService() {
         val address = associationInfo?.deviceMacAddress?.toString()
 
         if (event.event == DevicePresenceEvent.EVENT_BLE_APPEARED) {
-
-            Timber.i("Device appeared new API: ${event.associationId}")
-
             startLocationSenderService(address)
         }
 
         if (event.event == DevicePresenceEvent.EVENT_BLE_DISAPPEARED) {
-            Timber.i("Device disappeared new API: ${event.associationId}")
             if (address == null) {
                 Timber.e("Could not get address for disappeared device with association id: $associationId")
                 return
             }
-            stopServiceOnDeviceDisappeared(address)
+            reportDeviceDisappeared(address)
         }
     }
 
     @Deprecated("Deprecated in Java")
     override fun onDeviceDisappeared(address: String) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
-            Timber.i("Device disappeared oldest api: $address. Service will keep running until destroyed")
-            stopServiceOnDeviceDisappeared(address)
+            Timber.i("Device disappeared oldest API: $address")
+            reportDeviceDisappeared(address)
         }
     }
 
@@ -124,12 +123,13 @@ class CameraDeviceCompanionService : CompanionDeviceService() {
     override fun onDeviceDisappeared(associationInfo: AssociationInfo) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
             super.onDeviceDisappeared(associationInfo)
-            Timber.i("Device disappeared old API: ${associationInfo.id}. Service will keep running until destroyed")
-            stopServiceOnDeviceDisappeared(associationInfo.deviceMacAddress.toString())
+            Timber.i("Device disappeared old API: ${associationInfo.id}")
+            val address = associationInfo.deviceMacAddress?.toString() ?: return
+            reportDeviceDisappeared(address)
         }
     }
 
-    private fun stopServiceOnDeviceDisappeared(address: String) {
+    private fun reportDeviceDisappeared(address: String) {
         // startService from the background throws when the target service is not
         // already running — and if it is not running there is nothing to shut
         // down anyway. isRunning can flip between check and call, so keep both.
@@ -137,14 +137,14 @@ class CameraDeviceCompanionService : CompanionDeviceService() {
             Timber.i("LocationSenderService not running, ignoring disappearance of $address")
             return
         }
-        val shutdownIntent = Intent(this, LocationSenderService::class.java).apply {
-            action = SonyBluetoothConstants.ACTION_REQUEST_SHUTDOWN
+        val presenceIntent = Intent(this, LocationSenderService::class.java).apply {
+            action = ServiceCommandRouter.ACTION_DEVICE_DISAPPEARED
         }
-        shutdownIntent.putExtra("address", address.uppercase())
+        presenceIntent.putExtra("address", address.uppercase())
         try {
-            startService(shutdownIntent)
+            startService(presenceIntent)
         } catch (e: IllegalStateException) {
-            Timber.w(e, "Could not deliver shutdown intent for $address")
+            Timber.w(e, "Could not deliver disappearance intent for $address")
         }
     }
 
@@ -155,14 +155,19 @@ class CameraDeviceCompanionService : CompanionDeviceService() {
 
 
     override fun onUnbind(intent: Intent?): Boolean {
-        Timber.i("CompanionDeviceService onUnbind called. Will request shutdown of FGS")
-        val shutdownIntent = Intent(this, LocationSenderService::class.java).apply {
-            action = SonyBluetoothConstants.ACTION_REQUEST_SHUTDOWN
-
-        }
-     /*   shutdownIntent.putExtra("address", "all")
-        startService(shutdownIntent)*/
+        Timber.i("CompanionDeviceService unbound; foreground service follows GATT connection state")
         return super.onUnbind(intent)
+    }
+
+    @RequiresApi(Build.VERSION_CODES.BAKLAVA)
+    private fun presenceEventName(event: Int): String = when (event) {
+        DevicePresenceEvent.EVENT_BLE_APPEARED -> "BLE_APPEARED"
+        DevicePresenceEvent.EVENT_BLE_DISAPPEARED -> "BLE_DISAPPEARED"
+        DevicePresenceEvent.EVENT_BT_CONNECTED -> "BT_CONNECTED"
+        DevicePresenceEvent.EVENT_BT_DISCONNECTED -> "BT_DISCONNECTED"
+        DevicePresenceEvent.EVENT_SELF_MANAGED_APPEARED -> "SELF_MANAGED_APPEARED"
+        DevicePresenceEvent.EVENT_SELF_MANAGED_DISAPPEARED -> "SELF_MANAGED_DISAPPEARED"
+        else -> "UNKNOWN"
     }
 
 

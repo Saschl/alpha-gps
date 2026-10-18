@@ -44,7 +44,7 @@ class ServiceShutdownCoordinator(
             return
         }
 
-        // Sometimes false "disappeared" events appear, so keep the device active if it was always on.
+        // Always-on devices retain their connection until the setting is disabled.
         if (!deviceDao.isDeviceAlwaysOnEnabled(address)) {
             transport.pauseDevice(address)
         }
