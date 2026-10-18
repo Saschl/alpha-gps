@@ -2,7 +2,6 @@ package com.sasch.cameragps.sharednew.bluetooth.coordinator
 
 import com.diamondedge.logging.logging
 import com.sasch.cameragps.sharednew.bluetooth.SonyBluetoothConstants
-import com.sasch.cameragps.sharednew.bluetooth.coordinator.RemoteControlCoordinator.Companion.SHUTTER_READY_TIMEOUT_MS
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Deferred
@@ -18,6 +17,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Shared remote control coordinator. Owns:
@@ -287,7 +287,7 @@ class RemoteControlCoordinator(
         identifier: String,
         timeoutMs: Long,
         predicate: (ByteArray) -> Boolean,
-    ): ByteArray? = withTimeoutOrNull(timeoutMs) {
+    ): ByteArray? = withTimeoutOrNull(timeoutMs.milliseconds) {
         statusUpdates
             .filter { it.first == identifier }
             .map { it.second }
@@ -366,7 +366,7 @@ class RemoteControlCoordinator(
         if (!port.hasRemoteControlCharacteristic(identifier)) return
 
         val job = scope.launch {
-            delay(REMOTE_STATUS_PROBE_INITIAL_DELAY_MS)
+            delay(REMOTE_STATUS_PROBE_INITIAL_DELAY_MS.milliseconds)
             while (isActive) {
                 if (!port.isConnected(identifier)) {
                     break
@@ -381,7 +381,7 @@ class RemoteControlCoordinator(
                     SonyBluetoothConstants.PROBE_COMMAND,
                 )
 
-                delay(REMOTE_STATUS_PROBE_INTERVAL_MS)
+                delay(REMOTE_STATUS_PROBE_INTERVAL_MS.milliseconds)
             }
             // Clean up our own entry when the loop exits naturally
             val currentJob = currentCoroutineContext()[Job]

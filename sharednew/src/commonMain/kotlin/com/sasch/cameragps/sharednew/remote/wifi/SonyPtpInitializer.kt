@@ -5,6 +5,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.time.Duration.Companion.seconds
 
 internal data class SonyExtendedDeviceInfo(
     val version: Int,
@@ -50,6 +51,15 @@ internal object SonyDidVersion {
     fun supportsRemoteWithTransfer(version: String?): Boolean =
         version?.substringBefore('.')?.toIntOrNull()?.let { it >= 4 } ?: false
 
+    fun supportsSeparateTransfer(
+        version: String?,
+        mediaServer: Boolean,
+        deviceInfo: PtpDeviceInfo
+    ): Boolean =
+        !supportsRemoteWithTransfer(version) && mediaServer &&
+                (version?.substringBefore('.')?.toIntOrNull() ?: 0) >= 3 &&
+                deviceInfo.supports(SonyPtpOperation.SDIO_OPEN_SESSION)
+
     private val serverVersionTag = Regex(
         """<((?:[A-Za-z_][\w.-]*:)?X_ServerVersion)(?:\s+[^<>]*)?>([^<]*)</\1\s*>"""
     )
@@ -67,6 +77,24 @@ internal object SonyDidVersion {
     }
 }
 
+internal object SonyDidMediaServer {
+    private val tag = Regex(
+        """<((?:[A-Za-z_][\w.-]*:)?X_PTP_MediaServerSupport)(?:\s+[^<>]*)?>([^<]*)</\1\s*>"""
+    )
+
+    fun supported(did: ByteArray): Boolean {
+        require(did.size <= 64 * 1024) { "DID XML is too large" }
+        val xml = did.decodeToString(throwOnInvalidSequence = true)
+            .replace(Regex("<!--.*?-->", RegexOption.DOT_MATCHES_ALL), "")
+        require(!xml.contains("<!")) { "Unsupported DID XML declaration" }
+        val matches = tag.findAll(xml).toList()
+        require(matches.size <= 1) { "Ambiguous PTP media-server support" }
+        return matches.singleOrNull()?.groupValues?.get(2)?.trim() == "Enable"
+    }
+}
+
+internal enum class SonySessionPurpose { RemoteShooting, ImageTransfer }
+
 internal sealed interface SonyPtpInitializationResult {
     data class Ready(
         val serverVersion: String?,
@@ -75,10 +103,21 @@ internal sealed interface SonyPtpInitializationResult {
         val deviceInfo: PtpDeviceInfo,
         /** Held in memory only for later live-view endpoint discovery. */
         val deviceDescription: ByteArray?,
+        val mediaServerSupported: Boolean = false,
+        val purpose: SonySessionPurpose = SonySessionPurpose.RemoteShooting,
     ) : SonyPtpInitializationResult {
         val isRemoteWithTransfer: Boolean get() = SonyDidVersion.supportsRemoteWithTransfer(serverVersion)
+        val supportsSeparateTransferSession: Boolean
+            get() =
+                SonyDidVersion.supportsSeparateTransfer(
+                    serverVersion,
+                    mediaServerSupported,
+                    deviceInfo
+                )
 
-        override fun toString() = "SonyPtpReady(serverVersion=$serverVersion, vendorCodeVersion=$vendorCodeVersion)"
+        override fun toString() =
+            "SonyPtpReady(serverVersion=$serverVersion, vendorCodeVersion=$vendorCodeVersion, " +
+                    "mediaServerSupported=$mediaServerSupported, purpose=$purpose)"
     }
 
     data class Rejected(val stage: String, val responseCode: Int) : SonyPtpInitializationResult
@@ -116,7 +155,7 @@ internal class SonyPtpInitializer(private val commands: PtpIpCommandQueue) {
         }
     }
 
-    suspend fun initialize(): SonyPtpInitializationResult {
+    suspend fun initialize(purpose: SonySessionPurpose = SonySessionPurpose.RemoteShooting): SonyPtpInitializationResult {
         if (initializationStarted) return SonyPtpInitializationResult.Failed("already_initialized")
         initializationStarted = true
         var ready = false
@@ -136,6 +175,7 @@ internal class SonyPtpInitializer(private val commands: PtpIpCommandQueue) {
 
             var description: ByteArray? = null
             var serverVersion: String? = null
+            var mediaServerSupported = false
             if (deviceInfo.supports(SonyPtpOperation.SDIO_GET_DEVICE_DESCRIPTION_FILE)) {
                 description = operation("get_dd_xml", SonyPtpOperation.SDIO_GET_DEVICE_DESCRIPTION_FILE,
                     listOf(1), dataIn = true).data ?: throw Failure("get_dd_xml")
@@ -145,11 +185,25 @@ internal class SonyPtpInitializer(private val commands: PtpIpCommandQueue) {
                 serverVersion = try { SonyDidVersion.parse(did) } catch (_: IllegalArgumentException) {
                     throw Failure("get_did_xml")
                 }
+                mediaServerSupported = SonyDidMediaServer.supported(did)
             }
             val remoteWithTransfer = SonyDidVersion.supportsRemoteWithTransfer(serverVersion)
-            if (remoteWithTransfer) {
+            val separateTransfer = SonyDidVersion.supportsSeparateTransfer(
+                serverVersion,
+                mediaServerSupported,
+                deviceInfo
+            )
+            if (purpose == SonySessionPurpose.ImageTransfer && !separateTransfer) {
+                throw Failure("unsupported_transfer_session")
+            }
+            if (remoteWithTransfer || separateTransfer) {
                 if (!deviceInfo.supports(SonyPtpOperation.SDIO_OPEN_SESSION)) throw Failure("unsupported_session")
-                operation("open_session", SonyPtpOperation.SDIO_OPEN_SESSION, listOf(1, 2))
+                val mode = when {
+                    remoteWithTransfer -> 2L
+                    purpose == SonySessionPurpose.ImageTransfer -> 1L
+                    else -> 0L
+                }
+                operation("open_session", SonyPtpOperation.SDIO_OPEN_SESSION, listOf(1, mode))
             } else {
                 operation("open_session", SonyPtpOperation.OPEN_SESSION, listOf(1))
             }
@@ -168,9 +222,29 @@ internal class SonyPtpInitializer(private val commands: PtpIpCommandQueue) {
             val extendedInfo = try { SonyExtendedDeviceInfoParser.parse(extendedData) }
             catch (_: IllegalArgumentException) { throw Failure("get_extended_device_info") }
             operation("sdio_connect_3", SonyPtpOperation.SDIO_CONNECT, listOf(3, 0, 0), dataIn = true)
+            // Transfer operations can appear only after entering the new session mode.
+            val activeDeviceInfo = if (purpose == SonySessionPurpose.ImageTransfer) {
+                when (val result = PtpIpCapabilityReader(commands).read()) {
+                    is PtpIpCapabilityResult.Available -> result.deviceInfo
+                    is PtpIpCapabilityResult.Rejected -> throw Rejection(
+                        "transfer_device_info",
+                        result.responseCode
+                    )
+
+                    PtpIpCapabilityResult.Uncertain -> throw Uncertain("transfer_device_info")
+                    PtpIpCapabilityResult.Failed -> throw Failure("transfer_device_info")
+                }
+            } else deviceInfo
             ready = true
             return SonyPtpInitializationResult.Ready(
-                serverVersion, vendorVersion, extendedInfo, deviceInfo, description)
+                serverVersion,
+                vendorVersion,
+                extendedInfo,
+                activeDeviceInfo,
+                description,
+                mediaServerSupported,
+                purpose
+            )
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (rejected: Rejection) {
@@ -190,7 +264,7 @@ internal class SonyPtpInitializer(private val commands: PtpIpCommandQueue) {
         if (!sessionOpen) return
         sessionOpen = false
         withContext(NonCancellable) {
-            withTimeoutOrNull(3_000) {
+            withTimeoutOrNull(3.seconds) {
                 commands.executeNoData(SonyPtpOperation.CLOSE_SESSION)
             }
         }

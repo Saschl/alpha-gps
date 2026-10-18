@@ -2,6 +2,7 @@ package com.sasch.cameragps.sharednew.remote.wifi
 
 import com.diamondedge.logging.logging
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.NonCancellable
@@ -30,6 +31,7 @@ internal class PtpIpOpenedSession(
     private val sonyInitializer = SonyPtpInitializer(commands)
     val events = PtpIpEventMonitor(eventConnection, scope)
     private var closing = false
+    private val closed = CompletableDeferred<Unit>()
 
     init {
         scope.launch(start = CoroutineStart.UNDISPATCHED) {
@@ -39,22 +41,29 @@ internal class PtpIpOpenedSession(
     }
 
     suspend fun readCapabilities(): PtpIpCapabilityResult = PtpIpCapabilityReader(commands).read()
-    suspend fun initializeSony(): SonyPtpInitializationResult = sonyInitializer.initialize()
+    suspend fun initializeSony(purpose: SonySessionPurpose = SonySessionPurpose.RemoteShooting): SonyPtpInitializationResult =
+        sonyInitializer.initialize(purpose)
 
     suspend fun close() {
-        if (closing) return
+        if (closing) {
+            closed.await(); return
+        }
         closing = true
         withContext(NonCancellable) {
             try {
-                sonyInitializer.closeRemoteSession()
-            } finally {
-                commands.close()
-                events.close()
                 try {
-                    eventConnection.close()
+                    sonyInitializer.closeRemoteSession()
                 } finally {
-                    commandConnection.close()
+                    commands.close()
+                    events.close()
+                    try {
+                        eventConnection.close()
+                    } finally {
+                        commandConnection.close()
+                    }
                 }
+            } finally {
+                closed.complete(Unit)
             }
         }
     }

@@ -33,6 +33,7 @@ internal interface WifiRemoteConnection {
     val canCapture: Boolean
     val canTransferImages: Boolean get() = false
     val canConvertHeif: Boolean get() = false
+    val photoHandlesSurviveModeSwitch: Boolean get() = true
     suspend fun openPhotoBrowser(): CameraPhotoPage = error("Photo browsing unavailable")
     suspend fun photoPage(offset: Int): CameraPhotoPage = error("Photo browsing unavailable")
     suspend fun photoThumbnail(handle: Long): ImageBitmap? = null
@@ -45,6 +46,9 @@ internal interface WifiRemoteConnection {
         WifiImageTransferState(WifiImageTransferStatus.Failed)
 
     suspend fun closePhotoBrowser() {}
+
+    /** End transfer mode without reopening a shooting session during teardown. */
+    suspend fun prepareToDisconnect() = closePhotoBrowser()
     val images: Flow<ImageBitmap>
     val lost: Flow<Unit>
     suspend fun capture(): WifiCaptureStatus
@@ -379,7 +383,12 @@ class WifiRemoteController internal constructor(
             _thumbnails.value = emptyMap()
             updateReady(id) {
                 it.copy(
-                    photoBrowser = WifiPhotoBrowserState(savedDownloads = it.photoBrowser.savedDownloads),
+                    photoBrowser = WifiPhotoBrowserState(
+                        savedDownloads =
+                            if (connection.photoHandlesSurviveModeSwitch) it.photoBrowser.savedDownloads else emptySet()
+                    ),
+                    canCaptureStill = connection.canCapture,
+                    canTransferImages = connection.canTransferImages,
                     imageTransfer = WifiImageTransferState(), preview = WifiPreviewStatus.Waiting
                 )
             }
@@ -566,7 +575,7 @@ class WifiRemoteController internal constructor(
                 try {
                     if (failure == null) {
                         try {
-                            withTimeoutOrNull(5.seconds) { connection?.closePhotoBrowser() }
+                            withTimeoutOrNull(5.seconds) { connection?.prepareToDisconnect() }
                         } catch (_: Exception) { /* Socket closure also ends transfer mode. */
                         }
                     }

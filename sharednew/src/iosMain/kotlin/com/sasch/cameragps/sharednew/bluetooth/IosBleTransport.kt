@@ -32,6 +32,7 @@ import platform.Foundation.NSError
 import platform.Foundation.create
 import platform.darwin.NSObject
 import platform.posix.memcpy
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * iOS implementation of [BlePeripheralTransport] over CoreBluetooth.
@@ -407,7 +408,7 @@ internal class IosBleTransport(
                     "(attempt ${discovery.gateRetryCount}/${pairingPolicy.maxRetries})"
             }
             scope.launch {
-                delay(pairingPolicy.retryDelayMs)
+                delay(pairingPolicy.retryDelayMs.milliseconds)
                 if (handle.discovery === discovery) {
                     handle.peripheral.setNotifyValue(true, forCharacteristic = characteristic)
                 }

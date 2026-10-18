@@ -147,9 +147,12 @@ fun DeviceDetailScreen(
                         )
                     }
                 },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface,
+                    // scrolledContainerColor = Color.Unspecified,
+                    // navigationIconContentColor = Color.Unspecified,
                     titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    // actionIconContentColor = Color.Unspecified
                 )
             )
         }

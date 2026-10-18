@@ -64,7 +64,7 @@ private class AndroidWifiRemoteConnector(context: Context) : WifiRemoteConnector
         val links = connectivity.getLinkProperties(network)
             ?: throw WifiRemoteConnectException(WifiRemoteFailure.NetworkLost)
         if (links.linkAddresses.none { link ->
-                android.net.IpPrefix(link.address, link.prefixLength).contains(address)
+                ipPrefixContains(link.address, link.prefixLength, address)
             } || links.linkAddresses.any { it.address == address }) {
             throw WifiRemoteConnectException(WifiRemoteFailure.JoinCameraWifi)
         }

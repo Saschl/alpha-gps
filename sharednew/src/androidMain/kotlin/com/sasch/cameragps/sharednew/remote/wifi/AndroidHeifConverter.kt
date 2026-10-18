@@ -1,12 +1,12 @@
 package com.sasch.cameragps.sharednew.remote.wifi
 
 import android.graphics.Bitmap
-import android.util.Log
 import androidx.exifinterface.media.ExifInterface
+import com.diamondedge.logging.logging
 import com.sasch.cameragps.heif.HeifDecoder
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
@@ -34,7 +34,7 @@ internal suspend fun convertAndroidHeifToJpeg(source: File, target: File) = with
     } catch (cancelled: CancellationException) {
         throw cancelled
     } catch (failure: Exception) {
-        Log.w("CameraHeif", "JPEG conversion failed while $stage", failure)
+        logging("CameraHeif").w(failure) { "JPEG conversion failed while $stage" }
         throw failure
     } catch (failure: OutOfMemoryError) {
         throw IOException("Insufficient memory for HEIF conversion", failure)

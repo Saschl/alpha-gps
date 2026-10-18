@@ -101,27 +101,27 @@ class BleSessionCoordinator(
         val id = identifier.uppercase()
         val uuid = characteristicUuid.lowercase()
 
-        when {
-            uuid == SonyBluetoothConstants.CHARACTERISTIC_ENABLE_UNLOCK_GPS_COMMAND.lowercase() -> {
+        when (uuid) {
+            SonyBluetoothConstants.CHARACTERISTIC_ENABLE_UNLOCK_GPS_COMMAND.lowercase() -> {
                 if (!success) return
                 handleGpsUnlockResponse(id)
             }
 
-            uuid == SonyBluetoothConstants.CHARACTERISTIC_ENABLE_LOCK_GPS_COMMAND.lowercase() -> {
+            SonyBluetoothConstants.CHARACTERISTIC_ENABLE_LOCK_GPS_COMMAND.lowercase() -> {
                 if (!success) return
                 sendTimeSyncOrComplete(id)
             }
 
-            uuid == SonyBluetoothConstants.TIME_SYNC_CHARACTERISTIC_UUID.lowercase() -> {
+            SonyBluetoothConstants.TIME_SYNC_CHARACTERISTIC_UUID.lowercase() -> {
                 // Time sync failed → still proceed to transmission (matches existing behavior)
                 markReadyForTransmission(id)
             }
 
-            uuid == SonyBluetoothConstants.CHARACTERISTIC_UUID.lowercase() -> {
+            SonyBluetoothConstants.CHARACTERISTIC_UUID.lowercase() -> {
                 // Location data write response — nothing to do
             }
 
-            uuid == SonyBluetoothConstants.REMOTE_CHARACTERISTIC_UUID.lowercase() -> {
+            SonyBluetoothConstants.REMOTE_CHARACTERISTIC_UUID.lowercase() -> {
                 remoteControlCoordinator.onRemoteControlWriteResponse(id, success)
             }
         }

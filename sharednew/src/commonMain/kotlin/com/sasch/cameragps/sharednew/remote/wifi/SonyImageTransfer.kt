@@ -5,8 +5,8 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.TimeoutCancellationException
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
@@ -101,11 +101,13 @@ internal class SonyImageTransfer(
     val supported: Boolean = catalog != null || listOf(
         GET_STORAGE_IDS,
         GET_HANDLES,
-        GET_OBJECT_INFO,
         GET_PROPERTIES,
         SET_TRANSFER_MODE
     )
         .all(capabilities.deviceInfo::supports) &&
+            (capabilities.deviceInfo.supports(GET_OBJECT_INFO) || capabilities.deviceInfo.supports(
+                GET_OBJECT_PROP_LIST
+            )) &&
             (capabilities.deviceInfo.supports(GET_PARTIAL_LARGE_OBJECT) || capabilities.deviceInfo.supports(
                 GET_PARTIAL_OBJECT
             )) &&
@@ -141,7 +143,7 @@ internal class SonyImageTransfer(
         }
         val photos = mutableListOf<WifiCameraPhoto>()
         for (handle in found.distinct().asReversed()) {
-            val info = SonyImageInfo.parse(data(GET_OBJECT_INFO, listOf(handle), 4096))
+            val info = objectInfo(handle)
             if (info.mimeType.isNotEmpty()) photos += WifiCameraPhoto(
                 handle, info.filename, info.size, info.mimeType, info.capturedAt,
                 info.size in 1..MAX_IMAGE_BYTES, info.captureId
@@ -234,13 +236,7 @@ internal class SonyImageTransfer(
         try {
             return withTimeout(5.minutes) {
                 // Re-read metadata before saving: the card may have changed since listing.
-                val info = catalog?.revalidate(handle) ?: SonyImageInfo.parse(
-                    data(
-                        GET_OBJECT_INFO,
-                        listOf(handle),
-                        4096
-                    )
-                )
+                val info = catalog?.revalidate(handle) ?: objectInfo(handle)
                 check(
                     info.filename == photo.filename && info.size == photo.size && info.mimeType == photo.mimeType &&
                             info.capturedAt == photo.capturedAt
@@ -313,6 +309,19 @@ internal class SonyImageTransfer(
         return (result as PtpIpTransactionResult.Response).data ?: error("Missing camera data")
     }
 
+    private suspend fun objectInfo(handle: Long): SonyImageInfo =
+        if (capabilities.deviceInfo.supports(GET_OBJECT_INFO)) {
+            SonyImageInfo.parse(data(GET_OBJECT_INFO, listOf(handle), 4096))
+        } else {
+            SonyMtpObjectInfo.parse(
+                data(
+                    GET_OBJECT_PROP_LIST,
+                    listOf(handle, 0, 0xffffffffL, 0, 0),
+                    64 * 1024
+                ), handle
+            )
+        }
+
     private suspend fun read(handle: Long, offset: Long, length: Int): ByteArray {
         val bytes = if (catalog != null) catalog.read(handle, offset, length) else {
             val large = capabilities.deviceInfo.supports(GET_PARTIAL_LARGE_OBJECT)
@@ -343,6 +352,7 @@ internal class SonyImageTransfer(
         private const val GET_STORAGE_IDS = 0x1004
         private const val GET_HANDLES = 0x1007
         private const val GET_OBJECT_INFO = 0x1008
+        private const val GET_OBJECT_PROP_LIST = 0x9805
         private const val GET_THUMB = 0x100a
         private const val GET_PARTIAL_OBJECT = 0x101b
         private const val GET_PARTIAL_LARGE_OBJECT = 0x9211

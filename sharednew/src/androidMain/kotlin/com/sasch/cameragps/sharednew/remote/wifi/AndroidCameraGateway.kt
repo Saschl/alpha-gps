@@ -1,6 +1,5 @@
 package com.sasch.cameragps.sharednew.remote.wifi
 
-import android.net.IpPrefix
 import android.net.LinkProperties
 import java.net.Inet4Address
 
@@ -22,10 +21,7 @@ internal fun cameraGateway(properties: LinkProperties): String? {
         .filter { gateway ->
             !gateway.isAnyLocalAddress && !gateway.isLoopbackAddress && !gateway.isMulticastAddress &&
                     local.none { it.address == gateway } && local.any {
-                IpPrefix(
-                    it.address,
-                    it.prefixLength
-                ).contains(gateway)
+                ipPrefixContains(it.address, it.prefixLength, gateway)
             }
         }
         .mapNotNull { it.hostAddress }.distinct().singleOrNull()

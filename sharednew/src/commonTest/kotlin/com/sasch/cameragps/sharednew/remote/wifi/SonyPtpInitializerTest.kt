@@ -8,9 +8,9 @@ import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
-import kotlin.test.assertFailsWith
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class SonyPtpInitializerTest : WifiLoggingTest() {
@@ -135,6 +135,48 @@ class SonyPtpInitializerTest : WifiLoggingTest() {
         assertEquals(0x1003, (transport.sent.last().body[4].toInt() and 0xff) or
             ((transport.sent.last().body[5].toInt() and 0xff) shl 8))
         queue.close()
+    }
+
+    @Test
+    fun mediaServerCapabilityIsExplicitAndUnambiguous() {
+        assertTrue(
+            SonyDidMediaServer.supported(
+                "<!-- <X_PTP_MediaServerSupport>Disable</X_PTP_MediaServerSupport> --><s:X_PTP_MediaServerSupport>Enable</s:X_PTP_MediaServerSupport>".encodeToByteArray()
+            )
+        )
+        for (value in listOf("Disable", "Unknown", "true", "1", "")) {
+            assertEquals(
+                false, SonyDidMediaServer.supported(
+                    "<X_PTP_MediaServerSupport>$value</X_PTP_MediaServerSupport>".encodeToByteArray()
+                )
+            )
+        }
+        assertEquals(false, SonyDidMediaServer.supported("<Device/>".encodeToByteArray()))
+        for (xml in listOf(
+            "<X_PTP_MediaServerSupport>Enable</X_PTP_MediaServerSupport>".repeat(2),
+            "<!DOCTYPE Device><Device/>", "x".repeat(65537)
+        )) {
+            assertFailsWith<IllegalArgumentException> { SonyDidMediaServer.supported(xml.encodeToByteArray()) }
+        }
+    }
+
+    @Test
+    fun requestingTransferWithoutAdvertisedSupportNeverOpensSession() = runTest {
+        val transport = Transport()
+        val queue = PtpIpCommandQueue(transport, backgroundScope)
+        val initializer = SonyPtpInitializer(queue)
+        transport.reply(1, deviceInfo())
+        transport.reply(2, "<Device/>".encodeToByteArray())
+        transport.reply(3, "<X_ServerVersion>3.00</X_ServerVersion>".encodeToByteArray())
+        try {
+            assertEquals(
+                SonyPtpInitializationResult.Failed("unsupported_transfer_session"),
+                initializer.initialize(SonySessionPurpose.ImageTransfer)
+            )
+            assertEquals(3, transport.sent.size)
+        } finally {
+            queue.close()
+        }
     }
 
     @Test

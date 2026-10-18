@@ -13,6 +13,7 @@ import platform.Foundation.NSDate
 import platform.Foundation.NSUserDefaults
 import platform.Foundation.timeIntervalSince1970
 import platform.UIKit.UIViewController
+import kotlin.time.Duration.Companion.milliseconds
 
 internal class IosReviewPromptStore(
     private val defaults: NSUserDefaults = NSUserDefaults.standardUserDefaults,
@@ -70,7 +71,7 @@ internal fun IosReviewPromptEffect(
         if (!canPresent || hadCompetingPrompt || (!hasSavedCamera && !reviewTestMode)) return@LaunchedEffect
         // Let the device list settle. Navigation, backgrounding, and new dialogs
         // cancel this effect; don't stack a review immediately after another ask.
-        delay(2_000)
+        delay(2_000.milliseconds)
         controller.requestIfDue(
             isForeground = true,
             hasSavedCamera = hasSavedCamera,
