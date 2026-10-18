@@ -1,3 +1,13 @@
+<p>
+  <a href="https://apps.apple.com/us/app/alpha-gps-camera-geotagging/id6760982303"><img height="48" alt="Download on the App Store" src="Download_on_the_App_Store_Badge_US-UK_RGB_blk_092917.svg" /></a>
+  <a href="https://play.google.com/store/apps/details?id=com.saschl.cameragps"><img height="48" alt="Get it on Google Play" src="https://github.com/user-attachments/assets/775cb6fc-a297-4208-9249-43291c52d045" /></a>
+  <a href="https://f-droid.org/de/packages/com.saschl.cameragps/"><img height="48" alt="Get it on F-Droid" src="https://f-droid.org/badge/get-it-on.svg" /></a>
+</p>
+
+You can also get the Android APK
+from [GitHub Releases](https://github.com/Saschl/alpha-gps/releases) and install it directly on your
+phone, or add the repository URL to Obtainium.
+
 <a href="https://hosted.weblate.org/engage/alpha-gps/">
 <img src="https://hosted.weblate.org/widget/alpha-gps/svg-badge.svg" alt="Übersetzungsstatus" />
 </a>
@@ -14,16 +24,6 @@ It makes use of the companion device manager APIs of Android which *should* prov
 > [!NOTE]
 > I will move and add documentation to the new webpage at https://alphagps.app in the future
 
-
-## How to install?
-
-<a href="https://apps.apple.com/us/app/alpha-gps-camera-geotagging/id6760982303"><img width="200" alt="Download_on_the_App_Store_Badge_US" src="Download_on_the_App_Store_Badge_US-UK_RGB_blk_092917.svg"/></a>
-
-<a href="https://play.google.com/store/apps/details?id=com.saschl.cameragps"><img width="200" alt="GetItOnGooglePlay_Badge_Web_color_English" src="https://github.com/user-attachments/assets/775cb6fc-a297-4208-9249-43291c52d045" /></a>
-
-<a href="https://f-droid.org/de/packages/com.saschl.cameragps/"><img width="200" alt="Get it on F-Droid" src="https://f-droid.org/badge/get-it-on.svg" /></a>
-
-You can also get the APK for Android from the releases and install it directly on your phone. Or use Obtainium and enter the repo URL for a more seamless experience.
 
 ## Error monitoring with Sentry
 
@@ -48,31 +48,6 @@ git submodule update --init --recursive
 
 Run this again after pulling changes that update the dependencies. Native builds use these local
 sources without downloading dependencies. F-Droid build recipes must enable `submodules: true`.
-
-## Build a Google Play bundle
-
-```bash
-./tools/build-play-aab.sh
-```
-
-Builds `app/build/outputs/bundle/gplayRelease/app-gplay-release.aab` with Sentry mapping,
-source-context and native-symbol uploads disabled. Runtime crash reporting still follows the app's
-consent settings. Extra Gradle arguments can be passed to the script, for example `--offline`.
-
-For a signed bundle:
-
-```bash
-./tools/build-play-aab.sh --keystore /path/to/release.jks --alias your-key-alias
-```
-
-Relative keystore paths are resolved from the directory where you run the script. The path defaults
-to `app/keystore.jks` in the repository. You can also set
-`SIGNING_KEYSTORE_PATH` and `SIGNING_KEY_ALIAS` in the environment; command-line options take
-priority. The script reads the keystore password from stdin without echoing it, unless
-`SIGNING_STORE_PASSWORD` is already set. The key password defaults to the keystore password; set
-`SIGNING_KEY_PASSWORD` if it differs. With no signing options or signing path/alias environment
-variables, the build produces an unsigned bundle. Explicit signing requests fail if the keystore or
-alias is missing.
 
 ## How can I contribute?
 As the project is open source, contributions are welcome! Just check out the repo, open Android Studio and create a Pull Request.
