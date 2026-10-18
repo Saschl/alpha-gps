@@ -37,6 +37,7 @@ import androidx.navigationevent.NavigationEventInfo
 import androidx.navigationevent.compose.NavigationBackHandler
 import androidx.navigationevent.compose.rememberNavigationEventState
 import cameragps.sharednew.generated.resources.Res
+import cameragps.sharednew.generated.resources.wifi_connection_failed
 import cameragps.sharednew.generated.resources.wifi_remote_address_failed
 import cameragps.sharednew.generated.resources.wifi_remote_approval
 import cameragps.sharednew.generated.resources.wifi_remote_auto_connect
@@ -72,6 +73,7 @@ import cameragps.sharednew.generated.resources.wifi_remote_rejected
 import cameragps.sharednew.generated.resources.wifi_remote_selection_clear
 import cameragps.sharednew.generated.resources.wifi_remote_settings
 import cameragps.sharednew.generated.resources.wifi_remote_setup
+import cameragps.sharednew.generated.resources.wifi_remote_setup_detect_address
 import cameragps.sharednew.generated.resources.wifi_remote_setup_failed
 import cameragps.sharednew.generated.resources.wifi_remote_shooting
 import cameragps.sharednew.generated.resources.wifi_remote_shutdown_requested
@@ -213,6 +215,7 @@ fun WifiRemoteScreen(viewModel: WifiRemoteViewModel, onConnect: (String) -> Unit
                      wifiSettingsLabel: String = stringResource(Res.string.wifi_remote_settings),
                      networkPermissionMessage: String = stringResource(Res.string.wifi_remote_permission),
                      openingSessionMessage: String = stringResource(Res.string.wifi_remote_opening),
+                     onAppSettings: (() -> Unit)? = null,
                      onDownloadPhotos: (List<WifiPhotoDownload>) -> Unit = { downloads ->
                          viewModel.controller.downloadPhotos(viewModel.identifier, downloads)
                      }
@@ -318,12 +321,20 @@ fun WifiRemoteScreen(viewModel: WifiRemoteViewModel, onConnect: (String) -> Unit
                             }
                         }
                         if (manual) {
-                            Text(stringResource(Res.string.wifi_remote_setup))
+                            Text(
+                                stringResource(
+                                    if (controller.supportsAddressDiscovery) Res.string.wifi_remote_setup_detect_address
+                                    else Res.string.wifi_remote_setup
+                                )
+                            )
                             OutlinedButton(onClick = onWifiSettings) { Text(wifiSettingsLabel) }
                             OutlinedTextField(value = viewModel.host, onValueChange = { viewModel.host = it.take(64) },
                                 label = { Text(stringResource(Res.string.wifi_remote_ip)) }, singleLine = true,
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
-                            Button(onClick = { onConnect(viewModel.host) }, enabled = viewModel.host.isNotBlank() && !otherCamera) {
+                            Button(
+                                onClick = { onConnect(viewModel.host) },
+                                enabled = (controller.supportsAddressDiscovery || viewModel.host.isNotBlank()) && !otherCamera
+                            ) {
                                 Text(stringResource(Res.string.wifi_remote_connect))
                             }
                         }
@@ -353,6 +364,7 @@ fun WifiRemoteScreen(viewModel: WifiRemoteViewModel, onConnect: (String) -> Unit
                             WifiRemoteFailure.InvalidAddress -> Res.string.wifi_remote_invalid_ip
                             WifiRemoteFailure.JoinCameraWifi -> Res.string.wifi_remote_join_wifi
                             WifiRemoteFailure.NetworkPermissionDenied -> Res.string.wifi_remote_permission
+                            WifiRemoteFailure.NetworkConnectionFailed -> Res.string.wifi_connection_failed
                             WifiRemoteFailure.NetworkLost -> Res.string.wifi_remote_lost
                             WifiRemoteFailure.BluetoothRequired -> Res.string.wifi_remote_bluetooth_required
                             WifiRemoteFailure.CameraSetupFailed -> Res.string.wifi_remote_setup_failed
@@ -363,6 +375,9 @@ fun WifiRemoteScreen(viewModel: WifiRemoteViewModel, onConnect: (String) -> Unit
                             WifiRemoteFailure.LocationServicesRequired -> Res.string.wifi_remote_location_required
                             else -> Res.string.wifi_remote_failed
                         }), color = MaterialTheme.colorScheme.error)
+                    }
+                    if (noticeAcknowledged && onAppSettings != null) {
+                        WifiConnectionHelp(state.failure, onAppSettings)
                     }
                     if (ready) {
                         Text(stringResource(Res.string.wifi_remote_connected, state.cameraName))

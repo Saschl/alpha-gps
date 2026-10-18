@@ -6,6 +6,7 @@ import androidx.compose.ui.graphics.colorspace.ColorSpaces
 import com.sasch.cameragps.sharednew.bluetooth.session.CameraSessionRegistry
 import com.sasch.cameragps.sharednew.ui.remote.WifiRemoteViewModel
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.awaitCancellation
@@ -165,6 +166,30 @@ class WifiRemoteControllerTest : WifiLoggingTest() {
                 ),
             )
         }
+    }
+
+    @Test
+    fun blankAddressUsesManualConnectorWithoutBluetoothSetup() = runTest {
+        val registry = CameraSessionRegistry()
+        val connection = Connection()
+        var receivedHost: String? = null
+        val connector = object : WifiRemoteConnector {
+            override val supportsAddressDiscovery = true
+            override suspend fun open(host: String, scope: CoroutineScope): WifiRemoteConnection {
+                receivedHost = host
+                return connection
+            }
+        }
+        val controller = WifiRemoteController(
+            backgroundScope, registry, connector, {}, {},
+            automaticConnector = { _, _, _ -> error("Unexpected Bluetooth setup") },
+        )
+        assertTrue(controller.supportsAddressDiscovery)
+        controller.connect("camera", "  ")
+        runCurrent()
+        assertEquals("", receivedHost)
+        assertEquals(WifiRemotePhase.Ready, registry.get("camera")?.wifiRemote?.phase)
+        controller.closeAndJoin()
     }
 
     @Test
@@ -725,6 +750,33 @@ class WifiRemoteControllerTest : WifiLoggingTest() {
         assertEquals(listOf("connection", "ble"), connection.cleanup.takeLast(2))
         assertNull(controller.owner.value)
         assertNull(registry.get("camera"))
+    }
+
+    @Test
+    fun networkFailureSurvivesCleanupAndSuccessfulRetryClearsGuidance() = runTest {
+        val registry = CameraSessionRegistry()
+        val connection = Connection()
+        var fail = true
+        var releases = 0
+        val controller = WifiRemoteController(backgroundScope, registry, { _, _ ->
+            if (fail) throw WifiRemoteConnectException(WifiRemoteFailure.NetworkConnectionFailed)
+            connection
+        }, {}, { releases++ })
+        controller.connect("camera", "127.0.0.1")
+        runCurrent()
+        assertEquals(
+            WifiRemoteFailure.NetworkConnectionFailed,
+            registry.get("camera")!!.wifiRemote.failure
+        )
+        assertEquals(1, releases)
+        assertNull(controller.owner.value)
+
+        fail = false
+        controller.connect("camera", "127.0.0.1")
+        assertNull(registry.get("camera")!!.wifiRemote.failure)
+        runCurrent()
+        assertEquals(WifiRemotePhase.Ready, registry.get("camera")!!.wifiRemote.phase)
+        controller.closeAndJoin()
     }
 
     @Test

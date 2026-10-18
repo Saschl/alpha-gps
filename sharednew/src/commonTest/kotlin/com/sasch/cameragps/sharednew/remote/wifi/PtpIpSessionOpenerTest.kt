@@ -2,12 +2,14 @@ package com.sasch.cameragps.sharednew.remote.wifi
 
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -49,6 +51,20 @@ class PtpIpSessionOpenerTest : WifiLoggingTest() {
         val command = FakeConnection().apply { replies.trySend(PtpIpPacket(PtpIpHandshake.INIT_FAIL, byteArrayOf(1, 0, 0, 0))) }
         val opener = PtpIpSessionOpener(PtpIpConnectionFactory { command }, backgroundScope)
         assertNull(opener.open(ByteArray(16), "AlphaGPS"))
+        assertTrue(command.closed)
+    }
+
+    @Test
+    fun eventSocketFailureKeepsNetworkGuidanceAndClosesCommandSocket() = runTest {
+        val command = FakeConnection().apply { replies.trySend(commandAck()) }
+        val failure = WifiRemoteConnectException(WifiRemoteFailure.NetworkConnectionFailed)
+        var connections = 0
+        val opener = PtpIpSessionOpener(PtpIpConnectionFactory {
+            if (connections++ == 0) command else throw failure
+        }, backgroundScope)
+        assertSame(failure, assertFailsWith<WifiRemoteConnectException> {
+            opener.open(ByteArray(16), "AlphaGPS")
+        })
         assertTrue(command.closed)
     }
 

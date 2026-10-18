@@ -1,14 +1,15 @@
 package com.sasch.cameragps.sharednew.remote.wifi
 
 import com.diamondedge.logging.logging
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.time.Duration.Companion.milliseconds
 
 /** Native socket implementation must bind both connections to the selected camera network. */
 internal interface PtpIpPacketConnection : PtpIpCommandTransport {
@@ -68,7 +69,7 @@ internal class PtpIpSessionOpener(
     private val log = logging()
 
     suspend fun open(clientGuid: ByteArray, clientName: String): PtpIpOpenedSession? =
-        withTimeoutOrNull(timeoutMs) {
+        withTimeoutOrNull(timeoutMs.milliseconds) {
             var command: PtpIpPacketConnection? = null
             var event: PtpIpPacketConnection? = null
             try {
@@ -92,7 +93,7 @@ internal class PtpIpSessionOpener(
                 log.i { "Wi-Fi PTP opening cancelled or timed out: ${cancelled.message}" }
                 throw cancelled
             } catch (failure: WifiRemoteConnectException) {
-                log.w { "Wi-Fi PTP connection failed: ${failure.failure}" }
+                log.w { "Wi-Fi PTP connection failed: ${failure.failure}; cause=${failure.cause}" }
                 throw failure
             } catch (failure: Exception) {
                 log.w { "Wi-Fi PTP handshake failed: ${failure.message}" }

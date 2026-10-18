@@ -365,6 +365,7 @@
     <string name="wifi_remote_entry_hint">Live view, shutter and photo downloads</string>
     <string name="wifi_remote_setup">Start the camera’s smartphone Wi-Fi connection, disconnect Creators’ App, then join the camera’s Wi-Fi in phone settings. Enter the camera IP address.</string>
     <string name="wifi_remote_ip">Camera IP address</string>
+    <string name="wifi_remote_setup_detect_address">Start remote shooting on the camera and close Sony’s app, then join the camera’s Wi-Fi in phone settings. Leave the IP address blank to detect it automatically, or enter it manually.</string>
     <string name="wifi_remote_settings">Open Wi-Fi settings</string>
     <string name="wifi_remote_connect">Connect</string>
     <string name="wifi_remote_disconnect">Disconnect</string>
@@ -387,6 +388,10 @@
     <string name="wifi_remote_invalid_ip">Enter the camera’s IPv4 address, for example the address shown in its Wi-Fi connection details.</string>
     <string name="wifi_remote_join_wifi">Join the camera’s Wi-Fi network in phone settings, then return here.</string>
     <string name="wifi_remote_permission">Connection permission was denied. Allow Nearby devices in the app’s permission settings, or precise Location on older Android versions, then try again.</string>
+    <string name="wifi_connection_failed">Couldn’t open a Wi-Fi connection to the camera.</string>
+    <string name="wifi_connection_help">Connection help</string>
+    <string name="wifi_connection_help_title">Check connection settings</string>
+    <string name="wifi_connection_help_message">Make sure the camera is ready for remote shooting and this phone is connected to its Wi-Fi.\n\nSome Android versions can block an app’s network access. In App settings, look for “Mobile data &amp; Wi-Fi”, “Network access” or “Restrict data usage”, and allow Wi-Fi for Alpha GPS. Under Permissions, allow Nearby devices or precise Location if requested, and Local network if listed.\n\nReturn here and try connecting again. Setting names vary by phone.</string>
     <string name="wifi_remote_failed">Could not connect. Check the camera IP, keep its smartphone connection active, and close other camera-control apps.</string>
     <string name="wifi_remote_lost">The camera connection was lost. Join its Wi-Fi again and reconnect.</string>
     <string name="wifi_remote_other_camera">Another Wi-Fi remote session is open. Close it before connecting this camera.</string>

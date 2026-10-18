@@ -34,6 +34,7 @@ fun createAndroidWifiRemoteController(context: Context, scope: CoroutineScope,
 }
 
 private class AndroidWifiRemoteConnector(context: Context) : WifiRemoteConnector {
+    override val supportsAddressDiscovery = true
     private val imageStore = AndroidCameraImageStore(context)
     private val connectivity = context.getSystemService(ConnectivityManager::class.java)
 
@@ -43,8 +44,6 @@ private class AndroidWifiRemoteConnector(context: Context) : WifiRemoteConnector
     }
 
     private suspend fun openCamera(host: String, scope: CoroutineScope): WifiRemoteConnection {
-        try { SonyLiveViewEndpoint.fromUrl("http://$host/", host) }
-        catch (_: IllegalArgumentException) { throw WifiRemoteConnectException(WifiRemoteFailure.InvalidAddress) }
         val candidates = connectivity.allNetworks.filter { network ->
             val caps = connectivity.getNetworkCapabilities(network)
             caps?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true &&
@@ -52,7 +51,12 @@ private class AndroidWifiRemoteConnector(context: Context) : WifiRemoteConnector
         }
         if (candidates.size != 1) throw WifiRemoteConnectException(WifiRemoteFailure.JoinCameraWifi)
         val network = candidates.single()
-        return openOnNetwork(network, host, scope)
+        val cameraHost = resolveCameraHost(host) {
+            val links = connectivity.getLinkProperties(network)
+                ?: throw WifiRemoteConnectException(WifiRemoteFailure.NetworkLost)
+            cameraGateway(links)
+        }
+        return openOnNetwork(network, cameraHost, scope)
     }
 
     suspend fun openOnNetwork(network: Network, host: String, scope: CoroutineScope): WifiRemoteConnection {

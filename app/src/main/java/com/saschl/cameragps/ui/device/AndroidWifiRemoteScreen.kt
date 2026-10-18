@@ -20,6 +20,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.content.ContextCompat
+import androidx.core.net.toUri
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -111,6 +112,14 @@ fun AndroidWifiRemoteScreen(identifier: String, onClose: () -> Unit) {
             )
         },
         onAcknowledgeExperimentalNotice = { PreferencesManager.acknowledgeWifiRemoteNotice(context) },
+        onAppSettings = {
+            context.startActivity(
+                Intent(
+                    Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                    "package:${context.packageName}".toUri()
+                )
+            )
+        },
         onDownloadPhotos = { downloads ->
             if (Build.VERSION.SDK_INT <= 28 && ContextCompat.checkSelfPermission(
                     context,

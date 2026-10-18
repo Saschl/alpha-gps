@@ -17,6 +17,7 @@ enum class WifiRemoteFailure {
     CameraUnavailable,
     CameraRefused,
     NetworkPermissionDenied,
+    NetworkConnectionFailed,
     NetworkLost,
     AnotherController,
     ProtocolError,

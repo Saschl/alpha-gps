@@ -53,6 +53,9 @@ internal interface WifiRemoteConnection {
 }
 
 internal fun interface WifiRemoteConnector {
+    val supportsAddressDiscovery: Boolean get() = false
+
+    /** A blank host requests address discovery when supported. */
     suspend fun open(host: String, scope: CoroutineScope): WifiRemoteConnection
 }
 
@@ -68,7 +71,11 @@ internal interface WifiManualSetupConnector {
     ): WifiRemoteConnection
 }
 
-internal class WifiRemoteConnectException(val failure: WifiRemoteFailure) : Exception("Wi-Fi remote connection failed")
+internal class WifiRemoteConnectException(
+    val failure: WifiRemoteFailure,
+    cause: Throwable? = null
+) :
+    Exception("Wi-Fi remote connection failed", cause)
 
 data class WifiPhotoPreview(
     val handle: Long,
@@ -90,6 +97,7 @@ class WifiRemoteController internal constructor(
     private var attempt = 0
     val supportsAutomaticConnection get() = automaticConnector != null
     val supportsManualSetup get() = manualSetupConnector != null
+    val supportsAddressDiscovery get() = connector.supportsAddressDiscovery
     val sessions = registry.sessions
     private val _image = MutableStateFlow<ImageBitmap?>(null)
     val image = _image.asStateFlow()

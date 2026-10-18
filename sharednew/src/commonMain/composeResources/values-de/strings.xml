@@ -343,6 +343,7 @@
     <string name="wifi_remote_entry_hint">Live-Ansicht, Auslöser und Foto-Downloads</string>
     <string name="wifi_remote_setup">Starte an der Kamera die WLAN-Verbindung für Smartphones und trenne die Verbindung zur Creators’ App. Verbinde dich anschließend in den Einstellungen deines Smartphones mit dem WLAN der Kamera. Gib die IP-Adresse der Kamera ein.</string>
     <string name="wifi_remote_ip">IP-Adresse der Kamera</string>
+    <string name="wifi_remote_setup_detect_address">Starte die Fernaufnahme an der Kamera und schließe die Sony-App. Verbinde dich anschließend in den Einstellungen deines Smartphones mit dem WLAN der Kamera. Lass die IP-Adresse leer, um sie automatisch zu ermitteln, oder gib sie manuell ein.</string>
     <string name="wifi_remote_settings">Öffne die WLAN-Einstellungen</string>
     <string name="wifi_remote_connect">Verbinden</string>
     <string name="wifi_remote_disconnect">Verbindung trennen</string>
@@ -365,6 +366,10 @@
     <string name="wifi_remote_invalid_ip">Die IP-Adresse der Kamera eingeben. Diese kann in den WLAN-Einstellungen der Kamera oder des Smartphones gefunden werden.</string>
     <string name="wifi_remote_join_wifi">Verbinde dich mit dem WLAN-Netzwerk der Kamera und komme hier zurück.</string>
     <string name="wifi_remote_permission">Die Verbindungsberechtigung wurde verweigert. Erlaube in den Berechtigungseinstellungen der App „Geräte in der Nähe“ oder bei älteren Android-Versionen „Genauer Standort“ und versuche es dann erneut.</string>
+    <string name="wifi_connection_failed">Die WLAN-Verbindung zur Kamera konnte nicht geöffnet werden.</string>
+    <string name="wifi_connection_help">Verbindungshilfe</string>
+    <string name="wifi_connection_help_title">Verbindungseinstellungen prüfen</string>
+    <string name="wifi_connection_help_message">Stelle sicher, dass die Kamera für Fernaufnahmen bereit und dieses Smartphone mit ihrem WLAN verbunden ist.\n\nEinige Android-Versionen können den Netzwerkzugriff einer App blockieren. Suche in den App-Einstellungen nach „Mobile Daten &amp; WLAN“, „Netzwerkzugriff“ oder „Datennutzung einschränken“ und erlaube WLAN für Alpha GPS. Erlaube unter „Berechtigungen“ bei Bedarf „Geräte in der Nähe“ oder „Genauer Standort“ sowie „Lokales Netzwerk“, falls aufgeführt.\n\nKehre anschließend hierher zurück und versuche die Verbindung erneut. Die Bezeichnungen können je nach Smartphone abweichen.</string>
     <string name="wifi_remote_failed">Die Verbindung konnte nicht hergestellt werden. Überprüfe die IP-Adresse der Kamera, halte ihre Smartphone-Verbindung aktiv und schließe andere Apps zur Kamerasteuerung.</string>
     <string name="wifi_remote_lost">Die Verbindung zur Kamera wurde unterbrochen. Verbinde dich erneut mit dem WLAN der Kamera und stelle die Verbindung in der App wieder her.</string>
     <string name="wifi_remote_other_camera">Es ist eine weitere WLAN-Sitzung der Kamera aktiv. Schließe diese, bevor du diese Kamera verbindest.</string>

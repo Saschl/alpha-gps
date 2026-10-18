@@ -1,15 +1,17 @@
 package com.sasch.cameragps.sharednew.remote.wifi
 
 import android.net.Network
-import java.net.InetSocketAddress
-import java.net.Socket
-import java.net.SocketTimeoutException
-import javax.net.SocketFactory
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
+import java.io.IOException
+import java.net.InetSocketAddress
+import java.net.Socket
+import java.net.SocketTimeoutException
+import javax.net.SocketFactory
 
 internal class AndroidPtpIpConnectionFactory(
     private val network: Network,
@@ -56,7 +58,22 @@ internal class AndroidCameraByteConnection(private val socket: Socket) : CameraB
                     AndroidCameraByteConnection(opened)
                 }
             } catch (failure: Throwable) {
-                withContext(NonCancellable + Dispatchers.IO) { socket?.close() }
+                withContext(NonCancellable + Dispatchers.IO) {
+                    try {
+                        socket?.close()
+                    } catch (cleanup: Exception) {
+                        failure.addSuppressed(cleanup)
+                    }
+                }
+                currentCoroutineContext().ensureActive()
+                val causes = generateSequence(failure) { it.cause }.take(16).toList()
+                if (failure is Exception && causes.none { it is CancellationException } &&
+                    causes.any { it is IOException || it is SecurityException }) {
+                    throw WifiRemoteConnectException(
+                        WifiRemoteFailure.NetworkConnectionFailed,
+                        failure
+                    )
+                }
                 throw failure
             }
         }
