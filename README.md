@@ -1,7 +1,9 @@
+# Alpha GPS
+
 <p>
-  <a href="https://apps.apple.com/us/app/alpha-gps-camera-geotagging/id6760982303"><img height="48" alt="Download on the App Store" src="Download_on_the_App_Store_Badge_US-UK_RGB_blk_092917.svg" /></a>
-  <a href="https://play.google.com/store/apps/details?id=com.saschl.cameragps"><img height="48" alt="Get it on Google Play" src="https://github.com/user-attachments/assets/775cb6fc-a297-4208-9249-43291c52d045" /></a>
-  <a href="https://f-droid.org/de/packages/com.saschl.cameragps/"><img height="48" alt="Get it on F-Droid" src="https://f-droid.org/badge/get-it-on.svg" /></a>
+  <a href="https://apps.apple.com/us/app/alpha-gps-camera-geotagging/id6760982303"><img width="144" height="48" alt="Download on the App Store" src="Download_on_the_App_Store_Badge_US-UK_RGB_blk_092917.svg" /></a>&nbsp;
+  <a href="https://play.google.com/store/apps/details?id=com.saschl.cameragps"><img width="162" height="48" alt="Get it on Google Play" src="https://github.com/user-attachments/assets/775cb6fc-a297-4208-9249-43291c52d045" /></a>&nbsp;
+  <a href="https://f-droid.org/de/packages/com.saschl.cameragps/"><img width="161" height="48" alt="Get it on F-Droid" src="website/public/branding/fdroid-badge.svg" /></a>
 </p>
 
 You can also get the Android APK
