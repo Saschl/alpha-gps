@@ -21,8 +21,22 @@ It makes use of the companion device manager APIs of Android which *should* prov
 
 <a href="https://play.google.com/store/apps/details?id=com.saschl.cameragps"><img width="200" alt="GetItOnGooglePlay_Badge_Web_color_English" src="https://github.com/user-attachments/assets/775cb6fc-a297-4208-9249-43291c52d045" /></a>
 
+<a href="https://f-droid.org/de/packages/com.saschl.cameragps/"><img width="200" alt="Get it on F-Droid" src="https://f-droid.org/badge/get-it-on.svg" /></a>
 
 You can also get the APK for Android from the releases and install it directly on your phone. Or use Obtainium and enter the repo URL for a more seamless experience.
+
+## Error monitoring with Sentry
+
+<a href="https://sentry.io/">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="website/public/branding/sentry-light.svg" />
+    <img src="website/public/branding/sentry-dark.svg" width="200" alt="Sentry" />
+  </picture>
+</a>
+
+Alpha GPS uses [Sentry](https://sentry.io/) for error monitoring. The iOS and Google Play versions
+use Sentry for crash reports and diagnostic logs to help find and fix bugs. Reporting is opt-in and
+can be disabled in settings at any time. The F-Droid version does not include Sentry.
 
 ## Prepare a source checkout
 
@@ -62,6 +76,10 @@ alias is missing.
 
 ## How can I contribute?
 As the project is open source, contributions are welcome! Just check out the repo, open Android Studio and create a Pull Request.
+
+For a walkthrough of the connection layers, sessions, live view, photo transfer, and coroutine
+lifetimes, start with the [Wi-Fi architecture guide](docs/wifi-architecture.md).
+
 If you wish to improve the translations, the project is also available on Weblate. Check it
 out [here](https://hosted.weblate.org/engage/alpha-gps/)
 
@@ -103,9 +121,31 @@ until the device is connected again (this will happen automatically once the cam
 
 ## Which cameras are supported?
 
-- All cameras that are supported by the Imaging Edge and Creators' app should also be supported.
-  Reports are welcome, as I do not own all cameras ;) Confirmed working: A1, A7 V, A6400, A6700 and
-  ZV-E10.
+Sony cameras that support Bluetooth location linking with Imaging Edge Mobile or Creators' App
+should work. GPS geotagging has been confirmed on these models:
+
+- A1
+- [A7 III](https://github.com/Saschl/alpha-gps/issues/260)
+- [A7 IV](https://github.com/Saschl/alpha-gps/issues/301)
+- [A7 V](https://github.com/Saschl/alpha-gps/issues/79)
+- A7C II — confirmed by email.
+- [A7R III](https://github.com/Saschl/alpha-gps/issues/95#issuecomment-5609520240) — enable
+  **Location Info. Link** in the camera menu.
+- [A7R V](https://github.com/Saschl/alpha-gps/issues/199)
+- [A99 II](https://github.com/Saschl/alpha-gps/issues/294) — GPS confirmed; remote control, time
+  correction and area adjustment were disabled in the report.
+- [A6400](https://github.com/Saschl/alpha-gps/issues/195)
+- [A6500](https://github.com/Saschl/alpha-gps/issues/301) — geotagging confirmed; other features are
+  limited by the camera's capabilities.
+- [A6700](https://github.com/Saschl/alpha-gps/issues/294)
+- [ZV-1](https://github.com/Saschl/alpha-gps/issues/100)
+- [ZV-E10](https://github.com/Saschl/alpha-gps/issues/67#issuecomment-3678222970)
+
+These are user reports of geotagging, not a guarantee that every model supports remote shutter or
+all time-sync options. Wi-Fi-only models such as the
+[A6000](https://github.com/Saschl/alpha-gps/issues/236) cannot use Bluetooth geotagging. Reports are
+welcome, as I do not own all
+cameras! [Share your results](https://github.com/Saschl/alpha-gps/issues).
 
 
 <img width="242" height="512" alt="unnamed (1)" src="https://github.com/user-attachments/assets/0ee0e403-70a1-431c-bb68-99ddf03b95c3" />
