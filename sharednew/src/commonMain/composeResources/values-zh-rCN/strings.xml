@@ -309,6 +309,8 @@
     <string name="whats_new_close">知道了</string>
     <string name="whats_new_open">查看更新日志</string>
     <string name="whats_new_title">更新日志</string>
+    <string name="whats_new_171_zv1">改进了索尼 ZV-1 和其他较旧索尼相机的 Wi-Fi 遥控兼容性，包括实时取景启动和照片传输。</string>
+    <string name="whats_new_171_rx0">修复了索尼 RX0 II 等相机在关闭“始终开启”模式时，位置共享过程中反复断开蓝牙连接的问题。</string>
     <string name="whats_new_170_wifi_remote">新增实验性 Wi-Fi 遥控功能，支持实时取景、快门控制，以及浏览和下载图像。目前仅在索尼 α6700 上验证过。\n\n打开方式：在设备列表中点击你的相机，然后点击“Wi-Fi remote (experimental)”。</string>
     <string name="whats_new_162_time">在相机的详细信息中查看并切换自动时间校正。该设置决定相机是否使用手机调整其日期和时间。</string>
     <string name="whats_new_162_notifications">位置传输通知现已能更稳定地更新。</string>

@@ -73,6 +73,17 @@ class WhatsNewStateTest {
     }
 
     @Test
+    fun cameraFixReleaseShowsAfterUpgradeWithRx0NoteOnlyOnAndroid() {
+        val android = WhatsNewState("v1.7.1", ReleasePlatform.Android, "1.7.0", false) {}
+        val ios = WhatsNewState("1.7.1", ReleasePlatform.Ios, "1.7.0", false) {}
+        assertTrue(android.pending)
+        assertTrue(ios.pending)
+        assertEquals("1.7.1", android.release?.version)
+        assertEquals(2, android.release!!.highlights.size)
+        assertEquals(listOf(android.release!!.highlights.first()), ios.release!!.highlights)
+    }
+
+    @Test
     fun iosPairingNotesAreOnlyIncludedOnIos() {
         val android = ReleaseNotesCatalog.forVersion("v1.6.2", ReleasePlatform.Android)!!
         val ios = ReleaseNotesCatalog.forVersion("1.6.2", ReleasePlatform.Ios)!!

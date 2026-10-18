@@ -315,6 +315,8 @@
     <string name="camera_setting_retry">Kameraeinstellungen aktualisieren</string>
     <!-- In-app release notes. -->
     <string name="whats_new_title">Was ist neu?</string>
+    <string name="whats_new_171_zv1">Verbesserte Kompatibilität der WLAN-Fernsteuerung mit der Sony ZV-1 und anderen älteren Sony-Kameras, einschließlich Livebild-Start und Fotoübertragung.</string>
+    <string name="whats_new_171_rx0">Wiederholte Bluetooth-Verbindungsabbrüche bei der Standortübertragung mit Kameras wie der Sony RX0 II wurden behoben, wenn Always On deaktiviert ist.</string>
     <string name="whats_new_version">Version %1$s</string>
     <string name="whats_new_close">Verstanden</string>
     <string name="whats_new_open">Versionshinweise anzeigen</string>

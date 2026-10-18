@@ -336,6 +336,8 @@
 
     <!-- In-app release notes. -->
     <string name="whats_new_title">What’s new</string>
+    <string name="whats_new_171_zv1">Improved Wi-Fi remote compatibility for the Sony ZV-1 and other older Sony cameras, including live view startup and photo transfer.</string>
+    <string name="whats_new_171_rx0">Fixed repeated Bluetooth disconnections during location sharing with cameras such as the Sony RX0 II when Always On is disabled.</string>
     <string name="whats_new_version">Version %1$s</string>
     <string name="whats_new_close">Got it</string>
     <string name="whats_new_open">View release notes</string>

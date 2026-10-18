@@ -1,0 +1,4 @@
+What's new:
+
+ - Improved Wi-Fi remote compatibility for the Sony ZV-1 and other older Sony cameras, including live view startup and photo transfer.
+ - Fixed repeated Bluetooth disconnections during location sharing with cameras such as the Sony RX0 II when Always On is disabled.
