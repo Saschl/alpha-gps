@@ -3,7 +3,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 
 const repoUrl = "https://github.com/Saschl/alpha-gps";
 const playStoreUrl = "https://play.google.com/store/apps/details?id=com.saschl.cameragps";
-const fdroidUrl = "https://f-droid.org/de/packages/com.saschl.cameragps/";
+const fdroidUrl = "https://f-droid.org/packages/com.saschl.cameragps/";
 const appStoreId = "6760982303";
 const appStoreUrl = `https://apps.apple.com/us/app/alpha-gps-camera-geotagging/id${appStoreId}`;
 const releasesUrl = "https://github.com/Saschl/alpha-gps/releases";
@@ -79,7 +79,8 @@ const faq = [
 ];
 
 // One entry per store: a combined "Android, iOS" entry with two download URLs
-// can't say which listing belongs to which platform.
+// can't say which listing belongs to which platform. The same goes for the
+// store pages in sameAs.
 const appJsonLd = {
   "@context": "https://schema.org",
   "@type": "MobileApplication",
@@ -106,14 +107,16 @@ const jsonLd = [
     operatingSystem: "Android",
     softwareRequirements: `${minAndroid} or later`,
     downloadUrl: playStoreUrl,
-    installUrl: playStoreUrl
+    installUrl: playStoreUrl,
+    sameAs: [...appJsonLd.sameAs, playStoreUrl, fdroidUrl]
   },
   {
     ...appJsonLd,
     operatingSystem: "iOS",
     softwareRequirements: `${minIos} or later`,
     downloadUrl: appStoreUrl,
-    installUrl: appStoreUrl
+    installUrl: appStoreUrl,
+    sameAs: [...appJsonLd.sameAs, appStoreUrl]
   },
   {
     "@context": "https://schema.org",
@@ -128,8 +131,8 @@ const jsonLd = [
 ---
 
 <BaseLayout
-  title="Alpha GPS for Geotagging"
-  description="Open-source geotagging app that transmits GPS coordinates from your phone to Sony cameras on Android and iOS."
+  title="Alpha GPS – Sony Camera Geotagging App for iPhone & Android"
+  description="Free, open-source app that sends your phone's GPS location to your Sony camera over Bluetooth to geotag every photo. For iPhone and Android, no ads."
   jsonLd={jsonLd}
   appleAppId={appStoreId}
   nav={topNav}
