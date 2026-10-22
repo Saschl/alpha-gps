@@ -2,13 +2,13 @@
 <resources>
     <string name="add_camera">Kamera hinzufügen</string>
     <string name="device_list_need_help">Brauchst du Hilfe?</string>
-    <string name="location_linking_disabled_by_camera">Die Kamera hat die Standortverknüpfung deaktiviert. Aktiviere die Standortinformationen-Verknüpfung in den Kameraeinstellungen, um fortzufahren.</string>
+    <string name="location_linking_disabled_by_camera">Die Kamera hat die Standortverknüpfung deaktiviert. Aktiviere die Standortinformationen-Verknüpfung in den Kameraeinstellungen um fortzufahren.</string>
     <!-- Hinweise vor der Kamera-Suche im Systemdialog. -->
-    <string name="pairing_preparation_title">Kopplungsmodus aktivieren</string>
-    <string name="pairing_preparation_step_bluetooth">Schalte deine Kamera ein und aktiviere Bluetooth in ihren Einstellungen.</string>
+    <string name="pairing_preparation_title">Kopplungsmodus in der Kamera aktivieren</string>
+    <string name="pairing_preparation_step_bluetooth">Schalte deine Kamera ein und aktiviere Bluetooth in den Einstellungen.</string>
     <string name="pairing_preparation_step_pairing">Öffne den Bildschirm für die Bluetooth-Kopplung an der Kamera und starte die Kopplung.</string>
     <string name="pairing_preparation_step_ready">Lass diesen Bildschirm geöffnet, halte die Kamera in der Nähe und tippe auf Kamera suchen.</string>
-    <string name="pairing_preparation_note">Bluetooth allein einzuschalten reicht nicht aus. Die Kamera muss im Kopplungsmodus sein, damit dein Smartphone sie finden kann. Die Menünamen unterscheiden sich je nach Kameramodell.</string>
+    <string name="pairing_preparation_note">Bluetooth einzuschalten reicht nicht aus. Die Kamera muss im Kopplungsmodus sein, damit dein Smartphone sie finden kann. Die Menünamen unterscheiden sich je nach Kameramodell.</string>
     <string name="pairing_preparation_search">Kamera suchen</string>
     <string name="pairing_preparation_searching">Kamera wird gesucht…</string>
     <string name="pairing_preparation_help">Brauchst du Hilfe?</string>
@@ -24,8 +24,8 @@
     <string name="scan_for_devices">Drücke Start um deine Kamera zu koppeln</string>
     <string name="permission_gps">Zugriff auf genauen Standort</string>
     <string name="permission_background_gps">Erlaube Zugriff auf Standort wenn die App im Hintergrund ist</string>
-    <string name="permission_bluetooth">Erlaube der App Bluetooth Verbindungen herzustellen</string>
-    <string name="permission_notifications">Erlaube der App Benachrichtigungen anzuzeigen</string>
+    <string name="permission_bluetooth">Erlaube der App, Bluetooth Verbindungen herzustellen</string>
+    <string name="permission_notifications">Erlaube der App, Benachrichtigungen anzuzeigen</string>
     <string name="step1_title">Schritt 1: Bluetooth und Standortzugriff</string>
     <string name="step1_desc">Benötigt, damit eine Verbindung zur Kamera hergestellt werden kann und der Standort gesendet wird.</string>
     <string name="step1_missing">Fehlende Berechtigungen:</string>
