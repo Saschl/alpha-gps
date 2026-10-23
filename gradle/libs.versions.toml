@@ -22,7 +22,7 @@ sentry = "8.61.0"
 # set ONLY, so the Android foss (F-Droid) flavor never sees Sentry. The Cocoa
 # version is pinned by the KMP SDK release notes and MUST match the Swift
 # package pinned in iosApp/alphagps.xcodeproj.
-sentryKotlinMultiplatform = "0.27.0"
+sentryKotlinMultiplatform = "0.29.0"
 sentryCocoa = "8.58.2"
 room = "2.8.5"
 runtimeLivedata = "1.12.1"
