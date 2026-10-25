@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.receiveAsFlow
 class BleSessionCoordinator(
     private val port: BleGattPort,
     private val remoteControlCoordinator: RemoteControlCoordinator,
+    private val synchronizeTime: (String, onWriteComplete: () -> Unit) -> Unit,
 ) {
     private val log = logging()
 
@@ -110,11 +111,6 @@ class BleSessionCoordinator(
             SonyBluetoothConstants.CHARACTERISTIC_ENABLE_LOCK_GPS_COMMAND.lowercase() -> {
                 if (!success) return
                 sendTimeSyncOrComplete(id)
-            }
-
-            SonyBluetoothConstants.TIME_SYNC_CHARACTERISTIC_UUID.lowercase() -> {
-                // Time sync failed → still proceed to transmission (matches existing behavior)
-                markReadyForTransmission(id)
             }
 
             SonyBluetoothConstants.CHARACTERISTIC_UUID.lowercase() -> {
@@ -248,14 +244,8 @@ class BleSessionCoordinator(
                 SonyBluetoothConstants.TIME_SYNC_CHARACTERISTIC_UUID
             )
         ) {
-            log.d { "Handshake[$identifier]: writing time sync" }
             emitPhase(identifier, BleSessionPhase.SyncingTime)
-            val packet = LocationPacketBuilder.buildTimeSyncPacket(PlatformTimeZoneInfo())
-            port.writeCharacteristic(
-                identifier,
-                SonyBluetoothConstants.TIME_SYNC_CHARACTERISTIC_UUID,
-                packet,
-            )
+            synchronizeTime(identifier) { markReadyForTransmission(identifier) }
         } else {
             log.d { "Handshake[$identifier]: no time-sync characteristic, skipping" }
             markReadyForTransmission(identifier)

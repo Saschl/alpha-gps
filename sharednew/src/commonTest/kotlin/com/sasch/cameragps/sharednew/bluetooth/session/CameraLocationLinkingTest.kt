@@ -19,6 +19,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -41,6 +42,66 @@ class CameraLocationLinkingTest {
     @AfterTest
     fun restorePlatformLogging() {
         KmLogging.setLoggers(PlatformLogger(FixedLogLevel(true)))
+    }
+
+    @Test
+    fun timeResultWaitAndRejectionDoNotGateGpsOrRestartHandshake() = runTest {
+        val f = Fixture(backgroundScope)
+        f.transport.hasTimeResult = true
+        f.connect("A")
+        runCurrent()
+        assertTrue(f.session("A").isLocationReady)
+        f.fix()
+        runCurrent()
+        assertTrue(f.transport.locationWrites().isNotEmpty())
+        f.notify("A", Sony.INITIAL_SETTING_RESULT_UUID, byteArrayOf(7, 0, 4, 0, 0, 0, 0, 1))
+        runCurrent()
+        assertTrue(f.session("A").isLocationReady)
+        assertEquals(1, f.transport.operations.count { it.second == BleOperation.DiscoverServices })
+    }
+
+    @Test
+    fun optionalTimeWriteFailuresIncludingAuthAndInitiationFailureStillStartGps() = runTest {
+        for (status in BleOperationStatus.entries) {
+            val f = Fixture(backgroundScope)
+            f.transport.timeWriteStatus = status
+            f.connect("A")
+            runCurrent()
+            assertTrue(f.session("A").isLocationReady)
+            assertTrue(f.source.active)
+            assertEquals(0, f.session("A").pairingRetryCount)
+            f.orchestrator.shutdownAll()
+        }
+        val f = Fixture(backgroundScope)
+        f.transport.rejectTimeWrite = true
+        f.connect("A")
+        runCurrent()
+        assertTrue(f.session("A").isLocationReady)
+        assertTrue(f.source.active)
+    }
+
+    @Test
+    fun timedOutTimeWriteReleasesHandshakeAndLateCallbackCannotCompleteItAgain() = runTest {
+        val f = Fixture(backgroundScope)
+        val completed = mutableListOf<OrchestratorEvent.HandshakeCompleted>()
+        backgroundScope.launch {
+            f.orchestrator.events.collect { if (it is OrchestratorEvent.HandshakeCompleted) completed += it }
+        }
+        runCurrent()
+        f.transport.holdTimeWrite = true
+        f.connect("A")
+        runCurrent()
+        assertEquals(BleSessionPhase.SyncingTime, f.session("A").phase)
+        advanceTimeBy(15_001)
+        runCurrent()
+        assertTrue(f.session("A").isLocationReady)
+        assertTrue(f.source.active)
+        assertEquals(1, completed.size)
+        f.transport.completeWrite("A", Sony.TIME_SYNC_CHARACTERISTIC_UUID)
+        runCurrent()
+        assertTrue(f.session("A").isLocationReady)
+        assertEquals(1, completed.size)
+        assertEquals(1, f.transport.operations.count { it.second == BleOperation.DiscoverServices })
     }
 
     @Test
@@ -777,6 +838,10 @@ class CameraLocationLinkingTest {
         val operations = mutableListOf<Pair<String, BleOperation>>()
         var hasLocationStatus = true
         var hasCameraStatus = false
+        var hasTimeResult = false
+        var timeWriteStatus = BleOperationStatus.Success
+        var rejectTimeWrite = false
+        var holdTimeWrite = false
         var failRemoteWrites = false
         var hasAutoCorrection = false
         val readOnlySettings = mutableSetOf<String>()
@@ -809,6 +874,8 @@ class CameraLocationLinkingTest {
         override fun isConnected(identifier: String) = identifier in connected
         override fun hasCharacteristic(identifier: String, characteristicUuid: String) =
             if (characteristicUuid == Sony.CAMERA_STATUS_UUID) hasCameraStatus
+            else if (characteristicUuid == Sony.CAMERA_SUPPORT_UUID) false
+            else if (characteristicUuid == Sony.INITIAL_SETTING_RESULT_UUID) hasTimeResult
             else if (CameraAutoCorrectionSetting.fromUuid(characteristicUuid) != null) hasAutoCorrection
             else characteristicUuid != Sony.CHARACTERISTIC_LOCATION_ENABLED_IN_CAMERA || hasLocationStatus
 
@@ -871,6 +938,17 @@ class CameraLocationLinkingTest {
             value: ByteArray
         ): Boolean {
             operations += identifier to BleOperation.Write(characteristicUuid, value)
+            if (characteristicUuid == Sony.TIME_SYNC_CHARACTERISTIC_UUID) {
+                if (rejectTimeWrite) return false
+                if (!holdTimeWrite) emit(
+                    BleTransportEvent.CharacteristicWritten(
+                        identifier,
+                        characteristicUuid,
+                        timeWriteStatus
+                    )
+                )
+                return true
+            }
             if (rejectSettingWrites && CameraAutoCorrectionSetting.fromUuid(characteristicUuid) != null) return false
             if (holdSettingWrites && CameraAutoCorrectionSetting.fromUuid(characteristicUuid) != null) return true
             if (holdGpsUnlockWrites && characteristicUuid == Sony.CHARACTERISTIC_ENABLE_UNLOCK_GPS_COMMAND) return true

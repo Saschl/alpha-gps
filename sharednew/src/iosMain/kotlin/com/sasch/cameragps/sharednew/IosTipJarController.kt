@@ -1,9 +1,6 @@
 package com.sasch.cameragps.sharednew
 
 import com.diamondedge.logging.logging
-import com.sasch.cameragps.sharednew.IosTipJarController.fetchProducts
-import com.sasch.cameragps.sharednew.IosTipJarController.products
-import com.sasch.cameragps.sharednew.IosTipJarController.purchase
 import kotlinx.cinterop.BetaInteropApi
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.ObjCSignatureOverride
@@ -55,7 +52,8 @@ internal object IosTipJarController {
     private val tipProductIds = listOf(
         "com.saschl.cameragps.tip.small",
         "com.saschl.cameragps.tip.medium",
-        "com.saschl.cameragps.tip.large"
+        "com.saschl.cameragps.tip.large",
+        "com.saschl.cameragps.tip.xlarge"
     )
 
     private val _products = MutableStateFlow<List<TipProduct>>(emptyList())

@@ -4,6 +4,8 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import kotlin.math.abs
 import kotlin.time.Clock
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Instant
 
 /**
  * Shared builder for Sony camera BLE location and time-sync packets.
@@ -65,13 +67,19 @@ object LocationPacketBuilder {
     /**
      * Build the time-sync packet written to the camera during the handshake.
      */
-    @Suppress("DEPRECATION")
-    fun buildTimeSyncPacket(timeZoneInfo: PlatformTimeZoneInfo): ByteArray {
-        val now = Clock.System.now()
-        val local = now.toLocalDateTime(TimeZone.currentSystemDefault())
+    fun buildTimeSyncPacket(timeZoneInfo: PlatformTimeZoneInfo): ByteArray = buildTimeSyncPacket(
+        Clock.System.now(), timeZoneInfo.standardOffsetMinutes, timeZoneInfo.dstOffsetMinutes,
+    )
 
-        val standardOffsetMinutes = timeZoneInfo.standardOffsetMinutes
-        val dstMinutes = timeZoneInfo.dstOffsetMinutes
+    @Suppress("DEPRECATION")
+    internal fun buildTimeSyncPacket(
+        now: Instant,
+        standardOffsetMinutes: Int,
+        dstMinutes: Int,
+    ): ByteArray {
+        // Derive wall time from the same offsets encoded below, including across a zone change.
+        val local =
+            (now + (standardOffsetMinutes + dstMinutes).minutes).toLocalDateTime(TimeZone.UTC)
         val hoursComponent = abs(standardOffsetMinutes / 60)
         val offsetMinutesComponent = abs(standardOffsetMinutes % 60)
         val signedOffsetHourByte =
