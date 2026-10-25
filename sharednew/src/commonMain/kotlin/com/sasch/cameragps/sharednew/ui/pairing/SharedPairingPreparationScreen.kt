@@ -41,6 +41,8 @@ import cameragps.sharednew.generated.resources.pairing_preparation_step_bluetoot
 import cameragps.sharednew.generated.resources.pairing_preparation_step_pairing
 import cameragps.sharednew.generated.resources.pairing_preparation_step_ready
 import cameragps.sharednew.generated.resources.pairing_preparation_title
+import com.sasch.cameragps.sharednew.ui.components.AdaptiveAction
+import com.sasch.cameragps.sharednew.ui.components.ScreenContent
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 
@@ -55,87 +57,107 @@ fun SharedPairingPreparationScreen(
 ) {
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {},
-                navigationIcon = {
-                    IconButton(onClick = onBack, enabled = !isSearching) {
-                        Icon(
-                            painterResource(Res.drawable.arrow_back_24px),
-                            contentDescription = stringResource(Res.string.back),
-                        )
-                    }
-                },
-            )
+            ScreenContent {
+                TopAppBar(
+                    title = {},
+                    navigationIcon = {
+                        IconButton(onClick = onBack, enabled = !isSearching) {
+                            Icon(
+                                painterResource(Res.drawable.arrow_back_24px),
+                                contentDescription = stringResource(Res.string.back),
+                            )
+                        }
+                    },
+                )
+            }
         },
         bottomBar = {
-            Surface {
-                Column(
-                    modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(20.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    Button(
-                        onClick = onSearch,
-                        enabled = !isSearching,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            Surface(modifier = Modifier.fillMaxWidth()) {
+                ScreenContent {
+                    AdaptiveAction(
+                        modifier = Modifier.navigationBarsPadding().padding(20.dp),
+                    ) { actionModifier ->
+                        Column(
+                            modifier = actionModifier,
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
-                            if (isSearching) CircularProgressIndicator(modifier = Modifier.size(20.dp))
-                            Text(stringResource(
-                                if (isSearching) Res.string.pairing_preparation_searching
-                                else Res.string.pairing_preparation_search,
-                            ))
+                            Button(
+                                onClick = onSearch,
+                                enabled = !isSearching,
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                ) {
+                                    if (isSearching) CircularProgressIndicator(
+                                        modifier = Modifier.size(
+                                            20.dp
+                                        )
+                                    )
+                                    Text(
+                                        stringResource(
+                                            if (isSearching) Res.string.pairing_preparation_searching
+                                            else Res.string.pairing_preparation_search,
+                                        ),
+                                        modifier = Modifier.weight(1f, fill = false),
+                                    )
+                                }
+                            }
+                            TextButton(
+                                onClick = onHelp,
+                                enabled = !isSearching,
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text(stringResource(Res.string.pairing_preparation_help))
+                            }
                         }
-                    }
-                    TextButton(
-                        onClick = onHelp,
-                        enabled = !isSearching,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text(stringResource(Res.string.pairing_preparation_help))
                     }
                 }
             }
         },
     ) { padding ->
-        Column(
-            modifier = Modifier.fillMaxSize().padding(padding)
-                .verticalScroll(rememberScrollState()).padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(24.dp),
-        ) {
-            Text(
-                stringResource(Res.string.pairing_preparation_title),
-                style = MaterialTheme.typography.headlineMedium,
-                modifier = Modifier.semantics { heading() },
-            )
-            listOf(
-                Res.string.pairing_preparation_step_bluetooth,
-                Res.string.pairing_preparation_step_pairing,
-                Res.string.pairing_preparation_step_ready,
-            ).forEachIndexed { index, step ->
-                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    Surface(shape = CircleShape, color = MaterialTheme.colorScheme.secondaryContainer) {
+        ScreenContent(modifier = Modifier.fillMaxSize().padding(padding)) {
+            Column(
+                modifier = Modifier.fillMaxSize()
+                    .verticalScroll(rememberScrollState()).padding(24.dp),
+                verticalArrangement = Arrangement.spacedBy(24.dp),
+            ) {
+                Text(
+                    stringResource(Res.string.pairing_preparation_title),
+                    style = MaterialTheme.typography.headlineMedium,
+                    modifier = Modifier.semantics { heading() },
+                )
+                listOf(
+                    Res.string.pairing_preparation_step_bluetooth,
+                    Res.string.pairing_preparation_step_pairing,
+                    Res.string.pairing_preparation_step_ready,
+                ).forEachIndexed { index, step ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                        Surface(
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.secondaryContainer
+                        ) {
+                            Text(
+                                "${index + 1}",
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                style = MaterialTheme.typography.titleMedium,
+                            )
+                        }
                         Text(
-                            "${index + 1}",
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                            style = MaterialTheme.typography.titleMedium,
+                            stringResource(step),
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier.weight(1f),
                         )
                     }
+                }
+                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
                     Text(
-                        stringResource(step),
-                        style = MaterialTheme.typography.bodyLarge,
-                        modifier = Modifier.weight(1f),
+                        stringResource(Res.string.pairing_preparation_note),
+                        modifier = Modifier.padding(16.dp),
+                        style = MaterialTheme.typography.bodyMedium,
                     )
                 }
-            }
-            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
-                Text(
-                    stringResource(Res.string.pairing_preparation_note),
-                    modifier = Modifier.padding(16.dp),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
             }
         }
     }

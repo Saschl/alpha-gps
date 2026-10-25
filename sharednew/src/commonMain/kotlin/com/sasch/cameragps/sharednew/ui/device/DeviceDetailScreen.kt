@@ -62,6 +62,7 @@ import cameragps.sharednew.generated.resources.wifi_remote_title
 import com.sasch.cameragps.sharednew.bluetooth.BleSessionPhase
 import com.sasch.cameragps.sharednew.bluetooth.session.CameraAutoCorrectionSetting
 import com.sasch.cameragps.sharednew.bluetooth.session.CameraSettingState
+import com.sasch.cameragps.sharednew.ui.components.ScreenContent
 import com.sasch.cameragps.sharednew.ui.components.ScrollbarLazyColumn
 import com.sasch.cameragps.sharednew.util.KotlinPlatform
 import com.sasch.cameragps.sharednew.util.currentPlatform
@@ -99,117 +100,126 @@ fun DeviceDetailContent(
         viewModel.load(deviceId, deviceName)
     }
 
-    ScrollbarLazyColumn(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-        contentPadding = PaddingValues(bottom = 16.dp),
-    ) {
-        if (headerContent != null) {
-            item { headerContent(state.deviceName.ifEmpty { deviceName.orEmpty() }) }
-        }
+    ScreenContent(modifier = modifier) {
+        ScrollbarLazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            contentPadding = PaddingValues(bottom = 16.dp),
+        ) {
+            if (headerContent != null) {
+                item { headerContent(state.deviceName.ifEmpty { deviceName.orEmpty() }) }
+            }
 
-        if (onWifiRemote != null) {
-            item {
-                Button(
-                    onClick = onWifiRemote,
-                    enabled = state.isDeviceEnabled,
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 88.dp),
-                    shape = MaterialTheme.shapes.large,
-                    contentPadding = PaddingValues(20.dp),
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+            if (onWifiRemote != null) {
+                item {
+                    Button(
+                        onClick = onWifiRemote,
+                        enabled = state.isDeviceEnabled,
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 88.dp),
+                        shape = MaterialTheme.shapes.large,
+                        contentPadding = PaddingValues(20.dp),
                     ) {
-                        Icon(
-                            painterResource(Res.drawable.camera_24px), contentDescription = null,
-                            modifier = Modifier.size(28.dp)
-                        )
-                        Column(
-                            Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(16.dp),
                         ) {
-                            Text(
-                                stringResource(Res.string.wifi_remote_title),
-                                style = MaterialTheme.typography.titleMedium
+                            Icon(
+                                painterResource(Res.drawable.camera_24px),
+                                contentDescription = null,
+                                modifier = Modifier.size(28.dp)
                             )
-                            Text(
-                                stringResource(Res.string.wifi_remote_entry_hint),
-                                style = MaterialTheme.typography.bodySmall
+                            Column(
+                                Modifier.weight(1f),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Text(
+                                    stringResource(Res.string.wifi_remote_title),
+                                    style = MaterialTheme.typography.titleMedium
+                                )
+                                Text(
+                                    stringResource(Res.string.wifi_remote_entry_hint),
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                            Icon(
+                                painterResource(Res.drawable.keyboard_arrow_right_24px),
+                                contentDescription = null
                             )
                         }
-                        Icon(
-                            painterResource(Res.drawable.keyboard_arrow_right_24px),
-                            contentDescription = null
-                        )
                     }
                 }
             }
-        }
 
-        if (renameEnabled) {
-            item {
-                DeviceRenameRow(
-                    currentName = state.deviceName.ifEmpty { deviceName.orEmpty() },
-                    onPresentSystemRename = onPresentSystemRename,
-                    onRenameInApp = { newName -> viewModel.renameDevice(deviceId, newName) },
-                )
+            if (renameEnabled) {
+                item {
+                    DeviceRenameRow(
+                        currentName = state.deviceName.ifEmpty { deviceName.orEmpty() },
+                        onPresentSystemRename = onPresentSystemRename,
+                        onRenameInApp = { newName -> viewModel.renameDevice(deviceId, newName) },
+                    )
+                }
             }
-        }
 
-        item {
-            DeviceToggleRow(
-                title = stringResource(Res.string.enable_device),
-                checked = state.isDeviceEnabled,
-                enabled = !state.isAlwaysOnEnabled && state.buttonEnabled,
-                onCheckedChange = { enabled ->
-                    viewModel.setDeviceEnabled(enabled, deviceId, onDeviceEnabledChanged)
-                },
-            )
-        }
-
-
-        if (currentPlatform == KotlinPlatform.Android) {
             item {
                 DeviceToggleRow(
-                    title = stringResource(Res.string.enableConstantly),
-                    checked = state.isAlwaysOnEnabled,
-                    enabled = state.isDeviceEnabled && state.buttonEnabled,
+                    title = stringResource(Res.string.enable_device),
+                    checked = state.isDeviceEnabled,
+                    enabled = !state.isAlwaysOnEnabled && state.buttonEnabled,
                     onCheckedChange = { enabled ->
-                        viewModel.setAlwaysOnEnabled(enabled, deviceId)
+                        viewModel.setDeviceEnabled(enabled, deviceId, onDeviceEnabledChanged)
                     },
-                    infoText = stringResource(Res.string.always_on_description) +
-                            "\n\n" + stringResource(Res.string.hint_if_issues_after_switching),
                 )
             }
-        }
 
-        item {
-            DeviceToggleRow(
-                title = stringResource(Res.string.enable_remote_control),
-                checked = state.isRemoteControlEnabled,
-                enabled = state.isDeviceEnabled && state.buttonEnabled,
-                onCheckedChange = { enabled ->
-                    viewModel.setRemoteControlStatus(enabled, deviceId)
-                },
-                infoText = stringResource(Res.string.remote_control_hint),
-            )
-        }
 
-        for (setting in CameraAutoCorrectionSetting.entries) {
-            val settingState = session?.autoCorrectionSetting(setting) ?: CameraSettingState()
-            item(key = setting.name) {
-                val isTime = setting == CameraAutoCorrectionSetting.Time
-                CameraSettingRow(
-                    title = stringResource(if (isTime) Res.string.auto_time_correction else Res.string.auto_area_adjustment),
-                    infoText = stringResource(if (isTime) Res.string.auto_time_correction_hint else Res.string.auto_area_adjustment_hint),
-                    state = settingState,
-                    cameraReady = cameraReady,
-                    onCheckedChange = { viewModel.setAutoCorrectionSetting(deviceId, setting, it) },
-                    onRetry = { viewModel.refreshCameraSettings(deviceId) },
+            if (currentPlatform == KotlinPlatform.Android) {
+                item {
+                    DeviceToggleRow(
+                        title = stringResource(Res.string.enableConstantly),
+                        checked = state.isAlwaysOnEnabled,
+                        enabled = state.isDeviceEnabled && state.buttonEnabled,
+                        onCheckedChange = { enabled ->
+                            viewModel.setAlwaysOnEnabled(enabled, deviceId)
+                        },
+                        infoText = stringResource(Res.string.always_on_description) +
+                                "\n\n" + stringResource(Res.string.hint_if_issues_after_switching),
+                    )
+                }
+            }
+
+            item {
+                DeviceToggleRow(
+                    title = stringResource(Res.string.enable_remote_control),
+                    checked = state.isRemoteControlEnabled,
+                    enabled = state.isDeviceEnabled && state.buttonEnabled,
+                    onCheckedChange = { enabled ->
+                        viewModel.setRemoteControlStatus(enabled, deviceId)
+                    },
+                    infoText = stringResource(Res.string.remote_control_hint),
                 )
+            }
+
+            for (setting in CameraAutoCorrectionSetting.entries) {
+                val settingState = session?.autoCorrectionSetting(setting) ?: CameraSettingState()
+                item(key = setting.name) {
+                    val isTime = setting == CameraAutoCorrectionSetting.Time
+                    CameraSettingRow(
+                        title = stringResource(if (isTime) Res.string.auto_time_correction else Res.string.auto_area_adjustment),
+                        infoText = stringResource(if (isTime) Res.string.auto_time_correction_hint else Res.string.auto_area_adjustment_hint),
+                        state = settingState,
+                        cameraReady = cameraReady,
+                        onCheckedChange = {
+                            viewModel.setAutoCorrectionSetting(
+                                deviceId,
+                                setting,
+                                it
+                            )
+                        },
+                        onRetry = { viewModel.refreshCameraSettings(deviceId) },
+                    )
+                }
             }
         }
     }

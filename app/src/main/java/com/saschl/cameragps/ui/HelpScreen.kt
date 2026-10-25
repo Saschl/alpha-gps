@@ -65,6 +65,7 @@ import cameragps.sharednew.generated.resources.how_about_privacy_answer
 import cameragps.sharednew.generated.resources.is_there_documenation
 import cameragps.sharednew.generated.resources.is_there_documenation_answer
 import cameragps.sharednew.generated.resources.is_there_documenation_answer_coffee
+import com.sasch.cameragps.sharednew.ui.components.ScreenContent
 import com.sasch.cameragps.sharednew.ui.components.ScrollbarLazyColumn
 import com.saschl.cameragps.R
 import org.jetbrains.compose.resources.StringResource
@@ -126,200 +127,202 @@ fun HelpScreen(
         )
     )
 
-    Scaffold(
-        topBar = {
-            CenterAlignedTopAppBar(
-                title = {
-                    Text(
-                        text = stringResource(Res.string.help_faq_title),
-                        fontWeight = FontWeight.SemiBold
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(
-                            painterResource(R.drawable.arrow_back_24px),
-                            contentDescription = stringResource(Res.string.help_close_description)
+    ScreenContent {
+        Scaffold(
+            topBar = {
+                CenterAlignedTopAppBar(
+                    title = {
+                        Text(
+                            text = stringResource(Res.string.help_faq_title),
+                            fontWeight = FontWeight.SemiBold
                         )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = onBackClick) {
+                            Icon(
+                                painterResource(R.drawable.arrow_back_24px),
+                                contentDescription = stringResource(Res.string.help_close_description)
+                            )
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    )
                 )
-            )
-        }
-    ) { innerPadding ->
-        ScrollbarLazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            contentPadding = PaddingValues(vertical = 16.dp, horizontal = 16.dp)
-        ) {
-            // App description
-            item {
-                Card(
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer
-                    )
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp)
-                    ) {
-                        Text(
-                            text = stringResource(Res.string.help_about_title),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = stringResource(Res.string.help_about_description),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                    }
-                }
             }
-
-            // Entry point to the visual troubleshooting guide
-            item {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onTroubleshootingClick() },
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.tertiaryContainer
-                    )
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp)
+        ) { innerPadding ->
+            ScrollbarLazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                contentPadding = PaddingValues(vertical = 16.dp, horizontal = 16.dp)
+            ) {
+                // App description
+                item {
+                    Card(
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer
+                        )
                     ) {
-                        Text(
-                            text = stringResource(Res.string.guide_title),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onTertiaryContainer
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = stringResource(Res.string.guide_intro),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onTertiaryContainer
-                        )
-                    }
-                }
-            }
-
-            // FAQ items
-            items(faqItems) { faq ->
-                var expanded by remember { mutableStateOf(faq == faqItems.first()) }
-
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { expanded = !expanded },
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant
-                    )
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp)
-                    ) {
-                        Text(
-                            text = stringResource(faq.questionRes),
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-
-                        if (expanded) {
+                        Column(
+                            modifier = Modifier.padding(16.dp)
+                        ) {
+                            Text(
+                                text = stringResource(Res.string.help_about_title),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
                             Spacer(modifier = Modifier.height(8.dp))
-                            if (faq.containsLink) {
-                                Text(
-                                    buildAnnotatedString {
-                                        append(stringResource(faq.answerRes))
-                                        append("\n")
-                                        withLink(
-                                            LinkAnnotation.Url(
-                                                "https://github.com/Saschl/camera-gps/blob/main/README.md",
-                                                TextLinkStyles(
-                                                    style = SpanStyle(
-                                                        color = MaterialTheme.colorScheme.primary,
-                                                        textDecoration = TextDecoration.Underline
-                                                    )
-                                                )
-                                            )
-                                        ) {
-                                            append("https://github.com/Saschl/camera-gps")
-                                        }
-                                        append("\n")
-                                        withLink(
-                                            LinkAnnotation.Url(
-                                                "mailto:saschl.ra@web.de",
-                                                TextLinkStyles(
-                                                    style = SpanStyle(
-                                                        color = MaterialTheme.colorScheme.primary,
-                                                        textDecoration = TextDecoration.Underline
-                                                    )
-                                                )
-                                            )
-                                        ) {
-                                            append("saschl.ra@web.de")
-                                        }
-                                        append("\n\n")
-                                        append(stringResource(Res.string.is_there_documenation_answer_coffee))
-                                        withLink(
-                                            LinkAnnotation.Url(
-                                                "https://buymeacoffee.com/wj8tism4dq",
-                                                TextLinkStyles(
-                                                    style = SpanStyle(
-                                                        color = MaterialTheme.colorScheme.primary,
-                                                        textDecoration = TextDecoration.Underline
-                                                    )
-                                                )
-                                            )
-                                        ) {
-                                            append("Buy Me A Coffee")
-                                        }
+                            Text(
+                                text = stringResource(Res.string.help_about_description),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        }
+                    }
+                }
 
-                                    }
-                                )
-                            } else {
-                                Text(
-                                    text = stringResource(faq.answerRes),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+                // Entry point to the visual troubleshooting guide
+                item {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onTroubleshootingClick() },
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.tertiaryContainer
+                        )
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp)
+                        ) {
+                            Text(
+                                text = stringResource(Res.string.guide_title),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onTertiaryContainer
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = stringResource(Res.string.guide_intro),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onTertiaryContainer
+                            )
+                        }
+                    }
+                }
+
+                // FAQ items
+                items(faqItems) { faq ->
+                    var expanded by remember { mutableStateOf(faq == faqItems.first()) }
+
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { expanded = !expanded },
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant
+                        )
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp)
+                        ) {
+                            Text(
+                                text = stringResource(faq.questionRes),
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+
+                            if (expanded) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                if (faq.containsLink) {
+                                    Text(
+                                        buildAnnotatedString {
+                                            append(stringResource(faq.answerRes))
+                                            append("\n")
+                                            withLink(
+                                                LinkAnnotation.Url(
+                                                    "https://github.com/Saschl/camera-gps/blob/main/README.md",
+                                                    TextLinkStyles(
+                                                        style = SpanStyle(
+                                                            color = MaterialTheme.colorScheme.primary,
+                                                            textDecoration = TextDecoration.Underline
+                                                        )
+                                                    )
+                                                )
+                                            ) {
+                                                append("https://github.com/Saschl/camera-gps")
+                                            }
+                                            append("\n")
+                                            withLink(
+                                                LinkAnnotation.Url(
+                                                    "mailto:saschl.ra@web.de",
+                                                    TextLinkStyles(
+                                                        style = SpanStyle(
+                                                            color = MaterialTheme.colorScheme.primary,
+                                                            textDecoration = TextDecoration.Underline
+                                                        )
+                                                    )
+                                                )
+                                            ) {
+                                                append("saschl.ra@web.de")
+                                            }
+                                            append("\n\n")
+                                            append(stringResource(Res.string.is_there_documenation_answer_coffee))
+                                            withLink(
+                                                LinkAnnotation.Url(
+                                                    "https://buymeacoffee.com/wj8tism4dq",
+                                                    TextLinkStyles(
+                                                        style = SpanStyle(
+                                                            color = MaterialTheme.colorScheme.primary,
+                                                            textDecoration = TextDecoration.Underline
+                                                        )
+                                                    )
+                                                )
+                                            ) {
+                                                append("Buy Me A Coffee")
+                                            }
+
+                                        }
+                                    )
+                                } else {
+                                    Text(
+                                        text = stringResource(faq.answerRes),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
                             }
                         }
                     }
                 }
-            }
 
-            // Footer
-            item {
-                Card(
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.secondaryContainer
-                    )
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp)
+                // Footer
+                item {
+                    Card(
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.secondaryContainer
+                        )
                     ) {
-                        Text(
-                            text = stringResource(Res.string.help_need_more_title),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = stringResource(Res.string.help_need_more_description),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer
-                        )
+                        Column(
+                            modifier = Modifier.padding(16.dp)
+                        ) {
+                            Text(
+                                text = stringResource(Res.string.help_need_more_title),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = stringResource(Res.string.help_need_more_description),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                        }
                     }
                 }
             }

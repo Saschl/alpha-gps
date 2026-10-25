@@ -14,6 +14,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.navigationevent.NavigationEventInfo
 import androidx.navigationevent.compose.NavigationBackHandler
 import androidx.navigationevent.compose.rememberNavigationEventState
+import com.sasch.cameragps.sharednew.ui.components.ScreenContent
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -26,26 +27,28 @@ fun SharedSettingsScreen(
 ) {
     Scaffold(
         topBar = {
-            CenterAlignedTopAppBar(
-                title = {
-                    Text(
-                        text = title,
-                        fontWeight = FontWeight.SemiBold,
-                        modifier = androidx.compose.ui.Modifier
-                            .clickable { onTitleClick() }
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        navigationIcon()
-                    }
-                },
+            ScreenContent {
+                CenterAlignedTopAppBar(
+                    title = {
+                        Text(
+                            text = title,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = androidx.compose.ui.Modifier
+                                .clickable { onTitleClick() }
+                        )
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = onBackClick) {
+                            navigationIcon()
+                        }
+                    },
 
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    )
                 )
-            )
+            }
         }
     ) { paddingValues ->
         NavigationBackHandler(
@@ -55,7 +58,9 @@ fun SharedSettingsScreen(
                 onBackClick()
             }
         )
-        content(paddingValues)
+        ScreenContent {
+            content(paddingValues)
+        }
     }
 }
 

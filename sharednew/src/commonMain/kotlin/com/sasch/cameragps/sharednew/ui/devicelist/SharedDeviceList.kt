@@ -70,6 +70,7 @@ import cameragps.sharednew.generated.resources.trigger_shutter
 import com.sasch.cameragps.sharednew.bluetooth.BluetoothDeviceInfo
 import com.sasch.cameragps.sharednew.ui.ShutterPulseIcon
 import com.sasch.cameragps.sharednew.ui.TransmissionDot
+import com.sasch.cameragps.sharednew.ui.components.AdaptiveAction
 import com.sasch.cameragps.sharednew.ui.components.ScrollbarLazyColumn
 import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.painterResource
@@ -381,6 +382,7 @@ private fun DeviceCard(
             ) {
                 Text(
                     text = device.name,
+                    modifier = Modifier.weight(1f),
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Medium,
                 )
@@ -462,26 +464,29 @@ private fun DeviceCard(
                 )
             }
             if (device.isSaved && isRemoteFeatureActive) {
-                FilledTonalButton(
-                    onClick = {
-                        if (hapticsEnabled) {
-                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                        }
-                        onTriggerRemoteShutter()
-                    },
-                    border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 12.dp)
-                        .heightIn(min = 52.dp),
-                ) {
-                    ShutterPulseIcon(
-                        isActive = isShutterActive,
-                        painter = painterResource(Res.drawable.camera_24px),
-                        contentDescription = null,
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text(stringResource(Res.string.trigger_shutter))
+                AdaptiveAction(modifier = Modifier.padding(top = 12.dp)) { actionModifier ->
+                    FilledTonalButton(
+                        onClick = {
+                            if (hapticsEnabled) {
+                                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                            }
+                            onTriggerRemoteShutter()
+                        },
+                        border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary),
+                        modifier = actionModifier
+                            .heightIn(min = 52.dp),
+                    ) {
+                        ShutterPulseIcon(
+                            isActive = isShutterActive,
+                            painter = painterResource(Res.drawable.camera_24px),
+                            contentDescription = null,
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            stringResource(Res.string.trigger_shutter),
+                            modifier = Modifier.weight(1f, fill = false),
+                        )
+                    }
                 }
             }
         }

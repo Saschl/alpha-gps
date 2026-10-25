@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.dp
 import cameragps.sharednew.generated.resources.Res
 import cameragps.sharednew.generated.resources.add_camera
 import cameragps.sharednew.generated.resources.device_list_need_help
+import com.sasch.cameragps.sharednew.ui.components.AdaptiveAction
 import org.jetbrains.compose.resources.stringResource
 
 /** iOS-style screen layout; hosts supply platform actions, notices and empty states. */
@@ -52,12 +53,12 @@ fun DeviceListLayout(
 
 @Composable
 fun AddCameraButton(onClick: () -> Unit) {
-    Button(
-        onClick = onClick,
+    AdaptiveAction(
         modifier = Modifier
-            .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp),
-    ) {
-        Text(stringResource(Res.string.add_camera))
+    ) { actionModifier ->
+        Button(onClick = onClick, modifier = actionModifier) {
+            Text(stringResource(Res.string.add_camera))
+        }
     }
 }

@@ -66,6 +66,7 @@ import cameragps.sharednew.generated.resources.guide_repair_title
 import cameragps.sharednew.generated.resources.guide_startup_description
 import cameragps.sharednew.generated.resources.guide_startup_step_disable
 import cameragps.sharednew.generated.resources.guide_startup_title
+import com.sasch.cameragps.sharednew.ui.components.ScreenContent
 import com.sasch.cameragps.sharednew.ui.components.ScrollbarLazyColumn
 import com.sasch.cameragps.sharednew.util.KotlinPlatform
 import com.sasch.cameragps.sharednew.util.currentPlatform
@@ -169,23 +170,24 @@ fun TroubleshootingGuideContent(innerPadding: PaddingValues) {
         ),
     )
 
-    ScrollbarLazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(innerPadding)
-            .padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-        contentPadding = PaddingValues(vertical = 16.dp),
-    ) {
-        item {
-            Text(
-                text = stringResource(Res.string.guide_intro),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        itemsIndexed(sections) { index, section ->
-            GuideSectionCard(number = index + 1, section = section)
+    ScreenContent(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+        ScrollbarLazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            contentPadding = PaddingValues(vertical = 16.dp),
+        ) {
+            item {
+                Text(
+                    text = stringResource(Res.string.guide_intro),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            itemsIndexed(sections) { index, section ->
+                GuideSectionCard(number = index + 1, section = section)
+            }
         }
     }
 }

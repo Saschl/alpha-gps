@@ -1,8 +1,6 @@
 package com.sasch.cameragps.sharednew.ui.device
 
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -13,6 +11,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import com.sasch.cameragps.sharednew.ui.components.ScreenContent
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -26,29 +25,27 @@ fun SharedDevicesScreen(
         containerColor = MaterialTheme.colorScheme.background,
         snackbarHost = snackbarHost,
         topBar = {
-            CenterAlignedTopAppBar(
-                title = {
-                    Text(
-                        text = title,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                },
-                actions = {
-                    topBarActions()
+            ScreenContent {
+                CenterAlignedTopAppBar(
+                    title = {
+                        Text(
+                            text = title,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    },
+                    actions = {
+                        topBarActions()
 
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.background,
+                        titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    )
                 )
-            )
+            }
         }
     ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(innerPadding)
-        ) {
+        ScreenContent(modifier = Modifier.padding(innerPadding)) {
             content(innerPadding)
         }
     }
