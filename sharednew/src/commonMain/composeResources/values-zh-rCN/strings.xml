@@ -431,4 +431,9 @@
     <string name="wifi_remote_ios_permission">请在应用设置中允许访问“本地网络”，然后重新连接。</string>
     <string name="wifi_remote_ios_opening">正在连接相机… 如果 iOS 弹出提示，请允许访问“本地网络”。</string>
     <string name="welcome_remote_label">遥控拍摄</string>
+    <string name="wifi_remote_setup_detect_address">请先在相机上启动遥控拍摄并关闭索尼的 App，然后在手机设置中连接相机的 Wi-Fi。IP 地址请留空以自动检测，或者手动输入。</string>
+    <string name="wifi_connection_failed">无法建立与相机的 Wi-Fi 连接。</string>
+    <string name="wifi_connection_help">连接帮助</string>
+    <string name="wifi_connection_help_title">检查连接设置</string>
+    <string name="wifi_connection_help_message">请确保相机已准备好进行遥控拍摄，且本手机已连接至相机的 Wi-Fi。\n\n部分 Android 版本可能会限制应用的网络访问权限。请前往“应用设置”，查找“移动数据和 Wi-Fi”、“网络访问”或“限制联网/数据用量”等选项，并允许 Alpha GPS 使用 Wi-Fi。在“权限”设置中，根据提示允许访问“附近设备”或“精确位置”；如果列表中有“本地网络”，也请一并允许。\n\n完成后返回此处重新尝试连接。具体的设置名称因手机品牌而异。</string>
 </resources>
