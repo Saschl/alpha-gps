@@ -354,12 +354,12 @@
     <string name="welcome_remote_label">Remote control</string>
     <string name="welcome_remote_title">Shoot from your phone</string>
     <string name="welcome_remote_body">Use your phone as a remote shutter. On supported cameras, you can also use Wi-Fi to view the live image and transfer photos.</string>
-    <string name="welcome_pair_label">Setup · 1 of 2</string>
-    <string name="welcome_pair_title">Pair your camera</string>
-    <string name="welcome_pair_body">Enable Bluetooth on your camera and start pairing mode. Then add it in Alpha GPS and confirm the pairing prompts.</string>
-    <string name="welcome_ready_label">Setup · 2 of 2</string>
-    <string name="welcome_ready_title">Allow location access</string>
-    <string name="welcome_ready_body">Allow precise location access, including in the background, to keep sending GPS data while your phone is locked. On older cameras, also enable Location Info. Link.</string>
+    <string name="welcome_pair_label">Connection</string>
+    <string name="welcome_pair_title">Connect your camera</string>
+    <string name="welcome_pair_body">When you’re ready, tap Add camera. Alpha GPS will guide you through pairing your Sony camera with your phone.</string>
+    <string name="welcome_ready_label">Location access</string>
+    <string name="welcome_ready_title">Keep your photos geotagged</string>
+    <string name="welcome_ready_body">Alpha GPS needs precise location access to geotag your photos. Background access keeps location updates running while your phone is locked.</string>
 
     <string name="wifi_remote_experimental_title">Experimental Wi-Fi remote</string>
     <string name="wifi_remote_experimental_message">Wi-Fi remote is experimental and has currently only been validated with the developer’s Sony α6700. Other camera models may behave differently.\n\nPlease report any issues by email or on GitHub. Include your camera model and your phone’s operating system and version (Android or iOS).</string>

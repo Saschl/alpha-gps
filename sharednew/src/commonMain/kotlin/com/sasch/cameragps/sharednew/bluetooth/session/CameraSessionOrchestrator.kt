@@ -87,8 +87,10 @@ class CameraSessionOrchestrator(
     })
     private val port = QueuedBleGattPort(queue, transport, registry)
     private val autoCorrection = CameraAutoCorrectionController(port, registry, scope)
+    private val timeSync = CameraTimeSyncController(port, registry, scope)
     private val remoteControl: RemoteControlCoordinator = RemoteControlCoordinator(port, scope)
-    private val sessionCoordinator = BleSessionCoordinator(port, remoteControl)
+    private val sessionCoordinator =
+        BleSessionCoordinator(port, remoteControl, timeSync::synchronize)
 
     val locationManager = LocationTransmissionManager(
         source = locationSource,
@@ -211,6 +213,7 @@ class CameraSessionOrchestrator(
     fun clearDevice(identifier: String) {
         val id = identifier.uppercase()
         autoCorrection.clear(id)
+        timeSync.clear(id)
         queue.cancelOperations(id, "session cleared")
         sessionCoordinator.clearSession(id)
         registry.markBleDisconnected(id)
@@ -219,6 +222,7 @@ class CameraSessionOrchestrator(
 
     fun shutdownAll() {
         autoCorrection.clearAll()
+        timeSync.clearAll()
         sessionCoordinator.clearAllSessions()
         queue.shutdown("shutdown")
         locationManager.shutdown()
@@ -240,6 +244,11 @@ class CameraSessionOrchestrator(
             is BleTransportEvent.CharacteristicWritten -> {
                 // These operations consume their own queue result, including failures.
                 if (CameraAutoCorrectionSetting.fromUuid(event.characteristicUuid) != null) return
+                if (event.characteristicUuid.equals(
+                        SonyBluetoothConstants.TIME_SYNC_CHARACTERISTIC_UUID,
+                        true
+                    )
+                ) return
                 // DD30 is shared by lock acquisition and release. A release
                 // completion must not advance/restart the GPS-enable handshake.
                 val isLocationLockRelease = completedOperation is BleOperation.Write &&
@@ -269,6 +278,14 @@ class CameraSessionOrchestrator(
     }
 
     private fun handleCharacteristicChanged(event: BleTransportEvent.CharacteristicChanged) {
+        if (event.characteristicUuid.equals(
+                SonyBluetoothConstants.INITIAL_SETTING_RESULT_UUID,
+                true
+            )
+        ) {
+            timeSync.onResult(event.identifier, event.value)
+            return
+        }
         // The coordinator updates the camera-reported warning in the registry.
         // Neither status value releases the GPS lock or restarts the handshake.
         sessionCoordinator.onCharacteristicChanged(
@@ -279,6 +296,7 @@ class CameraSessionOrchestrator(
     private fun handleConnected(identifier: String) {
         val id = identifier.uppercase()
         autoCorrection.clear(id)
+        timeSync.clear(id)
         log.i { "Device $id connected" }
         registry.upsert(id) {
             it.copy(
@@ -359,6 +377,12 @@ class CameraSessionOrchestrator(
     }
 
     private fun handleSubscriptionChanged(event: BleTransportEvent.SubscriptionChanged) {
+        // Optional time-setting subscriptions consume their own result, without restarting GPS setup.
+        if (event.characteristicUuid.equals(
+                SonyBluetoothConstants.INITIAL_SETTING_RESULT_UUID,
+                true
+            )
+        ) return
         val id = event.identifier.uppercase()
         when (event.status) {
             BleOperationStatus.AuthError -> retryAfterAuthError(id) {
@@ -424,6 +448,7 @@ class CameraSessionOrchestrator(
         log.i { "Handshake complete for $id" }
         registry.updateIfPresent(id) { it.copy(phase = BleSessionPhase.Transmitting) }
         locationManager.onDeviceReady(id)
+        timeSync.onDeviceReady(id)
         autoCorrection.refresh(id)
 
         val remoteEnabled = runCatching { deviceDao.isRemoteControlEnabled(id) }

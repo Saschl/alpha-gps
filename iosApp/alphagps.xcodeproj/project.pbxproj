@@ -435,6 +435,8 @@
 				kind = exactVersion;
 				version = 9.30.2;
 			};
+			traits = (
+			);
 		};
 /* End XCRemoteSwiftPackageReference section */
 
