@@ -37,6 +37,7 @@ internal class CameraTimeSyncController(
         var subscribed = false
         var lastOffsets: Pair<Int, Int>? = null
         var pendingResult: CompletableDeferred<CameraTimeSettingResult>? = null
+        var lastRefreshSkip: String? = null
     }
 
     private val sessions = mutableMapOf<String, Session>()
@@ -46,6 +47,7 @@ internal class CameraTimeSyncController(
         clear(id)
         val session = Session()
         sessions[id] = session
+        log.d { "Time sync[$id]: starting initial synchronization" }
         launchSync(id, session, onWriteComplete)
     }
 
@@ -56,25 +58,64 @@ internal class CameraTimeSyncController(
         session.monitorJob = scope.launch {
             while (isActive) {
                 delay(30.seconds)
-                val camera = registry.get(id) ?: continue
+                val camera = registry.get(id)
+                if (camera == null) {
+                    logRefreshSkip(id, session, "camera session missing")
+                    continue
+                }
                 if (!camera.isLocationReady || !port.isConnected(id) || session.syncJob?.isActive == true) {
+                    logRefreshSkip(
+                        id,
+                        session,
+                        "ready=${camera.isLocationReady}, connected=${port.isConnected(id)}, syncActive=${session.syncJob?.isActive == true}"
+                    )
                     continue
                 }
                 // CC13 sets both clock and area, so respect either explicit opt-out on refresh.
                 if (camera.autoTimeCorrection.enabled == false || camera.autoAreaAdjustment.enabled == false) {
+                    logRefreshSkip(
+                        id,
+                        session,
+                        "autoTime=${camera.autoTimeCorrection.enabled}, autoArea=${camera.autoAreaAdjustment.enabled}"
+                    )
                     continue
                 }
-                if (session.supported != false && currentTime().offsets != session.lastOffsets) {
+                val offsets = currentTime().offsets
+                if (session.supported != false && offsets != session.lastOffsets) {
+                    session.lastRefreshSkip = null
+                    log.d { "Time sync[$id]: refreshing after offset change ${session.lastOffsets} -> $offsets (standard/DST minutes)" }
                     launchSync(id, session)
+                } else {
+                    logRefreshSkip(
+                        id,
+                        session,
+                        "offsets unchanged (standard=${offsets.first}min, DST=${offsets.second}min)"
+                    )
                 }
             }
         }
     }
 
     fun onResult(identifier: String, value: ByteArray) {
-        val pending = sessions[identifier.uppercase()]?.pendingResult ?: return
-        val result = CameraTimeSettingResult.parse(value) ?: return
+        val id = identifier.uppercase()
+        val pending = sessions[id]?.pendingResult
+        log.d { "Time sync[$id]: CC0E received=${value.toHexString()}, awaitingResult=${pending?.isActive == true}" }
+        if (pending == null) {
+            log.d { "Time sync[$id]: ignoring CC0E with no pending attempt" }
+            return
+        }
+        val result = CameraTimeSettingResult.parse(value)
+        if (result == null) {
+            log.d { "Time sync[$id]: ignoring malformed or unrelated CC0E response" }
+            return
+        }
         pending.complete(result)
+    }
+
+    private fun logRefreshSkip(id: String, session: Session, reason: String) {
+        if (session.lastRefreshSkip == reason) return
+        session.lastRefreshSkip = reason
+        log.d { "Time sync[$id]: refresh skipped: $reason" }
     }
 
     fun clear(identifier: String) {
@@ -119,6 +160,9 @@ internal class CameraTimeSyncController(
                 session.supported = (read as? BleOperationResult.Success)?.value
                     ?.let(::parseTimeAreaSupport)
                 log.i { "Time sync[$id]: advertised time/area support=${session.supported} (read=$read)" }
+                log.d { "Time sync[$id]: CC0D received=${(read as? BleOperationResult.Success)?.value?.toHexString()}" }
+            } else {
+                log.d { "Time sync[$id]: CC0D missing; checking direct-command characteristic" }
             }
         }
         if (session.supported == false ||
@@ -133,6 +177,7 @@ internal class CameraTimeSyncController(
                 port.execute(id, BleOperation.Subscribe(Sony.INITIAL_SETTING_RESULT_UUID, true))
             currentCoroutineContext().ensureActive()
             session.subscribed = subscription is BleOperationResult.Success
+            log.d { "Time sync[$id]: CC0E subscription=$subscription" }
             if (!session.subscribed) log.w { "Time sync[$id]: result subscription failed ($subscription)" }
         }
 
@@ -146,8 +191,10 @@ internal class CameraTimeSyncController(
             time.instant, time.standardOffsetMinutes, time.dstOffsetMinutes,
         )
         log.i { "Time sync[$id]: UTC=${time.instant}, standard=${time.standardOffsetMinutes}min, DST=${time.dstOffsetMinutes}min" }
+        log.d { "Time sync[$id]: CC13 sending=${packet.toHexString()}" }
         val write = port.execute(id, BleOperation.Write(Sony.TIME_SYNC_CHARACTERISTIC_UUID, packet))
         currentCoroutineContext().ensureActive()
+        log.d { "Time sync[$id]: CC13 write result=$write" }
         // Release the handshake on every write outcome; confirmation waits outside the BLE lane.
         onWriteComplete()
         if (write !is BleOperationResult.Success) {

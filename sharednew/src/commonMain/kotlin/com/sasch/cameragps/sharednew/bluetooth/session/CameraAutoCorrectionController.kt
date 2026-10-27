@@ -1,5 +1,6 @@
 package com.sasch.cameragps.sharednew.bluetooth.session
 
+import com.diamondedge.logging.logging
 import com.sasch.cameragps.sharednew.bluetooth.BleSessionPhase
 import com.sasch.cameragps.sharednew.bluetooth.transport.BleOperation
 import com.sasch.cameragps.sharednew.bluetooth.transport.BleOperationResult
@@ -14,6 +15,7 @@ internal class CameraAutoCorrectionController(
     private val registry: CameraSessionRegistry,
     private val scope: CoroutineScope,
 ) {
+    private val log = logging()
     private val jobs = mutableMapOf<Pair<String, CameraAutoCorrectionSetting>, Job>()
 
     fun refresh(identifier: String) {
@@ -23,6 +25,7 @@ internal class CameraAutoCorrectionController(
             val old = registry.get(id)?.autoCorrectionSetting(setting) ?: continue
             if (old.pending) continue
             if (!port.supportsWriteWithResponse(id, setting.characteristicUuid)) {
+                log.d { "Auto correction[$id]: $setting unsupported (${setting.characteristicUuid})" }
                 port.setAutoCorrectionState(id, setting, CameraSettingState(supported = false))
                 continue
             }
@@ -40,6 +43,10 @@ internal class CameraAutoCorrectionController(
                     1 -> true
                     else -> null
                 } else null
+                log.d {
+                    "Auto correction[$id]: $setting read=$result, raw=${bytes?.toHexString()}, " +
+                            "parsedEnabled=$value, effectiveEnabled=${value ?: old.enabled}"
+                }
                 port.setAutoCorrectionState(
                     id, setting, CameraSettingState(
                         supported = if (value != null) true else old.supported,
@@ -58,6 +65,7 @@ internal class CameraAutoCorrectionController(
         if (old.supported != true || old.enabled == null || old.pending || old.enabled == enabled) return
         port.setAutoCorrectionState(id, setting, old.copy(pending = true, failed = false))
         jobs[id to setting] = scope.launch {
+            log.d { "Auto correction[$id]: $setting writing enabled=$enabled" }
             val result = port.execute(
                 id, BleOperation.Write(
                     setting.characteristicUuid, byteArrayOf(if (enabled) 1 else 0),
@@ -65,6 +73,7 @@ internal class CameraAutoCorrectionController(
             )
             coroutineContext.ensureActive()
             val success = result is BleOperationResult.Success
+            log.d { "Auto correction[$id]: $setting write=$result, effectiveEnabled=${if (success) enabled else old.enabled}" }
             port.setAutoCorrectionState(
                 id, setting, old.copy(
                     enabled = if (success) enabled else old.enabled,

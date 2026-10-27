@@ -70,6 +70,33 @@ class CameraTimeSyncControllerTest {
     }
 
     @Test
+    fun timeSyncSuffixUsesSignedStandardHoursAndAbsoluteMinutesIndependentlyOfDst() {
+        val cases = listOf(
+            0 to byteArrayOf(0, 0),
+            60 to byteArrayOf(1, 0),
+            330 to byteArrayOf(5, 30),
+            345 to byteArrayOf(5, 45),
+            570 to byteArrayOf(9, 30),
+            -210 to byteArrayOf(-3, 30),
+            -300 to byteArrayOf(-5, 0),
+            -570 to byteArrayOf(-9, 30),
+        )
+        for ((standard, expected) in cases) {
+            for (dst in listOf(0, 30, 60)) {
+                val packet = LocationPacketBuilder.buildTimeSyncPacket(
+                    Instant.parse("2026-10-25T01:00:00Z"), standard, dst,
+                )
+                assertContentEquals(
+                    expected,
+                    packet.copyOfRange(11, 13),
+                    "standard=$standard, DST=$dst"
+                )
+                assertEquals(if (dst > 0) 1 else 0, packet[10].toInt())
+            }
+        }
+    }
+
+    @Test
     fun capabilityParserDistinguishesUnsupportedFromUnknown() {
         assertEquals(true, parseTimeAreaSupport(byteArrayOf(6, 0, 2, 1, 0, 4, 1)))
         assertEquals(false, parseTimeAreaSupport(byteArrayOf(3, 0, 4, 0)))
@@ -134,6 +161,8 @@ class CameraTimeSyncControllerTest {
         runCurrent()
         assertEquals(listOf("A"), f.completed)
         assertTrue(logger.messages.any { "camera applied time/area" in it })
+        assertTrue(logger.debugMessages.any { "CC13 sending=0c000007ea0a19023b3b010100" in it })
+        assertTrue(logger.debugMessages.any { "CC0E received=0700040100000000, awaitingResult=true" in it })
         advanceTimeBy(30_001)
         runCurrent()
         assertFalse(logger.messages.any { "result timed out" in it })
@@ -160,6 +189,8 @@ class CameraTimeSyncControllerTest {
         f.notify("A", result().apply { this[2] = 3 })
         f.notify("A", byteArrayOf(7, 0, 4))
         runCurrent()
+        assertTrue(logger.debugMessages.any { "CC0E received=070004, awaitingResult=true" in it })
+        assertTrue(logger.debugMessages.any { "ignoring malformed or unrelated CC0E" in it })
         assertFalse(logger.messages.any { "camera applied" in it })
         advanceTimeBy(30_001)
         runCurrent()
@@ -167,10 +198,11 @@ class CameraTimeSyncControllerTest {
         f.notify("A", result())
         runCurrent()
         assertFalse(logger.messages.any { "camera applied" in it })
+        assertTrue(logger.debugMessages.any { "ignoring CC0E with no pending attempt" in it })
     }
 
     @Test
-    fun missingCapabilityAndResultCharacteristicsKeepLegacyTimeSettingWorking() = runTest {
+    fun missingCapabilityAndResultCharacteristicsKeepInitialAndDstRefreshWorking() = runTest {
         val f = Fixture(backgroundScope)
         f.transport.characteristics.remove(Sony.CAMERA_SUPPORT_UUID)
         f.transport.characteristics.remove(Sony.INITIAL_SETTING_RESULT_UUID)
@@ -179,6 +211,18 @@ class CameraTimeSyncControllerTest {
         assertEquals(1, f.transport.operations.size)
         assertEquals(listOf("A"), f.completed)
         assertTrue(logger.messages.any { "camera result unavailable" in it })
+        f.registry.updateIfPresent("A") {
+            it.copy(
+                autoTimeCorrection = CameraSettingState(true, true),
+                autoAreaAdjustment = CameraSettingState(true, true),
+            )
+        }
+        f.time = f.time.copy(dstOffsetMinutes = 0)
+        advanceTimeBy(30_001)
+        runCurrent()
+        assertEquals(2, f.transport.writes().size)
+        assertEquals(0, f.transport.writes().last().value[10].toInt())
+        assertEquals(listOf("A"), f.completed)
     }
 
     @Test
@@ -270,6 +314,7 @@ class CameraTimeSyncControllerTest {
     @Test
     fun eitherCorrectionOptOutDefersRefreshUntilEnabled() = runTest {
         for (setting in CameraAutoCorrectionSetting.entries) {
+            logger.debugMessages.clear()
             val f = Fixture(backgroundScope)
             f.start("A")
             runCurrent()
@@ -294,6 +339,9 @@ class CameraTimeSyncControllerTest {
             advanceTimeBy(30_001)
             runCurrent()
             assertEquals(1, f.transport.writes().size)
+            advanceTimeBy(60_000)
+            runCurrent()
+            assertEquals(1, logger.debugMessages.count { "refresh skipped: autoTime=" in it })
             f.registry.updateIfPresent("A") {
                 it.copy(
                     autoTimeCorrection = CameraSettingState(
@@ -307,6 +355,43 @@ class CameraTimeSyncControllerTest {
             assertEquals(2, f.transport.writes().size)
             f.controller.clearAll()
         }
+    }
+
+    @Test
+    fun invalidSettingReadLogsRawValueWithoutPresentingRetainedValueAsNewReading() = runTest {
+        val f = Fixture(backgroundScope)
+        f.transport.earlyResult = result()
+        f.start("A")
+        runCurrent()
+        for (setting in CameraAutoCorrectionSetting.entries) {
+            f.transport.characteristics += setting.characteristicUuid
+        }
+        val settings = CameraAutoCorrectionController(f.port, f.registry, backgroundScope)
+        f.transport.support = byteArrayOf(1)
+        settings.refresh("A")
+        runCurrent()
+        assertTrue(f.registry.get("A")!!.autoTimeCorrection.enabled == true)
+        f.transport.support = byteArrayOf(2)
+        settings.refresh("A")
+        runCurrent()
+        assertTrue(f.registry.get("A")!!.autoTimeCorrection.failed)
+        assertTrue(f.registry.get("A")!!.autoTimeCorrection.enabled == true)
+        for (setting in CameraAutoCorrectionSetting.entries) {
+            assertTrue(logger.debugMessages.any {
+                "$setting read=" in it && "raw=02, parsedEnabled=null, effectiveEnabled=true" in it
+            })
+        }
+    }
+
+    @Test
+    fun packetDiagnosticsAreOnlyEmittedWhenDebugLoggingIsEnabled() = runTest {
+        logger.debugEnabled = false
+        val f = Fixture(backgroundScope)
+        f.transport.earlyResult = result()
+        f.start("A")
+        runCurrent()
+        assertTrue(logger.debugMessages.isEmpty())
+        assertTrue(logger.messages.any { "camera applied time/area" in it })
     }
 
     @Test
@@ -476,8 +561,12 @@ class CameraTimeSyncControllerTest {
 
     private class RecordingLogger : Logger {
         val messages = mutableListOf<String>()
+        val debugMessages = mutableListOf<String>()
+        var debugEnabled = true
         override fun verbose(tag: String, msg: String) = Unit
-        override fun debug(tag: String, msg: String) = Unit
+        override fun debug(tag: String, msg: String) {
+            debugMessages += msg
+        }
         override fun info(tag: String, msg: String) {
             messages += msg
         }
@@ -491,7 +580,7 @@ class CameraTimeSyncControllerTest {
         }
 
         override fun isLoggingVerbose() = false
-        override fun isLoggingDebug() = false
+        override fun isLoggingDebug() = debugEnabled
         override fun isLoggingInfo() = true
         override fun isLoggingWarning() = true
         override fun isLoggingError() = true

@@ -71,7 +71,6 @@ object LocationPacketBuilder {
         Clock.System.now(), timeZoneInfo.standardOffsetMinutes, timeZoneInfo.dstOffsetMinutes,
     )
 
-    @Suppress("DEPRECATION")
     internal fun buildTimeSyncPacket(
         now: Instant,
         standardOffsetMinutes: Int,
