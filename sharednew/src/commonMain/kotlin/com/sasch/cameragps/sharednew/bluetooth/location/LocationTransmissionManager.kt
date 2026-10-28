@@ -60,6 +60,9 @@ class LocationTransmissionManager(
     val isTransmitting: StateFlow<Boolean> = _isTransmitting
 
     private var latest: GeoLocation? = null
+
+    fun lastFixAgeMillis(): Long? =
+        latest?.let { (nowMillis() - it.timestampMillis).coerceAtLeast(0) }
     private var hasSessionLocation = false
     private var collectJob: Job? = null
     private var periodicJob: Job? = null

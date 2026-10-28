@@ -96,6 +96,16 @@
                 android:value="true" />
         </service>
 
+        <provider
+            android:name=".diagnostics.TroubleshootingFileProvider"
+            android:authorities="${applicationId}.troubleshooting"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/troubleshooting_paths" />
+        </provider>
+
         <receiver
             android:name=".service.RebootReceiver"
             android:enabled="true"

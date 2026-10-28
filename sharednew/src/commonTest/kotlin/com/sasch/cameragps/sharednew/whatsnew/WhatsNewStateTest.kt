@@ -84,6 +84,17 @@ class WhatsNewStateTest {
     }
 
     @Test
+    fun diagnosticsReleaseShowsSameNotesOnBothPlatformsAfterUpgrade() {
+        val android = WhatsNewState("v1.7.2", ReleasePlatform.Android, "1.7.1", false) {}
+        val ios = WhatsNewState("1.7.2", ReleasePlatform.Ios, "1.7.1", false) {}
+        assertTrue(android.pending)
+        assertTrue(ios.pending)
+        assertEquals("1.7.2", android.release?.version)
+        assertEquals(3, android.release!!.highlights.size)
+        assertEquals(android.release, ios.release)
+    }
+
+    @Test
     fun iosPairingNotesAreOnlyIncludedOnIos() {
         val android = ReleaseNotesCatalog.forVersion("v1.6.2", ReleasePlatform.Android)!!
         val ios = ReleaseNotesCatalog.forVersion("1.6.2", ReleasePlatform.Ios)!!

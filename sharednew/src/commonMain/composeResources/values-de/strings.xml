@@ -317,6 +317,9 @@
     <string name="camera_setting_retry">Kameraeinstellungen aktualisieren</string>
     <!-- In-app release notes. -->
     <string name="whats_new_title">Was ist neu?</string>
+    <string name="whats_new_172_troubleshooting">Fehlerbehebung mit einem Klick; bei Problemen können Sie detaillierte (anonymisierte) Diagnosedaten weitergeben</string>
+    <string name="whats_new_172_layout">Verbesserungen der Darstellung auf größeren Geräten</string>
+    <string name="whats_new_172_optimisations">Kleinere Optimierungen</string>
     <string name="whats_new_171_zv1">Verbesserte Kompatibilität der WLAN-Fernsteuerung mit der Sony ZV-1 und anderen älteren Sony-Kameras, einschließlich Livebild-Start und Fotoübertragung.</string>
     <string name="whats_new_171_rx0">Wiederholte Bluetooth-Verbindungsabbrüche bei der Standortübertragung mit Kameras wie der Sony RX0 II wurden behoben, wenn Always On deaktiviert ist.</string>
     <string name="whats_new_version">Version %1$s</string>
@@ -447,4 +450,10 @@
     <string name="wifi_remote_ios_settings">App-Berechtigungen</string>
     <string name="wifi_remote_ios_permission">Erlaube in den Einstellungen der App den Zugriff auf das lokale Netzwerk und stelle die Verbindung erneut her.</string>
     <string name="wifi_remote_ios_opening">Verbindung zur Kamera wird hergestellt… Erlaube den Zugriff auf das lokale Netzwerk, wenn iOS danach fragt.</string>
+    <string name="report_share">Diagnosebericht per E-Mail</string>
+    <string name="report_copy">Zusammenfassung kopieren</string>
+    <string name="report_description">Sende eine ZIP-Datei mit App-Status und allen gespeicherten Protokollen an %1$s oder kopiere eine kurze Zusammenfassung. Kamerakennungen und bekannte Kameranamen werden ersetzt; Standort- und Zugangsdaten werden gefiltert.</string>
+    <string name="report_preparing">Bericht wird erstellt…</string>
+    <string name="report_error">Der Bericht konnte nicht erstellt oder geteilt werden. Bitte versuche es erneut.</string>
+    <string name="report_copied">Zusammenfassung in die Zwischenablage kopiert.</string>
 </resources>

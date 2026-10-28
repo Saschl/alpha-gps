@@ -1,0 +1,3 @@
+- One click troubleshooting, share detailed diagnostics (anonymised) if you face issues
+- Layout improvements for larger devices
+- Smaller optimisations

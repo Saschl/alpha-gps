@@ -336,6 +336,9 @@
     <string name="camera_setting_retry">Refresh camera settings</string>
     <!-- In-app release notes. -->
     <string name="whats_new_title">What’s new</string>
+    <string name="whats_new_172_troubleshooting">One click troubleshooting, share detailed diagnostics (anonymised) if you face issues</string>
+    <string name="whats_new_172_layout">Layout improvements for larger devices</string>
+    <string name="whats_new_172_optimisations">Smaller optimisations</string>
     <string name="whats_new_171_zv1">Improved Wi-Fi remote compatibility for the Sony ZV-1 and other older Sony cameras, including live view startup and photo transfer.</string>
     <string name="whats_new_171_rx0">Fixed repeated Bluetooth disconnections during location sharing with cameras such as the Sony RX0 II when Always On is disabled.</string>
     <string name="whats_new_version">Version %1$s</string>
@@ -466,4 +469,11 @@
     <string name="wifi_remote_ios_settings">App permissions</string>
     <string name="wifi_remote_ios_permission">Allow Local Network access in the app’s Settings, then reconnect.</string>
     <string name="wifi_remote_ios_opening">Connecting to camera… If iOS asks, allow Local Network access.</string>
+
+    <string name="report_share">Email troubleshooting report</string>
+    <string name="report_copy">Copy summary</string>
+    <string name="report_description">Email a ZIP with app status and all retained logs to %1$s, or copy a short summary. Camera identifiers and known camera names are replaced; location and credential details are filtered.</string>
+    <string name="report_preparing">Preparing report…</string>
+    <string name="report_error">Could not prepare or share the report. Please try again.</string>
+    <string name="report_copied">Summary copied to clipboard.</string>
 </resources>

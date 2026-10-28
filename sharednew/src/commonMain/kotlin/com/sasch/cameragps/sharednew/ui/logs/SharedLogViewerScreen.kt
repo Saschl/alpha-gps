@@ -37,6 +37,7 @@ import cameragps.sharednew.generated.resources.logs_empty
 import cameragps.sharednew.generated.resources.logs_title
 import com.sasch.cameragps.sharednew.database.logging.LogEntry
 import com.sasch.cameragps.sharednew.database.logging.LogRepository
+import com.sasch.cameragps.sharednew.diagnostics.TroubleshootingReporter
 import com.sasch.cameragps.sharednew.logging.LogFormatter
 import com.sasch.cameragps.sharednew.ui.components.verticalScrollbar
 import kotlinx.coroutines.launch
@@ -59,6 +60,7 @@ private val LOG_TIMESTAMP_FORMAT = LocalDateTime.Format {
 fun SharedLogViewerScreen(
     logFormatter: LogFormatter,
     logRepository: LogRepository,
+    reporter: TroubleshootingReporter,
     onBackClick: () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
@@ -96,6 +98,7 @@ fun SharedLogViewerScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            TroubleshootingReportCard(reporter)
             Button(
                 onClick = {
                     scope.launch {

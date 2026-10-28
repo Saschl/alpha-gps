@@ -1,15 +1,11 @@
 package com.sasch.cameragps.sharednew.bluetooth
 
-import com.sasch.cameragps.sharednew.remote.wifi.createIosWifiRemoteController
-
 import com.diamondedge.logging.LogLevel
 import com.diamondedge.logging.logging
 import com.sasch.cameragps.sharednew.IosAppPreferences
 import com.sasch.cameragps.sharednew.IosLaunchContext
 import com.sasch.cameragps.sharednew.IosTransmissionNotifications
 import com.sasch.cameragps.sharednew.bluetooth.IosBluetoothController.centralShell
-import com.sasch.cameragps.sharednew.bluetooth.IosBluetoothController.clearPairingFailedDevice
-import com.sasch.cameragps.sharednew.bluetooth.IosBluetoothController.ensureInitialized
 import com.sasch.cameragps.sharednew.bluetooth.IosBluetoothController.persistAccessoryNames
 import com.sasch.cameragps.sharednew.bluetooth.IosBluetoothController.reconnectToPersistedPeripherals
 import com.sasch.cameragps.sharednew.bluetooth.IosBluetoothController.startCentralIfNeeded
@@ -25,7 +21,9 @@ import com.sasch.cameragps.sharednew.database.LogDatabase
 import com.sasch.cameragps.sharednew.database.devices.CameraDeviceDAO
 import com.sasch.cameragps.sharednew.database.getDatabaseBuilder
 import com.sasch.cameragps.sharednew.database.logging.LogRepository
+import com.sasch.cameragps.sharednew.diagnostics.TroubleshootingSnapshot
 import com.sasch.cameragps.sharednew.logging.IosLogging
+import com.sasch.cameragps.sharednew.remote.wifi.createIosWifiRemoteController
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -343,6 +341,18 @@ object IosBluetoothController : BluetoothController {
         transmissionNotifications.setEnabled(enabled)
 
     fun hasPreciseAccuracyAuthorization(): Boolean = locationSource.hasPreciseAuthorization()
+
+    internal suspend fun troubleshootingSnapshot(details: Map<String, String>): TroubleshootingSnapshot {
+        val devices = deviceDao.getAllCameraDevices()
+        return TroubleshootingSnapshot(
+            details = details,
+            devices = devices,
+            sessions = sessions.value,
+            tracking = orchestrator.locationManager.isActive.value,
+            transmitting = orchestrator.locationManager.isTransmitting.value,
+            lastFixAgeMillis = orchestrator.locationManager.lastFixAgeMillis(),
+        )
+    }
 
     init {
         locationSource.onAuthorizationChanged = {

@@ -65,8 +65,10 @@ import cameragps.sharednew.generated.resources.how_about_privacy_answer
 import cameragps.sharednew.generated.resources.is_there_documenation
 import cameragps.sharednew.generated.resources.is_there_documenation_answer
 import cameragps.sharednew.generated.resources.is_there_documenation_answer_coffee
+import com.sasch.cameragps.sharednew.diagnostics.TroubleshootingReporter
 import com.sasch.cameragps.sharednew.ui.components.ScreenContent
 import com.sasch.cameragps.sharednew.ui.components.ScrollbarLazyColumn
+import com.sasch.cameragps.sharednew.ui.logs.TroubleshootingReportCard
 import com.saschl.cameragps.R
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
@@ -81,6 +83,7 @@ private data class FaqItem(
 @Composable
 fun HelpScreen(
     onBackClick: () -> Unit,
+    reporter: TroubleshootingReporter,
     onTroubleshootingClick: () -> Unit = {}
 ) {
     val faqItems = listOf(
@@ -213,6 +216,8 @@ fun HelpScreen(
                         }
                     }
                 }
+
+                item { TroubleshootingReportCard(reporter) }
 
                 // FAQ items
                 items(faqItems) { faq ->

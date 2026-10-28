@@ -14,6 +14,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.uikit.LocalUIViewController
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -29,6 +30,7 @@ import com.sasch.cameragps.sharednew.bluetooth.IosBluetoothController
 import com.sasch.cameragps.sharednew.crash.IosCrashReporting
 import com.sasch.cameragps.sharednew.database.getDatabaseBuilder
 import com.sasch.cameragps.sharednew.database.logging.LogRepository
+import com.sasch.cameragps.sharednew.diagnostics.createIosTroubleshootingReporter
 import com.sasch.cameragps.sharednew.language.appLanguagePreference
 import com.sasch.cameragps.sharednew.logging.IosLogFormatter
 import com.sasch.cameragps.sharednew.logging.IosLogging
@@ -96,6 +98,10 @@ internal fun CameraGpsIosApp(
     val isCameraPickerActive by pairingPreparation.isSearching.collectAsState()
     val lifecycleState by LocalLifecycleOwner.current.lifecycle.currentStateFlow.collectAsState()
     val logRepository = remember { LogRepository(getDatabaseBuilder()) }
+    val reportPresenter = LocalUIViewController.current
+    val troubleshootingReporter = remember(logRepository, reportPresenter) {
+        createIosTroubleshootingReporter(logRepository, reportPresenter)
+    }
     var currentScreen by remember {
         mutableStateOf(
             if (IosAppPreferences.showWelcomeOnLaunch()) IosScreen.Welcome else IosScreen.Devices
@@ -358,6 +364,7 @@ internal fun CameraGpsIosApp(
 
             IosScreen.Help -> {
                 IosHelpScreen(
+                    reporter = troubleshootingReporter,
                     onBackClick = { currentScreen = IosScreen.Devices },
                     onOpenTroubleshooting = {
                         troubleshootingReturnScreen = IosScreen.Help
@@ -377,6 +384,7 @@ internal fun CameraGpsIosApp(
                 SharedLogViewerScreen(
                     logFormatter = logFormatter,
                     logRepository = logRepository,
+                    reporter = troubleshootingReporter,
                     onBackClick = { currentScreen = IosScreen.Devices }
                 )
             }

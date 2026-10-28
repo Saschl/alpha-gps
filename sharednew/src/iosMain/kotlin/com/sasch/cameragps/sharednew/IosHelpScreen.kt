@@ -52,8 +52,10 @@ import cameragps.sharednew.generated.resources.how_about_privacy_answer
 import cameragps.sharednew.generated.resources.is_there_documenation
 import cameragps.sharednew.generated.resources.is_there_documenation_answer
 import cameragps.sharednew.generated.resources.is_there_documenation_answer_coffee
+import com.sasch.cameragps.sharednew.diagnostics.TroubleshootingReporter
 import com.sasch.cameragps.sharednew.ui.components.ScrollbarLazyColumn
 import com.sasch.cameragps.sharednew.ui.help.TroubleshootingGuideContent
+import com.sasch.cameragps.sharednew.ui.logs.TroubleshootingReportCard
 import com.sasch.cameragps.sharednew.ui.settings.SharedSettingsScreen
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.painterResource
@@ -68,6 +70,7 @@ private data class IosFaqItem(
 @Composable
 internal fun IosHelpScreen(
     onBackClick: () -> Unit,
+    reporter: TroubleshootingReporter,
     onOpenTroubleshooting: () -> Unit = {},
 ) {
     val faqItems = listOf(
@@ -165,6 +168,8 @@ internal fun IosHelpScreen(
                     }
                 }
             }
+
+            item { TroubleshootingReportCard(reporter) }
 
             items(faqItems, key = { it.questionRes }) { faq ->
                 var expanded by remember { mutableStateOf(faq == faqItems.first()) }

@@ -6,11 +6,17 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
-class LogRepository(databaseBuilder: RoomDatabase.Builder<LogDatabase>) {
-    private val logDao = LogDatabase.getRoomDatabase(databaseBuilder).logDao()
-    private val scope = CoroutineScope(Dispatchers.IO)
+class LogRepository internal constructor(
+    private val logDao: LogDao,
+    private val scope: CoroutineScope,
+) {
+    constructor(databaseBuilder: RoomDatabase.Builder<LogDatabase>) : this(
+        LogDatabase.getRoomDatabase(databaseBuilder).logDao(),
+        CoroutineScope(Dispatchers.IO),
+    )
 
     fun insertLog(
         timestamp: Long,
@@ -31,15 +37,23 @@ class LogRepository(databaseBuilder: RoomDatabase.Builder<LogDatabase>) {
 
             // Clean up old logs to prevent database from growing too large
             val count = logDao.getLogCount()
-            if (count > 1000) {
-                logDao.deleteOldLogs(500) // Keep only latest 500 logs
+            if (count > MAX_RETAINED_LOGS) {
+                logDao.deleteOldLogs(RETAINED_LOGS_AFTER_TRIM)
             }
         }
     }
 
     fun getRecentLogs(limit: Int = 200): Flow<List<LogEntry>> = logDao.getRecentLogs(limit)
 
+    /** A chronological snapshot of all retained logs, independent of the viewer limit. */
+    suspend fun getLogsForExport(): List<LogEntry> = logDao.getAllLogs().first().reversed()
+
     suspend fun clearAllLogs() {
         logDao.clearAllLogs()
+    }
+
+    private companion object {
+        const val MAX_RETAINED_LOGS = 5_000
+        const val RETAINED_LOGS_AFTER_TRIM = 4_000
     }
 }

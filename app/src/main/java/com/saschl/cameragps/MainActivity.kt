@@ -33,6 +33,7 @@ import com.sasch.cameragps.sharednew.ui.logs.SharedLogViewerScreen
 import com.sasch.cameragps.sharednew.ui.theme.CameraGpsTheme
 import com.sasch.cameragps.sharednew.whatsnew.ReleasePlatform
 import com.sasch.cameragps.sharednew.whatsnew.rememberWhatsNewState
+import com.saschl.cameragps.diagnostics.createAndroidTroubleshootingReporter
 import com.saschl.cameragps.service.LocationSenderService
 import com.saschl.cameragps.ui.EnhancedLocationPermissionBox
 import com.saschl.cameragps.ui.HelpScreen
@@ -68,6 +69,9 @@ class MainActivity : AppCompatActivity() {
         val cameraDeviceDAO =
             LogDatabase.getRoomDatabase(getDatabaseBuilder(context)).cameraDeviceDao()
         val logRepository = remember(context) { LogRepository(getDatabaseBuilder(context)) }
+        val troubleshootingReporter = remember(context, logRepository) {
+            createAndroidTroubleshootingReporter(context, logRepository)
+        }
         val lifecycleState by ProcessLifecycleOwner.get().lifecycle.currentStateFlow.collectAsState()
 
         val startDestination = remember {
@@ -204,6 +208,7 @@ class MainActivity : AppCompatActivity() {
                 AppDestination.Help -> {
                     NavEntry(AppDestination.Help) {
                         HelpScreen(
+                            reporter = troubleshootingReporter,
                             onBackClick = {
                                 popBackStackIfPossible()
                             },
@@ -277,6 +282,7 @@ class MainActivity : AppCompatActivity() {
                         SharedLogViewerScreen(
                             logFormatter,
                             logRepository = logRepository,
+                            reporter = troubleshootingReporter,
                             onBackClick = {
                                 popBackStackIfPossible()
                             }

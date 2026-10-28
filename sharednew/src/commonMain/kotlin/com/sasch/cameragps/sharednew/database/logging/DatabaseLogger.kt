@@ -44,7 +44,7 @@ class DatabaseLogger(
             priority = 5,
             tag = tag,
             message = msg,
-            exception = null
+            exception = t?.stackTraceToString()
         )
     }
 
@@ -54,7 +54,7 @@ class DatabaseLogger(
             priority = 6,
             tag = tag,
             message = msg,
-            exception = null
+            exception = t?.stackTraceToString()
         )
     }
 
