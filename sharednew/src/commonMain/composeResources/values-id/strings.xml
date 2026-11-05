@@ -300,7 +300,9 @@
     <string name="auto_time_correction_hint">Izinkan kamera secara otomatis mengoreksi tanggal dan waktunya menggunakan informasi dari ponsel Anda. Pengaturan ini mengubah konfigurasi pada kamera yang terhubung.</string>
     <string name="auto_area_adjustment">Penyesuaian area otomatis</string>
     <string name="auto_area_adjustment_hint">Izinkan kamera secara otomatis menyesuaikan area dan zona waktunya menggunakan informasi dari ponsel Anda. Pengaturan ini mengubah konfigurasi pada kamera yang terhubung.</string>
-    <string name="camera_setting_connect">(Kamera harus terhubung)</string>
+    <string name="camera_settings_header">Pengaturan kamera</string>
+    <string name="camera_settings_disconnected">Hubungkan kamera untuk melihat dan mengubah pengaturan ini.</string>
+    <string name="camera_setting_unknown">Tidak diketahui</string>
     <string name="camera_setting_pending">Menunggu kamera…</string>
     <string name="camera_setting_unsupported">Kamera ini tidak mendukung perubahan pengaturan ini melalui aplikasi.</string>
     <string name="camera_setting_failed">Pengaturan kamera tidak dapat dikonfirmasi. Segarkan untuk memeriksa nilainya saat ini.</string>

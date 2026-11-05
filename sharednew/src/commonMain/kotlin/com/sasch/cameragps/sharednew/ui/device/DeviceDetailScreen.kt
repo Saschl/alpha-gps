@@ -14,6 +14,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -28,6 +29,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
@@ -38,11 +40,13 @@ import cameragps.sharednew.generated.resources.auto_area_adjustment_hint
 import cameragps.sharednew.generated.resources.auto_time_correction
 import cameragps.sharednew.generated.resources.auto_time_correction_hint
 import cameragps.sharednew.generated.resources.camera_24px
-import cameragps.sharednew.generated.resources.camera_setting_connect
 import cameragps.sharednew.generated.resources.camera_setting_failed
 import cameragps.sharednew.generated.resources.camera_setting_pending
 import cameragps.sharednew.generated.resources.camera_setting_retry
+import cameragps.sharednew.generated.resources.camera_setting_unknown
 import cameragps.sharednew.generated.resources.camera_setting_unsupported
+import cameragps.sharednew.generated.resources.camera_settings_disconnected
+import cameragps.sharednew.generated.resources.camera_settings_header
 import cameragps.sharednew.generated.resources.cancel_button
 import cameragps.sharednew.generated.resources.dialog_ok
 import cameragps.sharednew.generated.resources.enableConstantly
@@ -201,26 +205,52 @@ fun DeviceDetailContent(
                 )
             }
 
-            for (setting in CameraAutoCorrectionSetting.entries) {
-                val settingState = session?.autoCorrectionSetting(setting) ?: CameraSettingState()
-                item(key = setting.name) {
-                    val isTime = setting == CameraAutoCorrectionSetting.Time
-                    CameraSettingRow(
-                        title = stringResource(if (isTime) Res.string.auto_time_correction else Res.string.auto_area_adjustment),
-                        infoText = stringResource(if (isTime) Res.string.auto_time_correction_hint else Res.string.auto_area_adjustment_hint),
-                        state = settingState,
-                        cameraReady = cameraReady,
-                        onCheckedChange = {
-                            viewModel.setAutoCorrectionSetting(
-                                deviceId,
-                                setting,
-                                it
+            // These settings live on the camera, unlike the app-side toggles above,
+            // so they are boxed into their own section that explains why they need a connection.
+            item(key = "camera_settings") {
+                OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                    ) {
+                        CameraSettingsHeader(cameraReady = cameraReady)
+                        for (setting in CameraAutoCorrectionSetting.entries) {
+                            val settingState =
+                                session?.autoCorrectionSetting(setting) ?: CameraSettingState()
+                            val isTime = setting == CameraAutoCorrectionSetting.Time
+                            CameraSettingRow(
+                                title = stringResource(if (isTime) Res.string.auto_time_correction else Res.string.auto_area_adjustment),
+                                infoText = stringResource(if (isTime) Res.string.auto_time_correction_hint else Res.string.auto_area_adjustment_hint),
+                                state = settingState,
+                                cameraReady = cameraReady,
+                                onCheckedChange = {
+                                    viewModel.setAutoCorrectionSetting(deviceId, setting, it)
+                                },
+                                onRetry = { viewModel.refreshCameraSettings(deviceId) },
                             )
-                        },
-                        onRetry = { viewModel.refreshCameraSettings(deviceId) },
-                    )
+                        }
+                    }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun CameraSettingsHeader(cameraReady: Boolean) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(
+            text = stringResource(Res.string.camera_settings_header),
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        if (!cameraReady) {
+            Text(
+                text = stringResource(Res.string.camera_settings_disconnected),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }
@@ -235,6 +265,8 @@ private fun CameraSettingRow(
     onRetry: () -> Unit,
 ) {
     val enabled = cameraReady && state.supported == true && state.enabled != null && !state.pending
+    // Without a live value, a switch drawn "off" would read as "feature disabled".
+    val valueKnown = cameraReady && state.enabled != null
     Column {
         DeviceToggleRow(
             title = title,
@@ -244,9 +276,11 @@ private fun CameraSettingRow(
             infoText = infoText,
             titleColor = if (enabled) MaterialTheme.colorScheme.onSurface
             else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+            trailingLabel = if (valueKnown) null else stringResource(Res.string.camera_setting_unknown),
         )
+        // While disconnected, the section header explains the state for both rows.
         val status = when {
-            !cameraReady -> Res.string.camera_setting_connect
+            !cameraReady -> null
             state.pending -> Res.string.camera_setting_pending
             state.supported == false -> Res.string.camera_setting_unsupported
             state.failed -> Res.string.camera_setting_failed
@@ -398,6 +432,8 @@ private fun DeviceToggleRow(
     onCheckedChange: (Boolean) -> Unit,
     infoText: String? = null,
     titleColor: Color = Color.Unspecified,
+    /** Shown in place of the switch when the value is unknown. */
+    trailingLabel: String? = null,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -413,10 +449,18 @@ private fun DeviceToggleRow(
         if (infoText != null) {
             SettingInfoButton(title = title, text = infoText)
         }
-        Switch(
-            checked = checked,
-            enabled = enabled,
-            onCheckedChange = onCheckedChange,
-        )
+        if (trailingLabel != null) {
+            Text(
+                text = trailingLabel,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        } else {
+            Switch(
+                checked = checked,
+                enabled = enabled,
+                onCheckedChange = onCheckedChange,
+            )
+        }
     }
 }
