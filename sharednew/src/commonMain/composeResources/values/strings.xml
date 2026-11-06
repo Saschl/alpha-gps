@@ -472,7 +472,7 @@
 
     <string name="report_share">Email troubleshooting report</string>
     <string name="report_copy">Copy summary</string>
-    <string name="report_description">Email a ZIP with app status and all retained logs to %1$s, or copy a short summary. Camera identifiers and known camera names are replaced; location and credential details are filtered.</string>
+    <string name="report_description">Email a ZIP with app status and all retained logs to %1$s, or copy a short summary. Camera identifiers and known camera names are replaced; location details are filtered.</string>
     <string name="report_preparing">Preparing report…</string>
     <string name="report_error">Could not prepare or share the report. Please try again.</string>
     <string name="report_copied">Summary copied to clipboard.</string>

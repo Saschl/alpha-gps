@@ -38,6 +38,7 @@ class SonyWifiBootstrapTest {
         var ssidReads = 0
         var hasBssid = true
         val statuses = ArrayDeque<ByteArray>()
+        var defaultStatus = byteArrayOf()
         var emptySsid = false
         var passwordReads = 0
         var delayPassword = false
@@ -50,7 +51,7 @@ class SonyWifiBootstrapTest {
             operations += operation
             return when (operation) {
                 is BleOperation.Read -> when (operation.characteristicUuid) {
-                    Sony.CAMERA_STATUS_UUID -> BleOperationResult.Success(statuses.removeFirstOrNull() ?: byteArrayOf())
+                    Sony.CAMERA_STATUS_UUID -> BleOperationResult.Success(statuses.removeFirstOrNull() ?: defaultStatus)
                     Sony.WIFI_SSID_UUID -> {
                         ssidReads++
                         if (emptySsid || ssidReads == 1) BleOperationResult.Failure(
@@ -117,6 +118,61 @@ class SonyWifiBootstrapTest {
         val firstCredential = ble.operations.indexOfFirst { it is BleOperation.Read && it.characteristicUuid == Sony.WIFI_SSID_UUID }
         assertEquals(3, ble.operations.take(firstCredential).filterIsInstance<BleOperation.Read>().size)
     }
+
+    @Test
+    fun reconnectWaitsForPreviousShutdownBeforeStartingWifi() = runTest {
+        val ble = FakeBle().apply {
+            statuses.addAll(listOf(wifiStatus(3), wifiStatus(3), wifiStatus(0), wifiStatus(1), wifiStatus(2)))
+        }
+
+        assertTrue(SonyWifiBootstrap(ble, credentialPollMs = 10).prepare("camera") != null)
+
+        val start = ble.operations.indexOfFirst { it is BleOperation.Write }
+        assertEquals(3, ble.operations.take(start).filterIsInstance<BleOperation.Read>().size)
+        assertEquals(1, ble.operations.filterIsInstance<BleOperation.Write>().size)
+    }
+
+    @Test
+    fun reconnectRetriesStartAfterShutdownOvertakesFirstCommand() = runTest {
+        val ble = FakeBle().apply {
+            statuses.addAll(listOf(wifiStatus(2), wifiStatus(3), wifiStatus(3), wifiStatus(0), wifiStatus(1), wifiStatus(2)))
+        }
+
+        assertTrue(SonyWifiBootstrap(ble, credentialPollMs = 10).prepare("camera") != null)
+
+        val starts = ble.operations.indices.filter { ble.operations[it] is BleOperation.Write }
+        assertEquals(2, starts.size)
+        assertEquals(3, ble.operations.subList(starts[0], starts[1]).filterIsInstance<BleOperation.Read>().size)
+        assertTrue(ble.operations.take(starts[1]).none {
+            it is BleOperation.Read && it.characteristicUuid == Sony.WIFI_SSID_UUID
+        })
+    }
+
+    @Test
+    fun stuckShutdownTimesOutWithoutStartingWifiOrReadingCredentials() = runTest {
+        val ble = FakeBle().apply { defaultStatus = wifiStatus(3) }
+
+        assertNull(SonyWifiBootstrap(ble, overallTimeoutMs = 100, credentialPollMs = 10).prepare("camera"))
+
+        assertTrue(ble.operations.none { it is BleOperation.Write })
+        assertEquals(0, ble.ssidReads)
+    }
+
+    @Test
+    fun cancellingShutdownWaitNeverStartsWifi() = runTest {
+        val ble = FakeBle().apply { defaultStatus = wifiStatus(3) }
+        val job = launch { SonyWifiBootstrap(ble).prepare("camera") }
+        runCurrent()
+
+        job.cancel()
+        runCurrent()
+
+        assertTrue(job.isCancelled)
+        assertTrue(ble.operations.none { it is BleOperation.Write })
+        assertEquals(0, ble.ssidReads)
+    }
+
+    private fun wifiStatus(state: Int) = byteArrayOf(4, 0, 1, state.toByte(), 0)
 
     @Test
     fun boundedCredentialFailureAndCancellationNeverRepeatWifiStart() = runTest {

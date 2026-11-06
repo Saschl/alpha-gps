@@ -82,17 +82,17 @@ internal class PtpIpSessionOpener(
             var command: PtpIpPacketConnection? = null
             var event: PtpIpPacketConnection? = null
             try {
-                log.i { "Wi-Fi PTP opening command channel" }
+                log.d { "Wi-Fi PTP opening command channel" }
                 command = connectionFactory.connect()
-                log.i { "Wi-Fi PTP sending command handshake" }
+                log.d { "Wi-Fi PTP sending command handshake" }
                 command.send(PtpIpHandshake.commandRequest(clientGuid, clientName))
                 val ack = PtpIpHandshake.parseCommandAck(command.receive())
-                log.i { "Wi-Fi PTP command acknowledged; opening event channel" }
+                log.d { "Wi-Fi PTP command acknowledged; opening event channel" }
 
                 event = connectionFactory.connect()
                 event.send(PtpIpHandshake.eventRequest(ack.connectionNumber))
                 require(event.receive().type == PtpIpHandshake.INIT_EVENT_ACK)
-                log.i { "Wi-Fi PTP event handshake acknowledged" }
+                log.d { "Wi-Fi PTP event handshake acknowledged" }
 
                 val session = PtpIpOpenedSession(ack, PtpIpCommandQueue(command, scope), command, event, scope)
                 command = null

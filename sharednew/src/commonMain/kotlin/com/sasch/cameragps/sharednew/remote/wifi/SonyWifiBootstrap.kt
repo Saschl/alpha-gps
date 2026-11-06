@@ -6,6 +6,7 @@ import com.sasch.cameragps.sharednew.bluetooth.transport.BleOperation
 import com.sasch.cameragps.sharednew.bluetooth.transport.BleOperationResult
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.time.Duration.Companion.milliseconds
 
 /** Every BLE operation is delegated to the existing per-device GATT queue. */
 internal interface WifiBootstrapBlePort {
@@ -33,7 +34,7 @@ internal class SonyWifiBootstrap(
     suspend fun prepare(identifier: String): CameraWifiCredentials? {
         var startAccepted = false
         var stage = "activation"
-        val credentials = withTimeoutOrNull(overallTimeoutMs) {
+        val credentials = withTimeoutOrNull(overallTimeoutMs.milliseconds) {
             if (!ble.isConnected(identifier)) return@withTimeoutOrNull null
             if (!ble.hasCharacteristic(identifier, SonyBluetoothConstants.WIFI_ON_UUID) ||
                 !ble.hasCharacteristic(identifier, SonyBluetoothConstants.WIFI_SSID_UUID) ||
@@ -45,33 +46,42 @@ internal class SonyWifiBootstrap(
                     identifier,
                     BleOperation.Subscribe(SonyBluetoothConstants.CAMERA_STATUS_UUID, true)
                 )
-                ble.execute(
-                    identifier,
-                    BleOperation.Read(SonyBluetoothConstants.CAMERA_STATUS_UUID)
-                )
+                var status = readWifiStatus(identifier)
+                log.d { "Camera Wi-Fi status before startup=$status" }
+                if (status?.first == 3) {
+                    stage = "previous shutdown"
+                    log.i { "Waiting for previous camera Wi-Fi shutdown before starting" }
+                    while (status?.first == 3 && ble.isConnected(identifier)) {
+                        delay(credentialPollMs.milliseconds)
+                        status = readWifiStatus(identifier)
+                    }
+                }
             }
-            if (ble.execute(
-                    identifier, BleOperation.Write(
-                        SonyBluetoothConstants.WIFI_ON_UUID, SonyBluetoothConstants.WIFI_ON_COMMAND,
-                    )
-                ) !is BleOperationResult.Success
-            ) return@withTimeoutOrNull null
+            if (!ble.isConnected(identifier)) return@withTimeoutOrNull null
+            stage = "activation"
+            if (!startWifi(identifier)) return@withTimeoutOrNull null
             startAccepted = true
             stage = "camera status"
-            log.i { "Camera accepted Wi-Fi start command; waiting for connection details" }
+            log.d { "Camera accepted Wi-Fi start command; waiting for connection details" }
 
             if (ble.hasCharacteristic(identifier, SonyBluetoothConstants.CAMERA_STATUS_UUID)) {
+                var shutdownObserved = false
+                var startRetried = false
                 while (ble.isConnected(identifier)) {
-                    val status = (ble.execute(
-                        identifier,
-                        BleOperation.Read(SonyBluetoothConstants.CAMERA_STATUS_UUID)
-                    )
-                            as? BleOperationResult.Success)?.value?.let(::parseWifiStatus) ?: break
+                    val status = readWifiStatus(identifier) ?: break
                     if (status.first == 2) break
                     if (status.first == 0 && status.second in 2..5) {
                         startAccepted = false
                         log.w { "Camera reported Wi-Fi startup error=${status.second}" }
                         return@withTimeoutOrNull null
+                    }
+                    if (status.first == 3) shutdownObserved = true
+                    // Shutdown can begin after the preflight read and consume the first start.
+                    if (status.first == 0 && shutdownObserved && !startRetried) {
+                        log.i { "Camera Wi-Fi shutdown finished after start; retrying startup once" }
+                        startRetried = true
+                        startAccepted = startWifi(identifier)
+                        if (!startAccepted) return@withTimeoutOrNull null
                     }
                     delay(credentialPollMs)
                 }
@@ -115,10 +125,20 @@ internal class SonyWifiBootstrap(
             log.w { "Camera Wi-Fi setup failed during $stage; startAccepted=$startAccepted" }
             if (startAccepted) throw WifiRemoteConnectException(WifiRemoteFailure.CameraCredentialsUnavailable)
         } else {
-            log.i { "Camera Wi-Fi connection details read successfully" }
+            log.d { "Camera Wi-Fi connection details read successfully" }
         }
         return credentials
     }
+
+    private suspend fun readWifiStatus(identifier: String): Pair<Int, Int>? =
+        (ble.execute(identifier, BleOperation.Read(SonyBluetoothConstants.CAMERA_STATUS_UUID))
+                as? BleOperationResult.Success)?.value?.let(::parseWifiStatus)
+
+    private suspend fun startWifi(identifier: String): Boolean =
+        ble.execute(
+            identifier,
+            BleOperation.Write(SonyBluetoothConstants.WIFI_ON_UUID, SonyBluetoothConstants.WIFI_ON_COMMAND)
+        ) is BleOperationResult.Success
 
     private fun parsePrefixedAscii(value: ByteArray): String? =
         if (value.size > 3) parseAscii(value.copyOfRange(3, value.size)) else null

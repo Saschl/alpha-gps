@@ -141,10 +141,10 @@ internal class SonyPtpInitializer(private val commands: PtpIpCommandQueue) {
         parameters: List<Long> = emptyList(),
         dataIn: Boolean = false,
     ): PtpIpTransactionResult.Response {
-        log.i { "Wi-Fi Sony stage=$stage request=0x${code.toString(16)}" }
+        log.d { "Wi-Fi Sony stage=$stage request=0x${code.toString(16)}" }
         val result = if (dataIn) commands.executeDataIn(code, parameters)
         else commands.executeNoData(code, parameters)
-        log.i { "Wi-Fi Sony stage=$stage ${result.diagnosticSummary()}" }
+        log.d { "Wi-Fi Sony stage=$stage ${result.diagnosticSummary()}" }
         return when (result) {
             is PtpIpTransactionResult.Response -> {
                 if (result.response.code != 0x2001) throw Rejection(stage, result.response.code)
@@ -160,14 +160,14 @@ internal class SonyPtpInitializer(private val commands: PtpIpCommandQueue) {
         initializationStarted = true
         var ready = false
         try {
-            log.i { "Wi-Fi Sony stage=get_device_info starting" }
+            log.d { "Wi-Fi Sony stage=get_device_info starting" }
             val deviceInfo = when (val result = PtpIpCapabilityReader(commands).read()) {
                 is PtpIpCapabilityResult.Available -> result.deviceInfo
                 is PtpIpCapabilityResult.Rejected -> throw Rejection("get_device_info", result.responseCode)
                 PtpIpCapabilityResult.Uncertain -> throw Uncertain("get_device_info")
                 PtpIpCapabilityResult.Failed -> throw Failure("get_device_info")
             }
-            log.i { "Wi-Fi Sony stage=get_device_info complete" }
+            log.d { "Wi-Fi Sony stage=get_device_info complete" }
             if (!deviceInfo.supports(SonyPtpOperation.SDIO_CONNECT) ||
                 !deviceInfo.supports(SonyPtpOperation.SDIO_GET_EXT_DEVICE_INFO)) {
                 throw Failure("unsupported_camera")

@@ -452,7 +452,7 @@
     <string name="wifi_remote_ios_opening">Verbindung zur Kamera wird hergestellt… Erlaube den Zugriff auf das lokale Netzwerk, wenn iOS danach fragt.</string>
     <string name="report_share">Diagnosebericht per E-Mail</string>
     <string name="report_copy">Zusammenfassung kopieren</string>
-    <string name="report_description">Sende eine ZIP-Datei mit App-Status und allen gespeicherten Protokollen an %1$s oder kopiere eine kurze Zusammenfassung. Kamerakennungen und bekannte Kameranamen werden ersetzt; Standort- und Zugangsdaten werden gefiltert.</string>
+    <string name="report_description">Sende eine ZIP-Datei mit App-Status und allen gespeicherten Protokollen an %1$s oder kopiere eine kurze Zusammenfassung. Kamerakennungen und bekannte Kameranamen werden ersetzt; Standortdaten werden gefiltert.</string>
     <string name="report_preparing">Bericht wird erstellt…</string>
     <string name="report_error">Der Bericht konnte nicht erstellt oder geteilt werden. Bitte versuche es erneut.</string>
     <string name="report_copied">Zusammenfassung in die Zwischenablage kopiert.</string>

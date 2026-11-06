@@ -153,7 +153,7 @@ private class SonyWifiConnection(
     override val images = flow {
         val session = checkNotNull(current)
         check(session.ready.purpose == SonySessionPurpose.RemoteShooting)
-        log.i { "Wi-Fi live view resolving camera endpoint" }
+        log.d { "Wi-Fi live view resolving camera endpoint" }
         emitAll(session.preview.images(session.endpoint.resolve(host)))
     }
 

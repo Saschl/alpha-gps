@@ -72,7 +72,7 @@ internal class IosCameraNetworkRequest(
                 }
             }
             val host = iosCameraGateway(gateways)
-            log.i { "Wi-Fi iOS path status=${nw_path_get_status(path)} gateway=$host" }
+            log.d { "Wi-Fi iOS path status=${nw_path_get_status(path)} gateway=$host" }
             paths.trySend(host)
         }
         job = scope.launch {
@@ -84,7 +84,7 @@ internal class IosCameraNetworkRequest(
                     manager.applyConfiguration(configuration) { error -> completion.trySend(error?.code) }
                     val code = completion.receive()
                     completion.close()
-                    log.i { "Wi-Fi iOS join completed errorCode=$code closed=$closed" }
+                    log.d { "Wi-Fi iOS join completed errorCode=$code closed=$closed" }
                     applied = code == null
                     joining = false
                     if (closed) return@launch
@@ -103,12 +103,12 @@ internal class IosCameraNetworkRequest(
                     val currentSsid = currentSsidWhenActive()
                     val matches = currentSsid?.let { it == ssid }
                     if (matches != previousMatch) {
-                        log.i { "Wi-Fi iOS expected network matches=$matches gateway=$host" }
+                        log.d { "Wi-Fi iOS expected network matches=$matches gateway=$host" }
                         previousMatch = matches
                     }
                     when (val event = networkState.update(currentSsid, host)) {
                         is CameraNetworkEvent.Ready -> {
-                            log.i { "Wi-Fi iOS network ready; camera gateway=${event.host}" }
+                            log.d { "Wi-Fi iOS network ready; camera gateway=${event.host}" }
                             eventsChannel.trySend(event)
                         }
 
@@ -137,7 +137,7 @@ internal class IosCameraNetworkRequest(
 
     override fun close() {
         if (closed) return
-        log.i { "Wi-Fi iOS network request closing; joining=$joining owned=$applied" }
+        log.d { "Wi-Fi iOS network request closing; joining=$joining owned=$applied" }
         closed = true
         nw_path_monitor_cancel(monitor)
         nw_path_monitor_set_update_handler(monitor, null)

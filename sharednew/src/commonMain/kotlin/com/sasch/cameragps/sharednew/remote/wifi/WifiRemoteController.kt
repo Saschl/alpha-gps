@@ -510,9 +510,9 @@ class WifiRemoteController internal constructor(
         var failure: WifiRemoteFailure? = null
         var shutdown = WifiShutdownStatus.NotRequested
         try {
-            log.i { "Wi-Fi remote attempt=$attempt claiming BLE remote controls" }
+            log.d { "Wi-Fi remote attempt=$attempt claiming BLE remote controls" }
             claimControls(id)
-            log.i { "Wi-Fi remote attempt=$attempt BLE remote controls claimed" }
+            log.d { "Wi-Fi remote attempt=$attempt BLE remote controls claimed" }
             coroutineScope {
                 val opened = open(id, this)
                 connection = opened
@@ -552,7 +552,7 @@ class WifiRemoteController internal constructor(
                 awaitCancellation()
             }
         } catch (cancelled: CancellationException) {
-            log.i { "Wi-Fi remote attempt=$attempt cancelled" }
+            log.d { "Wi-Fi remote attempt=$attempt cancelled" }
             throw cancelled
         } catch (failed: WifiRemoteConnectException) {
             failure = failed.failure
@@ -609,7 +609,7 @@ class WifiRemoteController internal constructor(
     private fun startPreview(id: String, connection: WifiRemoteConnection, parent: CoroutineScope) {
         previewJob = parent.launch {
             var receivedFrame = false
-            log.i { "Wi-Fi live view starting" }
+            log.d { "Wi-Fi live view starting" }
             try {
                 connection.images.collect { image ->
                     if (!receivedFrame) {

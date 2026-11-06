@@ -25,7 +25,7 @@ internal class IosCameraByteConnection private constructor(private val connectio
     }
 
     private suspend fun start() {
-        log.i { "Wi-Fi TCP opening $endpoint (plain TCP)" }
+        log.d { "Wi-Fi TCP opening $endpoint (plain TCP)" }
         nw_connection_set_queue(connection, dispatch_get_main_queue())
         nw_connection_set_state_changed_handler(connection) { state, error ->
             val path = nw_connection_copy_current_path(connection)
@@ -38,7 +38,7 @@ internal class IosCameraByteConnection private constructor(private val connectio
                 nw_connection_state_cancelled -> "cancelled"
                 else -> state.toString()
             }
-            log.i { "Wi-Fi TCP $endpoint state=$stateName pathReason=$reason ${networkErrorDescription(error)}" }
+            log.d { "Wi-Fi TCP $endpoint state=$stateName pathReason=$reason ${networkErrorDescription(error)}" }
             when (state) {
                 nw_connection_state_ready -> states.trySend(IosCameraConnectionState.Ready)
                 nw_connection_state_waiting -> states.trySend(IosCameraConnectionState.Waiting(
@@ -51,7 +51,7 @@ internal class IosCameraByteConnection private constructor(private val connectio
         awaitIosCameraConnectionReady(states) {
             log.i { "Wi-Fi TCP $endpoint waiting for Local Network permission; keeping connection open" }
         }
-        log.i { "Wi-Fi TCP ready $endpoint" }
+        log.d { "Wi-Fi TCP ready $endpoint" }
     }
 
     override suspend fun write(bytes: ByteArray) {
@@ -99,7 +99,7 @@ internal class IosCameraByteConnection private constructor(private val connectio
         try {
             val content = result.receive().getOrThrow()
             readComplete = content.endOfStream
-            if (readComplete) log.i { "Wi-Fi TCP EOF $endpoint" }
+            if (readComplete) log.d { "Wi-Fi TCP EOF $endpoint" }
             return content.bytes
         } catch (failure: Throwable) {
             log.w { "Wi-Fi TCP $endpoint interrupted: ${failure.message}" }
@@ -115,7 +115,7 @@ internal class IosCameraByteConnection private constructor(private val connectio
     override suspend fun close() {
         if (closed) return
         closed = true
-        log.i { "Wi-Fi TCP closing $endpoint" }
+        log.d { "Wi-Fi TCP closing $endpoint" }
         nw_connection_cancel(connection)
         nw_connection_set_state_changed_handler(connection, null)
         states.close()

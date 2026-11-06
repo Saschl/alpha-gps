@@ -16,7 +16,7 @@ internal class CameraHttpTransport(
         val port = authority.substringAfter(':', "80").toInt()
         val suffix = address.removePrefix(authority)
         val path = if (suffix.startsWith('/')) suffix else "/$suffix"
-        logging("CameraHttpTransport").i { "Wi-Fi live-view HTTP opening $host:$port" }
+        logging("CameraHttpTransport").d { "Wi-Fi live-view HTTP opening $host:$port" }
         val connection = connect(host, port)
         try {
             connection.write(("GET $path HTTP/1.1\r\nHost: $authority\r\n" +
@@ -42,7 +42,7 @@ private class CameraHttpBody(private val connection: CameraByteConnection) : Son
         val status = line().split(' ')
         require(status.size >= 2 && status[0] in listOf("HTTP/1.1", "HTTP/1.0")) { "Invalid camera HTTP status" }
         val code = status[1].toIntOrNull() ?: error("Invalid camera HTTP status")
-        logging("CameraHttpTransport").i { "Wi-Fi live-view HTTP response=$code" }
+        logging("CameraHttpTransport").d { "Wi-Fi live-view HTTP response=$code" }
         if (code != 200) throw SonyLiveViewHttpStatus(code)
         val headers = mutableMapOf<String, String>()
         var bytes = 0

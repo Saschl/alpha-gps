@@ -23,10 +23,12 @@ import platform.UIKit.UIViewController
  */
 @Suppress("FunctionName", "unused")
 fun StoreScreenshotViewController(scenario: String): UIViewController {
-    require(scenario in setOf("geotagging", "reconnect", "remote", "multiple", "privacy", "pairing"))
+    require(scenario in setOf("geotagging", "reconnect", "remote", "multiple", "privacy", "pairing", "wifi"))
     return ComposeUIViewController {
         CameraGpsTheme(darkTheme = false) {
-            if (scenario == "pairing") {
+            if (scenario == "wifi") {
+                StoreWifiScreenshot()
+            } else if (scenario == "pairing") {
                 SharedPairingPreparationScreen(
                     isSearching = false,
                     onSearch = {},

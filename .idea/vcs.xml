@@ -2,5 +2,7 @@
 <project version="4">
   <component name="VcsDirectoryMappings">
     <mapping directory="$PROJECT_DIR$" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/heif/src/main/cpp/vendor/libde265" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/heif/src/main/cpp/vendor/libheif" vcs="Git" />
   </component>
 </project>

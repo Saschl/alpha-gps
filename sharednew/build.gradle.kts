@@ -3,6 +3,7 @@ import java.util.Base64
 import groovy.json.JsonSlurper
 import groovy.json.JsonOutput
 import java.security.MessageDigest
+import org.jetbrains.kotlin.gradle.targets.native.tasks.KotlinNativeSimulatorTest
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
@@ -298,6 +299,17 @@ kotlin {
     iosSimulatorArm64 {
         binaries.framework {
             baseName = xcfName
+        }
+        // File coordination needs LaunchServices, which standalone test processes do not have.
+        tasks.named<KotlinNativeSimulatorTest>("iosSimulatorArm64Test") {
+            filter.excludeTestsMatching("*IosTroubleshootingArchiveTest*")
+        }
+        // Run with a booted simulator: :sharednew:iosSimulatorArm64ReportIntegrationTest
+        testRuns.create("reportIntegration")
+        tasks.named<KotlinNativeSimulatorTest>("iosSimulatorArm64ReportIntegrationTest") {
+            standalone.set(false)
+            device.set("booted")
+            filter.includeTestsMatching("*IosTroubleshootingArchiveTest*")
         }
     }
 

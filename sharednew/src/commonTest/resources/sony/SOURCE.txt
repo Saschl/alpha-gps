@@ -1,0 +1,8 @@
+DSC04175-preview-prefix.bin is the first 308059 bytes of the maintainer's
+Sony ILCE-6700 DSC04175.ARW (original size 33603584 bytes), supplied for tests.
+It preserves the original TIFF directories and embedded 1616x1080 JPEG at
+offset 196770, length 111289. It is intentionally truncated before the RAW
+sensor data and full-resolution JPEG; it is not a complete ARW file.
+
+The tests simulate range reads against the original file size and fail if
+the parser tries to read beyond the stored prefix. No image was re-encoded.

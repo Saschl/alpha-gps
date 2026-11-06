@@ -86,10 +86,10 @@ internal class SonyLiveViewStream(
                     liveviewAttempted = true
                     check(accepted(control(SonyPtpControlCode.LIVE_VIEW_ENABLE, true))) { "Live-view enable failed" }
                 }
-                log.i { "Wi-Fi live view opening HTTP stream; enableControls=$enableControls" }
+                log.d { "Wi-Fi live view opening HTTP stream; enableControls=$enableControls" }
                 val opened = openWithRetry(endpoint)
                 stream = opened
-                log.i { "Wi-Fi live-view HTTP ready; waiting for first frame" }
+                log.d { "Wi-Fi live-view HTTP ready; waiting for first frame" }
                 val decoder = SonyLiveViewFrameDecoder()
                 while (true) {
                     val frames = withTimeout(10_000.milliseconds) {
@@ -152,7 +152,7 @@ internal class SonyLiveViewStream(
         else listOf(code.toLong())
         return commands.executeDataOut(SonyPtpOperation.SDIO_CONTROL_DEVICE, params,
             byteArrayOf(if (down) 2 else 1, 0), operationTimeoutMs = 3_000).also {
-            log.i { "Wi-Fi live-view control=0x${code.toString(16)} enabled=$down ${it.diagnosticSummary()}" }
+            log.d { "Wi-Fi live-view control=0x${code.toString(16)} enabled=$down ${it.diagnosticSummary()}" }
         }
     }
 

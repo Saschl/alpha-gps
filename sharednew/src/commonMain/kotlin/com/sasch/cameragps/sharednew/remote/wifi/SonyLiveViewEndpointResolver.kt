@@ -11,7 +11,7 @@ internal class SonyLiveViewEndpointResolver(
     suspend fun resolve(cameraHost: String): SonyLiveViewEndpoint {
         capabilities.deviceDescription?.let { dd ->
             SonyLiveViewEndpoint.findInDeviceDescription(dd, cameraHost)?.let {
-                log.i { "Wi-Fi live-view endpoint source=description" }
+                log.d { "Wi-Fi live-view endpoint source=description" }
                 return it
             }
         }
@@ -30,7 +30,7 @@ internal class SonyLiveViewEndpointResolver(
         val url = property?.stringValue
         check(property?.enabled == true && !url.isNullOrEmpty()) { "Camera has no available preview URL" }
         return SonyLiveViewEndpoint.fromUrl(url, cameraHost).also {
-            log.i { "Wi-Fi live-view endpoint source=property" }
+            log.d { "Wi-Fi live-view endpoint source=property" }
         }
     }
 
