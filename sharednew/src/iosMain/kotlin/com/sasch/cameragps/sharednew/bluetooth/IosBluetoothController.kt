@@ -86,7 +86,7 @@ object IosBluetoothController : BluetoothController {
         // After the loggers exist, so an init failure is logged, and before
         // anything below can throw: crash reporting is most useful exactly on
         // the background-relaunch paths that have no UI to notice a problem.
-        IosCrashReporting.startIfConsented()
+        IosCrashReporting.updateFromPreferences()
         logging.i {
             "Launch (${IosLaunchContext.describe()}): appEnabled=$appEnabled " +
                     "migrationDone=${IosAppPreferences.isAccessoryMigrationDone()}"

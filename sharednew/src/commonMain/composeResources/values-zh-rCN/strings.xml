@@ -61,7 +61,6 @@
     <string name="sentry_settings">错误报告设置</string>
     <string name="enable_sentry">启用错误报告</string>
     <string name="enable_sentry_description">发送匿名崩溃报告以帮助改进应用</string>
-    <string name="sentry_restart_required">需要重启应用才能使更改生效</string>
     <string name="unknown_error">未知错误</string>
     <string name="help_faq_title">帮助与常见问题</string>
     <string name="help_close_description">关闭</string>

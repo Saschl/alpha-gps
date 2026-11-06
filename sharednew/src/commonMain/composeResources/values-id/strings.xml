@@ -71,7 +71,6 @@
     <string name="sentry_settings">Pengaturan Pelaporan Kesalahan</string>
     <string name="enable_sentry">Aktifkan Pelaporan Kesalahan</string>
     <string name="enable_sentry_description">Kirim laporan crash anonim untuk membantu meningkatkan aplikasi</string>
-    <string name="sentry_restart_required">Mulai ulang aplikasi diperlukan agar perubahan berlaku</string>
     <string name="unknown_error">Kesalahan tidak dikenal</string>
     <string name="help_faq_title">Bantuan &amp; FAQ</string>
     <string name="help_close_description">Tutup</string>

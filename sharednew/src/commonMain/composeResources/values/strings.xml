@@ -139,7 +139,6 @@
     <string name="sentry_settings">Error Reporting Settings</string>
     <string name="enable_sentry">Enable Error Reporting</string>
     <string name="enable_sentry_description">Send anonymous crash reports to help improve the app</string>
-    <string name="sentry_restart_required">App restart required for changes to take effect</string>
     <!-- General strings -->
     <string name="unknown_error">Unknown error</string>
     <!-- Help & FAQ strings -->

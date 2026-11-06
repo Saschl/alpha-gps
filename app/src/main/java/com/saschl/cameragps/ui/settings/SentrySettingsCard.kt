@@ -7,12 +7,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import com.sasch.cameragps.sharednew.ui.settings.SharedSentrySettingsCard
+import com.saschl.cameragps.utils.CrashReporting
 import com.saschl.cameragps.utils.PreferencesManager
 
 /**
  * Android host for the shared crash-reporting settings card. The card itself
- * (switch, description, restart hint) lives in `:sharednew` so iOS shows the
- * same entry; only the preference storage is Android-specific.
+ * (switch and description) lives in `:sharednew` so iOS shows the same entry.
  */
 @Composable
 internal fun SentrySettingsCard() {
@@ -26,6 +26,8 @@ internal fun SentrySettingsCard() {
         onEnabledChange = { enabled ->
             isSentryEnabled = enabled
             PreferencesManager.setSentryEnabled(context, enabled)
+            PreferencesManager.setSentryConsentDialogDismissed(context, true)
+            CrashReporting.updateFromPreferences(context)
         },
     )
 }

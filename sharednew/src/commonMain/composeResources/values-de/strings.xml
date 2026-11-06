@@ -128,7 +128,6 @@
     <string name="sentry_settings">Fehlerberichterstattung Einstellungen</string>
     <string name="enable_sentry">Fehlerberichterstattung aktivieren</string>
     <string name="enable_sentry_description">Anonyme Absturzberichte senden, um die App zu verbessern</string>
-    <string name="sentry_restart_required">App-Neustart erforderlich, damit die Änderungen wirksam werden</string>
     <string name="unknown_error">Unbekannter Fehler</string>
     <string name="help_faq_title">Hilfe &amp; FAQ</string>
     <string name="help_close_description">Schließen</string>

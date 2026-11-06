@@ -115,7 +115,6 @@
     <string name="sentry_settings">அமைப்புகளைப் புகாரளிப்பதில் பிழை</string>
     <string name="enable_sentry">பிழை அறிக்கையிடலை இயக்கு</string>
     <string name="enable_sentry_description">பயன்பாட்டை மேம்படுத்த உதவ அநாமதேய செயலிழப்பு அறிக்கைகளை அனுப்பவும்</string>
-    <string name="sentry_restart_required">மாற்றங்கள் நடைமுறைக்கு வர ஆப்சை மறுதொடக்கம் செய்ய வேண்டும்</string>
     <string name="unknown_error">அறியப்படாத பிழை</string>
     <string name="help_faq_title">உதவி &amp; அடிக்கடி கேட்கப்படும் கேள்விகள்</string>
     <string name="help_close_description">மூடு</string>

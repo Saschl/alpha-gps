@@ -115,7 +115,6 @@
     <string name="sentry_settings">Lỗi Reporting Cài đặt</string>
     <string name="enable_sentry">Bật Lỗi Reporting</string>
     <string name="enable_sentry_description">Gửi anonymous crash reports to Trợ giúp improve the app</string>
-    <string name="sentry_restart_required">App khởi động lại bắt buộc for changes to take effect</string>
     <string name="unknown_error">Unknown Lỗi</string>
     <string name="help_faq_title">Trợ giúp &amp; FAQ</string>
     <string name="help_close_description">Đóng</string>

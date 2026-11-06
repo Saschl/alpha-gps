@@ -3,8 +3,6 @@ package com.sasch.cameragps.sharednew.crash
 import com.diamondedge.logging.KmLogging
 import com.sasch.cameragps.sharednew.IosAppPreferences
 import com.sasch.cameragps.sharednew.crash.IosCrashReporting.AVAILABLE
-import com.sasch.cameragps.sharednew.crash.IosCrashReporting.start
-import com.sasch.cameragps.sharednew.crash.IosCrashReporting.started
 import io.sentry.kotlin.multiplatform.Sentry
 import platform.Foundation.NSBundle
 
@@ -28,13 +26,12 @@ internal object IosCrashReporting {
     private const val DSN =
         "https://2b23f28f72b9b9d4f4e3ec950e9cb461@o4510501457494016.ingest.de.sentry.io/4512036235182160"
 
-    private var started = false
+    private val lifecycle = CrashReportingLifecycle(::startSdk, ::stopSdk)
 
-    /** Forwards log lines to Sentry; only attached while [started]. */
+    /** Forwards log lines to Sentry; only attached while [isStarted]. */
     private val logger by lazy { SentryCrashLogger() }
 
-    /** True once [start] actually brought the SDK up. */
-    val isStarted: Boolean get() = started
+    val isStarted: Boolean get() = lifecycle.isStarted
 
     /**
      * The KmLogging logger to install alongside the database logger, or null
@@ -44,28 +41,17 @@ internal object IosCrashReporting {
      * that reconfigures logging has to ask for this again — see
      * [com.sasch.cameragps.sharednew.logging.IosLogging.install].
      */
-    fun activeLogger(): SentryCrashLogger? = if (started) logger else null
+    fun activeLogger(): SentryCrashLogger? = if (isStarted) logger else null
 
-    /** Starts Sentry if the user has opted in. Called once per launch. */
-    fun startIfConsented() {
-        if (
-            CrashReportPolicy.shouldInitialize(
-                enabled = IosAppPreferences.isSentryEnabled(),
-                consentDialogDismissed = IosAppPreferences.isSentryConsentDialogDismissed(),
-            )
-        ) {
-            start()
-        }
+    /** Called at launch and after either the settings switch or consent dialog changes. */
+    fun updateFromPreferences() {
+        lifecycle.update(
+            enabled = IosAppPreferences.isSentryEnabled() && DSN.isNotBlank(),
+            consentDialogDismissed = IosAppPreferences.isSentryConsentDialogDismissed(),
+        )
     }
 
-    /**
-     * Brings the SDK up and starts forwarding log lines. Idempotent; also
-     * called straight from the consent dialog so accepting takes effect without
-     * a restart.
-     */
-    fun start() {
-        if (started || DSN.isBlank()) return
-
+    private fun startSdk() {
         Sentry.init { options ->
             options.dsn = DSN
             // Never attach the device name, IP or other identifying data: the
@@ -92,8 +78,12 @@ internal object IosCrashReporting {
             options.enableUnhandledCppExceptionMonitoring = false
         }
 
-        started = true
         KmLogging.addLogger(logger)
+    }
+
+    private fun stopSdk() {
+        KmLogging.removeLogger(logger)
+        Sentry.close()
     }
 
     private fun bundleRelease(): String {

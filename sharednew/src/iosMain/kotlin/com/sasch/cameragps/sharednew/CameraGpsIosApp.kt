@@ -205,8 +205,7 @@ internal fun CameraGpsIosApp(
         // A choice in Settings also answers any pending consent prompt.
         IosAppPreferences.setSentryConsentDialogDismissed(true)
         dialogs.dismissSentryConsent()
-        // Enabling takes effect now; disabling requires the restart shown in Settings.
-        if (enabled) IosCrashReporting.start()
+        IosCrashReporting.updateFromPreferences()
     }
 
     IosReviewPromptEffect(

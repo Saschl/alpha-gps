@@ -3,7 +3,6 @@ package com.sasch.cameragps.sharednew.ui.settings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -20,7 +19,6 @@ import cameragps.sharednew.generated.resources.sentry_consent_decline
 import cameragps.sharednew.generated.resources.sentry_consent_dont_show
 import cameragps.sharednew.generated.resources.sentry_consent_message
 import cameragps.sharednew.generated.resources.sentry_consent_title
-import cameragps.sharednew.generated.resources.sentry_restart_required
 import cameragps.sharednew.generated.resources.sentry_settings
 import org.jetbrains.compose.resources.stringResource
 
@@ -94,12 +92,7 @@ fun SharedSentryConsentDialog(
     )
 }
 
-/**
- * Settings entry for crash reporting.
- *
- * Toggling only records the preference — neither platform can start or stop the
- * Sentry SDK cleanly mid-process, hence the restart hint below the switch.
- */
+/** Settings entry whose host applies crash-reporting consent changes immediately. */
 @Composable
 fun SharedSentrySettingsCard(
     enabled: Boolean,
@@ -112,14 +105,6 @@ fun SharedSentrySettingsCard(
             description = stringResource(Res.string.enable_sentry_description),
             checked = enabled,
             onCheckedChange = onEnabledChange,
-        )
-
-        Text(
-            text = stringResource(Res.string.sentry_restart_required),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.primary,
-            fontWeight = FontWeight.Medium,
-            modifier = Modifier.padding(top = 4.dp)
         )
     }
 }

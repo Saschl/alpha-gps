@@ -69,7 +69,6 @@
     <string name="sentry_settings">Ajustes de informes de errores</string>
     <string name="enable_sentry">Habilitar el informe de errores</string>
     <string name="enable_sentry_description">Envía informes de errores anónimos para ayudar a mejorar la aplicación</string>
-    <string name="sentry_restart_required">Es necesario reiniciar la aplicación para que los cambios surtan efecto</string>
     <string name="unknown_error">Error desconocido</string>
     <string name="help_faq_title">Ayuda y P+F</string>
     <string name="help_close_description">Cerrar</string>

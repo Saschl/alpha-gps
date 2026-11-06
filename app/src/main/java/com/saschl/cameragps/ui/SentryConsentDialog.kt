@@ -22,19 +22,21 @@ fun SentryConsentDialog(
         onAllow = {
             PreferencesManager.setSentryEnabled(context, true)
             PreferencesManager.setSentryConsentDialogDismissed(context, true)
-            CrashReporting.init(context)
+            CrashReporting.updateFromPreferences(context)
             Timber.i("User accepted Sentry error reporting, initializing Sentry")
             onDismiss()
         },
         onDecline = {
             PreferencesManager.setSentryEnabled(context, false)
             PreferencesManager.setSentryConsentDialogDismissed(context, true)
+            CrashReporting.updateFromPreferences(context)
             Timber.i("User declined Sentry error reporting")
             onDismiss()
         },
         onDontShowAgain = {
             PreferencesManager.setSentryEnabled(context, false)
             PreferencesManager.setSentryConsentDialogDismissed(context, true)
+            CrashReporting.updateFromPreferences(context)
             Timber.i("User chose not to show Sentry consent dialog again")
             onDismiss()
         },

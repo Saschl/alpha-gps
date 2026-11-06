@@ -115,7 +115,6 @@
     <string name="sentry_settings">Настройки отчетов об ошибках</string>
     <string name="enable_sentry">Включить отправку отчетов</string>
     <string name="enable_sentry_description">Отправлять анонимные отчеты о сбоях для улучшения приложения</string>
-    <string name="sentry_restart_required">Для применения изменений требуется перезапуск приложения</string>
     <string name="unknown_error">Неизвестная ошибка</string>
     <string name="help_faq_title">Справка и FAQ</string>
     <string name="help_close_description">Закрыть</string>

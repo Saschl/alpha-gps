@@ -4,7 +4,6 @@ import android.app.Application
 import com.diamondedge.logging.FixedLogLevel
 import com.diamondedge.logging.KmLogging
 import com.diamondedge.logging.PlatformLogger
-import com.sasch.cameragps.sharednew.crash.CrashReportPolicy
 import com.saschl.cameragps.service.FileTree
 import com.saschl.cameragps.service.GlobalExceptionHandler
 import com.saschl.cameragps.service.TimberLogger
@@ -31,18 +30,10 @@ class CameraGpsApplication : Application() {
         // database and consent-controlled Timber trees. Trees own their thresholds.
         KmLogging.setLoggers(PlatformLogger(FixedLogLevel(true)), TimberLogger())
 
-        // Crash reporting only after consent — the consent dialog does the
-        // first init. No-op in the foss flavor.
-        if (CrashReporting.AVAILABLE &&
-            CrashReportPolicy.shouldInitialize(
-                enabled = PreferencesManager.sentryEnabled(this),
-                consentDialogDismissed = PreferencesManager.isSentryConsentDialogDismissed(this),
-            )
-        ) {
-            CrashReporting.init(this)
-        }
-
+        // Sentry must wrap this handler so closing its SDK can restore it.
         val defaultHandler = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler(GlobalExceptionHandler(defaultHandler))
+
+        CrashReporting.updateFromPreferences(this)
     }
 }
