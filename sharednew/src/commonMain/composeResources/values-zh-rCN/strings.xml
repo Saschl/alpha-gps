@@ -300,7 +300,9 @@
     <string name="auto_time_correction_hint">允许相机利用来自智能手机的信息自动校正日期和时间。这将更改已连接相机上的设置。</string>
     <string name="auto_area_adjustment">自动区域调整</string>
     <string name="auto_area_adjustment_hint">允许相机利用来自智能手机的信息自动调整区域和时区。这将更改已连接相机上的设置。</string>
-    <string name="camera_setting_connect">（需连接相机）</string>
+    <string name="camera_settings_header">相机设置</string>
+    <string name="camera_settings_disconnected">连接相机以查看和更改这些设置。</string>
+    <string name="camera_setting_unknown">未知</string>
     <string name="camera_setting_pending">正在等待相机…</string>
     <string name="camera_setting_unsupported">此相机不支持通过应用程序更改此设置。</string>
     <string name="camera_setting_failed">无法确认相机设置。请刷新以获取当前设置。</string>
