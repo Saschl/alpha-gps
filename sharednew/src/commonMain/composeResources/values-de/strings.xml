@@ -73,7 +73,7 @@
     <string name="app_disabled_message">Aktiviere die App in den Einstellungen, um Kameras in der Nähe zu finden.</string>
     <string name="scanning_paused_title">Scan ist pausiert</string>
     <string name="scanning_paused_message">Um Kameras in der Nähe zu finden, schalte den automatischen Scan in den Einstellungen ein.</string>
-    <string name="scanning_for_cameras">Suche nach Kameras..</string>
+    <string name="scanning_for_cameras">Suche nach Kameras…</string>
     <string name="welcome_title">Willkommen bei Alpha GPS</string>
     <string name="welcome_subtitle">GPS-Koordinaten in Echtzeit für Ihre Kamera über Bluetooth</string>
     <string name="welcome_feature_connect_title">Verbinde die Kamera</string>
@@ -206,7 +206,7 @@
     <string name="delete_device">Gerät löschen</string>
     <string name="delete_device_confirmation">Möchtest du %1$s wirklich löschen?</string>
     <string name="enable_pairing_mode_title">Kopplungsmodus aktivieren</string>
-    <string name="enable_pairing_mode_message">Wenn du diese Kamera zum ersten Mal mit deinem Telefon verbindest, aktiviere bitte den Bluetooth-Kopplungsmodus in den Kameraeinstellungen, bevor du fortfaehrst. Wenn das nicht der Fall ist, kannst du einfach fortfahren.</string>
+    <string name="enable_pairing_mode_message">Wenn du diese Kamera zum ersten Mal mit deinem Telefon verbindest, aktiviere bitte den Bluetooth-Kopplungsmodus in den Kameraeinstellungen, bevor du fortfährst. Wenn das nicht der Fall ist, kannst du einfach fortfahren.</string>
     <string name="enable_pairing_mode_continue">Weiter</string>
     <string name="delete">Delete</string>
     <string name="always_on_enabled">Immer aktiv (Always On) aktiviert</string>
@@ -300,7 +300,7 @@
     <string name="scan_timeout_creators_app_hint">Kamera nicht gefunden? Stelle sicher, dass sie im Kopplungsmodus ist. Wurde sie zuvor mit Sonys Creators' App oder Imaging Edge Mobile eingerichtet, entferne die alte Kopplung an der Kamera und in den Bluetooth-Einstellungen deines Telefons — die Fehlerbehebung führt dich durch die Schritte.</string>
     <!-- Hint below the remote-control toggle on the device detail screen -->
     <string name="remote_control_hint">Bei manchen Kameramodellen kann die Fernbedienung nicht gleichzeitig mit der Standortverknüpfung genutzt werden. Falls die Verbindung oder GPS-Übertragung nicht mehr funktioniert, schalte diese Option aus.</string>
-    <string name="trigger_shutter">Fernauslöser</string>
+    <string name="trigger_shutter">Fernauslösung</string>
     <string name="remote_feature_inactive">Verbunden. Fernauslöser deaktiviert in der Kamera oder in der App</string>
     <string name="haptic_feedback">Haptisches Feedback</string>
     <string name="haptic_feedback_description">Lässt das Smartphone vibrieren, wenn der Fernauslöser aktiviert wird</string>
@@ -330,7 +330,7 @@
     <string name="welcome_skip">Überspringen</string>
     <string name="welcome_page_position">Seite %1$d von %2$d</string>
     <string name="welcome_gps_label">Standort</string>
-    <string name="welcome_gps_title">Deine Fotos. \n Mit Standortdaten.</string>
+    <string name="welcome_gps_title">Deine Fotos.\nMit Standortdaten.</string>
     <string name="welcome_gps_body">Alpha GPS überträgt den Standort deines Handys per Bluetooth an deine Sony-Kamera. Die Kamera speichert ihn zusammen mit deinen Fotos.</string>
     <string name="welcome_remote_label">Fernsteuerung</string>
     <string name="welcome_remote_title">Kamera fernsteuern</string>
@@ -386,7 +386,7 @@
     <string name="wifi_remote_network_password">WLAN-Passwort</string>
     <string name="wifi_remote_manual_join_continue">Ich habe das Netzwerk verbunden. Weiter.</string>
     <string name="wifi_remote_manual">Manueller Verbindungsaufbau</string>
-    <string name="wifi_remote_preparing">Aktiviere Kamera-WLAN</string>
+    <string name="wifi_remote_preparing">Aktiviere Kamera-WLAN…</string>
     <string name="wifi_remote_approval">Bestätige die WLAN-Verbindung der Kamera im Systemdialog…</string>
     <string name="wifi_remote_joining">Verbindung zur Kamera über WLAN wird hergestellt…</string>
     <string name="wifi_remote_bluetooth_required">Warte, bis die Bluetooth-Verbindung der Kamera hergestellt ist, und versuche es dann erneut. Du kannst die Verbindung auch manuell herstellen.</string>
