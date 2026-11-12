@@ -80,7 +80,7 @@
     <string name="help_need_more_title">Butuh bantuan lebih lanjut?</string>
     <string name="help_need_more_description">Periksa log aplikasi di menu atas untuk informasi pemecahan masalah, atau tinjau pengaturan perangkat Anda untuk memastikan semua izin telah diberikan.</string>
     <string name="faq_connect_camera_question">Bagaimana cara menghubungkan kamera saya ke aplikasi?</string>
-    <string name="faq_connect_camera_answer">1. Pastikan kamera Anda mendukung konektivitas Bluetooth dan penandaan GPS  \n2. Aktifkan Bluetooth di ponsel Anda  \n3. Ketuk \'Tambah Perangkat Kamera\' untuk memulai proses pemasangan  \n4. Ikuti instruksi di layar untuk memasangkan kamera Anda. Nyalakan ulang kamera setelah proses pemasangan pertama.</string>
+    <string name="faq_connect_camera_answer">1. Pastikan kamera Anda mendukung konektivitas Bluetooth dan penandaan GPS \n2. Aktifkan Bluetooth di ponsel Anda \n3. Ketuk \\'Tambah Perangkat Kamera\\' untuk memulai proses pemasangan \n4. Ikuti instruksi di layar untuk memasangkan kamera Anda. Nyalakan ulang kamera setelah proses pemasangan pertama.</string>
     <string name="faq_camera_not_appearing_question">Mengapa kamera saya tidak muncul di daftar?</string>
     <string name="faq_camera_not_appearing_answer">• Pastikan kamera Anda dalam mode pemasangan/Bluetooth  \n• Periksa bahwa kamera Anda mendukung profil Bluetooth yang diperlukan  \n• Pastikan Anda berada dalam jangkauan (biasanya 10 meter)  \n• Coba nyalakan ulang Bluetooth di ponsel Anda</string>
     <string name="faq_enable_service_question">Bagaimana cara mengaktifkan layanan secara permanen? Tampaknya berhenti setelah beberapa saat</string>

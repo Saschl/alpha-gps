@@ -2,7 +2,6 @@
 <resources>
     <string name="add_camera">Add camera</string>
     <string name="device_list_need_help">Need help?</string>
-
     <string name="location_linking_disabled_by_camera">Location linking is disabled by the camera. Enable Location Info. Link in the camera settings to resume.</string>
     <!-- Instructions shown before opening the native camera discovery picker. -->
     <string name="pairing_preparation_title">Put your camera in pairing mode</string>
@@ -78,7 +77,7 @@
     <string name="app_disabled_message">Enable the app in Settings to scan for nearby cameras.</string>
     <string name="scanning_paused_title">Scanning is paused</string>
     <string name="scanning_paused_message">Turn on automatic scanning in Settings to look for nearby cameras.</string>
-    <string name="scanning_for_cameras">Scanning for cameras...</string>
+    <string name="scanning_for_cameras">Scanning for cameras…</string>
     <!-- Welcome screen strings -->
     <string name="welcome_title">Welcome to Alpha GPS Geotagging</string>
     <string name="welcome_subtitle">Real-time GPS coordinates for your camera via Bluetooth</string>
@@ -152,7 +151,7 @@
     <string name="help_need_more_description">Check the app logs in the top menu for troubleshooting information, or review your device settings to ensure all permissions are granted.</string>
     <!-- FAQ Questions -->
     <string name="faq_connect_camera_question">How do I connect my camera to the app?</string>
-    <string name="faq_connect_camera_answer">1. Make sure your camera supports Bluetooth connectivity and GPS tagging\n2. Enable Bluetooth on your camera and phone\n3. Put your camera in pairing mode, click on the camera on the main screen and follow the on-screen instructions (both camera and phone) \n 4. If this fails, remove any pairing in the Bluetooth settings of the phone and camera. Then try again</string>
+    <string name="faq_connect_camera_answer">1. Make sure your camera supports Bluetooth connectivity and GPS tagging\n2. Enable Bluetooth on your camera and phone\n3. Put your camera in pairing mode, click on the camera on the main screen and follow the on-screen instructions (both camera and phone)\n4. If this fails, remove any pairing in the Bluetooth settings of the phone and camera. Then try again</string>
     <string name="faq_camera_not_appearing_question">Why isn't my camera appearing in the list?</string>
     <string name="faq_camera_not_appearing_answer">• Ensure your camera is in pairing/Bluetooth mode\n• Check that your camera supports the required Bluetooth profile\n• Make sure you\'re within range (typically 10 meters)\n• Try restarting Bluetooth on your phone</string>
     <string name="faq_disconnects_question">My camera is losing connection all the time</string>
@@ -335,7 +334,6 @@
     <string name="camera_setting_unsupported">This camera does not support changing this setting from the app.</string>
     <string name="camera_setting_failed">The camera setting could not be confirmed. Refresh to check its current value.</string>
     <string name="camera_setting_retry">Refresh camera settings</string>
-
     <!-- In-app release notes. -->
     <string name="whats_new_title">What’s new</string>
     <string name="whats_new_171_zv1">Improved Wi-Fi remote compatibility for the Sony ZV-1 and other older Sony cameras, including live view startup and photo transfer.</string>
@@ -362,7 +360,6 @@
     <string name="welcome_ready_label">Location access</string>
     <string name="welcome_ready_title">Keep your photos geotagged</string>
     <string name="welcome_ready_body">Alpha GPS needs precise location access to geotag your photos. Background access keeps location updates running while your phone is locked.</string>
-
     <string name="wifi_remote_experimental_title">Experimental Wi-Fi remote</string>
     <string name="wifi_remote_experimental_message">Wi-Fi remote is experimental and has currently only been validated with the developer’s Sony α6700. Other camera models may behave differently.\n\nPlease report any issues by email or on GitHub. Include your camera model and your phone’s operating system and version (Android or iOS).</string>
     <string name="wifi_remote_title">Wi-Fi remote (experimental)</string>
@@ -469,5 +466,4 @@
     <string name="wifi_remote_ios_settings">App permissions</string>
     <string name="wifi_remote_ios_permission">Allow Local Network access in the app’s Settings, then reconnect.</string>
     <string name="wifi_remote_ios_opening">Connecting to camera… If iOS asks, allow Local Network access.</string>
-
 </resources>
