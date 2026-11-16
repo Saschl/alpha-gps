@@ -39,7 +39,7 @@
     "react-dom": "^19.2.8",
     "react-rnd": "^10.5.3",
     "sharp": "0.35.5",
-    "sonner": "^1.7.0",
+    "sonner": "^2.0.0",
     "tailwind-merge": "^2.5.4",
     "tailwindcss-animate": "^1.0.7"
   },
