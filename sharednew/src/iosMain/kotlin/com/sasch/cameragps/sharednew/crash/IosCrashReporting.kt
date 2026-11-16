@@ -2,7 +2,6 @@ package com.sasch.cameragps.sharednew.crash
 
 import com.diamondedge.logging.KmLogging
 import com.sasch.cameragps.sharednew.IosAppPreferences
-import com.sasch.cameragps.sharednew.crash.IosCrashReporting.AVAILABLE
 import io.sentry.kotlin.multiplatform.Sentry
 import platform.Foundation.NSBundle
 
@@ -49,6 +48,7 @@ internal object IosCrashReporting {
             enabled = IosAppPreferences.isSentryEnabled() && DSN.isNotBlank(),
             consentDialogDismissed = IosAppPreferences.isSentryConsentDialogDismissed(),
         )
+        IosMetricReporting.updateConsent()
     }
 
     private fun startSdk() {
