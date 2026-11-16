@@ -49,7 +49,7 @@
     "@types/react-dom": "^19.2.3",
     "autoprefixer": "^10.4.20",
     "postcss": "^8.5.28",
-    "tailwindcss": "^3.4.15",
+    "tailwindcss": "^4.0.0",
     "typescript": "^5.6.3",
     "e2e": "0.16.0",
     "@e2e-dev/web": "0.11.2",
