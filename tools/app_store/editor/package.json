@@ -51,7 +51,7 @@
     "postcss": "^8.5.28",
     "tailwindcss": "^3.4.15",
     "typescript": "^5.6.3",
-    "e2e": "0.16.0",
+    "e2e": "0.23.1",
     "@e2e-dev/web": "0.11.2",
     "playwright": "1.63.0"
   },
