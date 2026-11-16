@@ -53,7 +53,7 @@
     "typescript": "^5.6.3",
     "e2e": "0.16.0",
     "@e2e-dev/web": "0.11.2",
-    "playwright": "1.63.0"
+    "playwright": "1.65.1"
   },
   "overrides": {
     "nanoid": "^3.3.18"
