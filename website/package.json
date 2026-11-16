@@ -9,8 +9,8 @@
     "preview": "astro preview"
   },
   "devDependencies": {
-    "@astrojs/sitemap": "3.7.4",
-    "astro": "7.4.7",
+    "@astrojs/sitemap": "3.7.5",
+    "astro": "7.4.12",
     "typescript": "7.0.2"
   }
 }
