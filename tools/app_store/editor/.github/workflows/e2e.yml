@@ -22,7 +22,7 @@ jobs:
       - run: bun run build
       - run: bun run test:e2e
       - run: SCREENSHOTS_E2E_PRODUCTION=1 bun run test:e2e
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         if: always()
         with:
           name: editor-e2e
