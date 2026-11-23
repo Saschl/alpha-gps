@@ -85,6 +85,12 @@ fastlane/test_output
 /artifacts/app-store/
 /artifacts/app-store-new
 
+# Local Sony protocol research inputs and generated JADX sources
+/artifacts/sony/
+/remote-app-playmemories-mobile.xapk
+/BODYDATA.DAT-a6700
+/BODYDATA.DAT-a7rv
+
 camerasim
 artifacts/apple-feedback
 tools

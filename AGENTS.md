@@ -1,7 +1,36 @@
-# CLAUDE.md
+# AGENTS.md
 
 Alpha GPS — Kotlin Multiplatform app that transmits phone GPS to Sony cameras over BLE
 (and offers a remote shutter). Android app + iOS app share one KMP module.
+
+## Sony protocol references
+
+For a new camera feature, follow the Sony app's caller for the same user action. For example,
+selecting photos on the phone and selecting them on the camera take different PTP paths.
+Record the app version or camera model and firmware alongside each finding. The Wi-Fi evidence
+notes identify which sequences have also been observed on hardware. [Wi-Fi protocol evidence](docs/wifi-remote-protocol-evidence.md)
+
+| Reference | Where to start |
+| --- | --- |
+| Creators' App 3.5.0 | `btconnection/` covers BLE location and Wi-Fi handover, `ptpip/` covers session setup and shutter controls, and `transfer/ptp/PtpContentsRoot.java` selects the photo browsing path. [Decompiled sources](artifacts/sony/creators/sources/jp/co/sony/ips/portalapp/) · [APK](Creators.apk) |
+| Imaging Edge Mobile 7.8.5 | Use `btconnection/` for older handover flows and `ptpip/` and `mtp/` for separate shooting and transfer sessions. [Decompiled sources](artifacts/sony/imaging-edge/sources/com/sony/playmemories/mobile/) · [XAPK](remote-app-playmemories-mobile.xapk) · [Transfer investigation](docs/wifi-remote-protocol-evidence.md#imaging-edge-transfer-mode-investigation-2026-10-18) |
+| Camera firmware | The firmware comparison lists input hashes, unpacking instructions, and named handlers in `libInfraBluetoothLowEnergy.so` for location and clock commands. [α6700 2.00 image](BODYDATA.DAT-a6700) · [α7R V 4.00 image](BODYDATA.DAT-a7rv) · [Firmware comparison](docs/sony-firmware-dst-comparison.md#inputs-and-extraction) · [BLE command comparison across both apps](docs/sony-dst-issue-314.md#sony-apk-comparison) |
+
+The Markdown investigations are tracked. The Sony packages and firmware are local inputs at the
+repository root. To recreate the linked source trees in a fresh checkout, place the APK and XAPK
+there and run these commands from the root with JADX 1.5.6.
+
+```sh
+mkdir -p artifacts/sony
+unzip -o remote-app-playmemories-mobile.xapk com.sony.playmemories.mobile.apk -d artifacts/sony
+jadx --no-res -d artifacts/sony/creators Creators.apk
+jadx --no-res -d artifacts/sony/imaging-edge artifacts/sony/com.sony.playmemories.mobile.apk
+```
+
+Search these ignored trees with `rg --no-ignore`, for example
+`rg --no-ignore -n 'class PtpContentsRoot' artifacts/sony/creators/sources`.
+JADX reports errors in both packages. Check ambiguous branches against the method's bytecode
+or a camera trace before relying on them.
 
 ## Modules
 
