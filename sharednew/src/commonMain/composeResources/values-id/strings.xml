@@ -352,6 +352,7 @@
     <string name="wifi_remote_uncertain">Pengambilan foto tidak dapat dikonfirmasi. Periksa kamera sebelum mengambil foto berikutnya.</string>
     <string name="wifi_remote_rejected">Kamera menolak permintaan pelepasan rana. Periksa mode pemotretan dan kartu memori kamera.</string>
     <string name="wifi_remote_preview_waiting">Menunggu pratinjau…</string>
+    <string name="wifi_remote_preview_paused_bulb">Pratinjau akan dilanjutkan setelah kamera menyelesaikan pemotretan Bulb.</string>
     <string name="wifi_remote_fullscreen">Pratinjau layar penuh</string>
     <string name="wifi_remote_minimize">Perkecil pratinjau</string>
     <string name="wifi_remote_preview_failed">Pratinjau terhenti. Putuskan koneksi dan hubungkan kembali untuk mencoba lagi.</string>

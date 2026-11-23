@@ -36,6 +36,7 @@ import cameragps.sharednew.generated.resources.wifi_remote_captured
 import cameragps.sharednew.generated.resources.wifi_remote_fullscreen
 import cameragps.sharednew.generated.resources.wifi_remote_minimize
 import cameragps.sharednew.generated.resources.wifi_remote_preview_failed
+import cameragps.sharednew.generated.resources.wifi_remote_preview_paused_bulb
 import cameragps.sharednew.generated.resources.wifi_remote_preview_waiting
 import cameragps.sharednew.generated.resources.wifi_remote_rejected
 import cameragps.sharednew.generated.resources.wifi_remote_shooting
@@ -71,8 +72,11 @@ internal fun WifiLiveViewPreview(
         } else if (placeholder != null) {
             Box(Modifier.padding(16.dp), contentAlignment = Alignment.Center) { placeholder() }
         } else Text(
-            stringResource(if (state.preview == WifiPreviewStatus.Failed)
-                Res.string.wifi_remote_preview_failed else Res.string.wifi_remote_preview_waiting),
+            stringResource(when (state.preview) {
+                WifiPreviewStatus.PausedForBulb -> Res.string.wifi_remote_preview_paused_bulb
+                WifiPreviewStatus.Failed -> Res.string.wifi_remote_preview_failed
+                WifiPreviewStatus.Waiting, WifiPreviewStatus.Streaming -> Res.string.wifi_remote_preview_waiting
+            }),
             color = Color.White, modifier = Modifier.padding(16.dp),
         )
     }

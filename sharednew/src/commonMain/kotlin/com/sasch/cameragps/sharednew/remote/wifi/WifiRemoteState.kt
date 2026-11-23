@@ -33,7 +33,7 @@ enum class WifiRemoteFailure {
 }
 
 enum class WifiCaptureStatus { Idle, Shooting, Captured, Uncertain, Rejected }
-enum class WifiPreviewStatus { Waiting, Streaming, Failed }
+enum class WifiPreviewStatus { Waiting, Streaming, PausedForBulb, Failed }
 enum class WifiShutdownStatus { NotRequested, Requested, Unavailable, Unconfirmed }
 
 enum class WifiImageTransferStatus { Idle, Downloading, Converting, Saved, Cancelled, Failed, ConversionFailed, PermissionDenied }

@@ -365,6 +365,7 @@
     <string name="wifi_remote_uncertain">Konnte Aufnahme nicht bestätigen. Überprüfe die Kamera bevor du fortfährst.</string>
     <string name="wifi_remote_rejected">Die Kamera hat die Aufnahme abgelehnt. Überprüfe die Einstellungen und die SD Karte.</string>
     <string name="wifi_remote_preview_waiting">Warte auf Vorschau…</string>
+    <string name="wifi_remote_preview_paused_bulb">Die Vorschau wird fortgesetzt, sobald die Kamera die Bulb-Aufnahme abgeschlossen hat.</string>
     <string name="wifi_remote_fullscreen">Vollbild-Vorschau</string>
     <string name="wifi_remote_minimize">Vorschau verkleinern</string>
     <string name="wifi_remote_shutdown_unconfirmed">Verbindung getrennt. Die Anforderung zum Deaktivieren des WLANs konnte nicht bestätigt werden. Überprüfe die Kamera, falls das WLAN weiterhin aktiviert ist.</string>

@@ -142,9 +142,14 @@ class WifiRemoteControllerTest : WifiLoggingTest() {
         var captures = 0
         var shutdownEnabled = false
         var previewStarts = 0
+        val liveFrames = Channel<ImageBitmap>(Channel.CONFLATED)
         override val images: Flow<ImageBitmap> = flow {
             previewStarts++
-            try { awaitCancellation() } finally { cleanup += "preview" }
+            try {
+                for (frame in liveFrames) emit(frame)
+            } finally {
+                cleanup += "preview"
+            }
         }
         override val lost = losses.receiveAsFlow()
         override suspend fun capture(): WifiCaptureStatus {
@@ -747,6 +752,62 @@ class WifiRemoteControllerTest : WifiLoggingTest() {
     }
 
     @Test
+    fun timedBulbResumesLiveFramesOnTheSameConnectionAfterProcessing() = runTest {
+        val registry = CameraSessionRegistry()
+        val connection = Connection()
+        var opens = 0
+        val controller = WifiRemoteController(backgroundScope, registry, { _, _ -> opens++; connection }, {}, {})
+        controller.connect("camera", "127.0.0.1")
+        connection.liveFrames.send(PreviewBitmap())
+        runCurrent()
+        fun preview() = registry.get("camera")!!.wifiRemote.preview
+        assertEquals(WifiPreviewStatus.Streaming, preview())
+
+        assertTrue(controller.startBulbTimer("camera", 15))
+        runCurrent()
+        assertEquals(listOf("preview"), connection.cleanup)
+        assertEquals(WifiPreviewStatus.PausedForBulb, preview())
+        assertNull(controller.image.value)
+        advanceTimeBy(15.seconds)
+        runCurrent()
+        assertEquals(BulbPhase.Processing, registry.get("camera")!!.bulbTimer.phase)
+        advanceTimeBy(12.seconds)
+        assertEquals(WifiPreviewStatus.PausedForBulb, preview())
+        assertEquals(1, connection.previewStarts)
+
+        connection.result.complete(WifiCaptureStatus.Captured)
+        runCurrent()
+        assertEquals(WifiPreviewStatus.Waiting, preview())
+        val freshFrame = PreviewBitmap()
+        connection.liveFrames.send(freshFrame)
+        runCurrent()
+        assertEquals(freshFrame, controller.image.value)
+        assertEquals(WifiPreviewStatus.Streaming, preview())
+        assertEquals(WifiCaptureStatus.Captured, registry.get("camera")!!.wifiRemote.capture)
+        assertEquals(2, connection.previewStarts)
+        assertEquals(1, opens)
+        assertEquals(1, connection.captures)
+        controller.closeAndJoin()
+    }
+
+    @Test
+    fun networkLossDuringBulbClosesTheSessionWithoutRestartingPreview() = runTest {
+        val registry = CameraSessionRegistry()
+        val connection = Connection()
+        val controller = WifiRemoteController(backgroundScope, registry, { _, _ -> connection }, {}, {})
+        controller.connect("camera", "127.0.0.1")
+        runCurrent()
+        assertTrue(controller.startBulbTimer("camera", 30))
+        runCurrent()
+        connection.losses.send(Unit)
+        runCurrent()
+        assertEquals(listOf("preview", "bulb", "connection"), connection.cleanup)
+        assertEquals(1, connection.previewStarts)
+        assertEquals(WifiRemoteFailure.NetworkLost, registry.get("camera")!!.wifiRemote.failure)
+        assertNull(controller.owner.value)
+    }
+
+    @Test
     fun bulbBlocksCaptureAndBrowsingUntilStopAndProcessingComplete() = runTest {
         val registry = CameraSessionRegistry()
         val connection = Connection()
@@ -770,6 +831,7 @@ class WifiRemoteControllerTest : WifiLoggingTest() {
         runCurrent()
         assertEquals(BulbPhase.Finished, registry.get("camera")!!.bulbTimer.phase)
         assertEquals(1, connection.cleanup.count { it == "bulb" })
+        assertEquals(2, connection.previewStarts)
         controller.closeAndJoin()
     }
 
@@ -874,6 +936,7 @@ class WifiRemoteControllerTest : WifiLoggingTest() {
         runCurrent()
         assertEquals(WifiCaptureStatus.Idle, registry.get("camera")!!.wifiRemote.capture)
         assertEquals(WifiRemotePhase.Ready, registry.get("camera")!!.wifiRemote.phase)
+        assertEquals(1, connection.previewStarts)
         controller.closeAndJoin()
     }
 

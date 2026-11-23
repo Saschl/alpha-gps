@@ -421,7 +421,7 @@ class WifiRemoteController internal constructor(
                     ),
                     canCaptureStill = connection.canCapture,
                     canTransferImages = connection.canTransferImages,
-                    imageTransfer = WifiImageTransferState(), preview = WifiPreviewStatus.Waiting
+                    imageTransfer = WifiImageTransferState()
                 )
             }
             startPreview(id, connection, sessionScope!!)
@@ -569,6 +569,10 @@ class WifiRemoteController internal constructor(
                     var confirmationTimer: Job? = null
                     for (exposure in requests) {
                         confirmationTimer?.cancel()
+                        if (exposure != null) {
+                            previewJob?.cancelAndJoin()
+                            updateReady(id) { it.copy(hasLiveView = false, preview = WifiPreviewStatus.PausedForBulb) }
+                        }
                         val result = try {
                             if (exposure == null) opened.capture() else opened.captureBulb(exposure)
                         } catch (cancelled: CancellationException) {
@@ -576,6 +580,7 @@ class WifiRemoteController internal constructor(
                             throw cancelled
                         }
                         catch (_: Exception) { WifiCaptureStatus.Uncertain }
+                        if (exposure != null) startPreview(id, opened, this@coroutineScope)
                         exposure?.phase(
                             when (result) {
                                 WifiCaptureStatus.Captured, WifiCaptureStatus.Idle -> BulbPhase.Finished
@@ -654,6 +659,7 @@ class WifiRemoteController internal constructor(
     }
 
     private fun startPreview(id: String, connection: WifiRemoteConnection, parent: CoroutineScope) {
+        updateReady(id) { it.copy(hasLiveView = false, preview = WifiPreviewStatus.Waiting) }
         previewJob = parent.launch {
             var receivedFrame = false
             log.d { "Wi-Fi live view starting" }

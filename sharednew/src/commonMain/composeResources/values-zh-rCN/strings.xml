@@ -352,6 +352,7 @@
     <string name="wifi_remote_uncertain">无法确认是否已拍摄。再次拍照前，请先检查相机。</string>
     <string name="wifi_remote_rejected">相机拒绝了快门请求。请检查拍摄模式和存储卡。</string>
     <string name="wifi_remote_preview_waiting">正在等待预览画面…</string>
+    <string name="wifi_remote_preview_paused_bulb">相机完成 B 门拍摄后，预览将自动恢复。</string>
     <string name="wifi_remote_fullscreen">全屏预览</string>
     <string name="wifi_remote_minimize">缩小预览画面</string>
     <string name="wifi_remote_preview_failed">预览已停止。请断开连接后重新连接。</string>
