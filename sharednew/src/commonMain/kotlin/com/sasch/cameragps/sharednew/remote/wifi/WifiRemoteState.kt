@@ -68,8 +68,8 @@ data class WifiPhotoBrowserState(
     val loading: Boolean = false,
     val failed: Boolean = false,
     val photos: List<WifiCameraPhoto> = emptyList(),
-    val offset: Int = 0,
-    val totalObjects: Int = 0,
+    val loadedCaptures: Int = 0,
+    val totalObjects: Int? = null,
     val hasMore: Boolean = false,
     val savedDownloads: Set<WifiPhotoDownload> = emptySet(),
 )

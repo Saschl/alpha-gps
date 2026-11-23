@@ -8,7 +8,6 @@ import com.sasch.cameragps.sharednew.remote.bulbDurationSeconds
 import com.sasch.cameragps.sharednew.remote.BulbExposure
 import com.sasch.cameragps.sharednew.remote.BulbPhase
 import com.sasch.cameragps.sharednew.remote.ShutterControls
-import kotlin.math.abs
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
@@ -28,6 +27,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
@@ -114,8 +114,7 @@ class WifiRemoteController internal constructor(
     private val _owner = MutableStateFlow<String?>(null)
     val owner = _owner.asStateFlow()
     private var job: Job? = null
-    private val _thumbnails = MutableStateFlow<Map<Long, ImageBitmap>>(emptyMap())
-    val thumbnails = _thumbnails.asStateFlow()
+    private var thumbnailCache = linkedMapOf<Long, ImageBitmap?>()
     private val _photoPreview = MutableStateFlow<WifiPhotoPreview?>(null)
     val photoPreview = _photoPreview.asStateFlow()
     private var photoPreviewJob: Job? = null
@@ -249,44 +248,60 @@ class WifiRemoteController internal constructor(
         return true
     }
 
-    fun browsePhotos(identifier: String, offset: Int? = null, preferredPhotoIndex: Int? = null) {
-        photoWork(identifier, { state ->
-            state.copy(
-                photoBrowser = state.photoBrowser.copy(
-                    open = true, loading = true, failed = false,
-                    photos = if (offset == null) emptyList() else state.photoBrowser.photos
-                )
-            )
+    fun browsePhotos(identifier: String) = loadPhotos(identifier, offset = null)
+
+    fun loadMorePhotos(identifier: String) {
+        val browser = registry.get(identifier)?.wifiRemote?.photoBrowser ?: return
+        if (browser.open && browser.hasMore && !browser.loading) loadPhotos(identifier, browser.loadedCaptures)
+    }
+
+    private fun loadPhotos(identifier: String, offset: Int?) {
+        val operation = if (offset == null) "open the photo catalog" else "load a photo page"
+        photoWork(identifier, operation, { state ->
+            val browser = if (offset == null) WifiPhotoBrowserState(savedDownloads = state.photoBrowser.savedDownloads)
+                else state.photoBrowser
+            state.copy(photoBrowser = browser.copy(open = true, loading = true, failed = false))
         }) { id, connection ->
-            clearPhotoPreview(id)
-            previewJob?.cancelAndJoin()
-            previewJob = null
-            _image.value = null
-            if (offset == null) _thumbnails.value = emptyMap()
-            updateReady(id) { it.copy(hasLiveView = false) }
-            val page =
-                if (offset == null) connection.openPhotoBrowser() else connection.photoPage(offset)
-            _thumbnails.value = emptyMap()
+            val page = if (offset == null) {
+                previewJob?.cancelAndJoin()
+                previewJob = null
+                _image.value = null
+                thumbnailCache = linkedMapOf()
+                updateReady(id) { it.copy(hasLiveView = false) }
+                connection.openPhotoBrowser()
+            } else connection.photoPage(offset)
+            val count = groupCameraPhotos(page.photos).size
+            check(page.offset == (offset ?: 0) && (count > 0 || !page.hasMore)) { "Invalid camera photo page" }
             updateReady(id) {
-                it.copy(
-                    photoBrowser = it.photoBrowser.copy(
-                        photos = page.photos,
-                        offset = page.offset,
-                        totalObjects = page.totalObjects,
-                        hasMore = page.hasMore
-                    )
-                )
-            }
-            val captures = groupCameraPhotos(page.photos)
-            val previewOrder = if (preferredPhotoIndex == null) captures.indices.toList()
-            else captures.indices.sortedBy { abs(page.offset + it - preferredPhotoIndex) }
-            for (index in previewOrder) {
-                val capture = captures[index]
-                val photo = capture.thumbnail
-                connection.photoThumbnail(photo.handle)
-                    ?.let { _thumbnails.value += photo.handle to it }
+                it.copy(photoBrowser = it.photoBrowser.copy(
+                    photos = it.photoBrowser.photos + page.photos,
+                    loadedCaptures = page.offset + count,
+                    totalObjects = page.totalObjects,
+                    hasMore = page.hasMore
+                ))
             }
         }
+    }
+
+    internal suspend fun photoThumbnail(identifier: String, handle: Long): ImageBitmap? {
+        val state = registry.get(identifier)?.wifiRemote ?: return null
+        val connection = activeConnection ?: return null
+        if (!_owner.value.equals(identifier, true) || !state.photoBrowser.open || state.imageTransfer.busy) return null
+        val cache = thumbnailCache
+        if (handle in cache) return cache.remove(handle).also { cache[handle] = it }
+        val image = try {
+            connection.photoThumbnail(handle)
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (failure: Exception) {
+            log.w(failure) { "Wi-Fi photo thumbnail unavailable" }
+            null
+        }
+        currentCoroutineContext().ensureActive()
+        if (cache !== thumbnailCache) return null
+        cache[handle] = image
+        if (cache.size > 24) cache.remove(cache.keys.first())
+        return image
     }
 
     fun showPhotoPreview(identifier: String, handle: Long) {
@@ -348,6 +363,7 @@ class WifiRemoteController internal constructor(
         if (pending.isEmpty()) return
         photoWork(
             identifier,
+            "download photos",
             {
                 it.copy(
                     imageTransfer = WifiImageTransferState(
@@ -399,6 +415,7 @@ class WifiRemoteController internal constructor(
     fun leavePhotoBrowser(identifier: String) {
         photoWork(
             identifier,
+            "close the photo browser",
             {
                 it.copy(
                     photoBrowser = it.photoBrowser.copy(
@@ -411,7 +428,7 @@ class WifiRemoteController internal constructor(
             previewJob?.cancelAndJoin()
             previewJob = null
             connection.closePhotoBrowser()
-            _thumbnails.value = emptyMap()
+            thumbnailCache = linkedMapOf()
             updateReady(id) {
                 it.copy(
                     photoBrowser = WifiPhotoBrowserState(
@@ -449,7 +466,9 @@ class WifiRemoteController internal constructor(
     }
 
     private fun photoWork(
-        identifier: String, starting: (WifiRemoteState) -> WifiRemoteState,
+        identifier: String,
+        operation: String,
+        starting: (WifiRemoteState) -> WifiRemoteState,
         action: suspend (String, WifiRemoteConnection) -> Unit
     ) {
         val id = identifier.uppercase()
@@ -467,30 +486,15 @@ class WifiRemoteController internal constructor(
         val work = parent.launch(start = CoroutineStart.LAZY) {
             try {
                 action(id, connection)
-            } catch (_: TimeoutCancellationException) {
-                updateReady(id) {
-                    it.copy(
-                        photoBrowser = it.photoBrowser.copy(failed = true),
-                        imageTransfer = if (it.imageTransfer.busy) it.imageTransfer.copy(
-                            status = WifiImageTransferStatus.Failed
-                        ) else it.imageTransfer
-                    )
-                }
-            } catch (cancelled: CancellationException) {
+            } catch (failure: Exception) {
                 parent.coroutineContext.ensureActive()
+                val cancelled = !isActive || (failure is CancellationException && failure !is TimeoutCancellationException)
+                if (!cancelled) log.e(failure) { "Failed to $operation over Wi-Fi" }
                 updateReady(id) {
                     it.copy(
-                        photoBrowser = it.photoBrowser.copy(failed = it.photoBrowser.loading),
-                        imageTransfer = if (it.imageTransfer.busy)
-                            it.imageTransfer.copy(status = WifiImageTransferStatus.Cancelled) else it.imageTransfer
-                    )
-                }
-            } catch (_: Exception) {
-                updateReady(id) {
-                    it.copy(
-                        photoBrowser = it.photoBrowser.copy(failed = true),
+                        photoBrowser = it.photoBrowser.copy(failed = !cancelled || it.photoBrowser.loading),
                         imageTransfer = if (it.imageTransfer.busy) it.imageTransfer.copy(
-                            status = WifiImageTransferStatus.Failed
+                            status = if (cancelled) WifiImageTransferStatus.Cancelled else WifiImageTransferStatus.Failed
                         ) else it.imageTransfer
                     )
                 }
@@ -619,7 +623,7 @@ class WifiRemoteController internal constructor(
             photoJob = null
             photoPreviewJob = null
             _photoPreview.value = null
-            _thumbnails.value = emptyMap()
+            thumbnailCache = linkedMapOf()
             captureRequests?.close()
             captureRequests = null
             withContext(NonCancellable) {

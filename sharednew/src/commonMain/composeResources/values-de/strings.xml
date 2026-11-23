@@ -410,7 +410,7 @@
     <string name="wifi_remote_selection_start">Foto auswählen</string>
     <string name="wifi_remote_selection_count">%1$d ausgewählt</string>
     <string name="wifi_remote_selection_clear">Auswahl aufheben</string>
-    <string name="wifi_remote_selection_all">Alle auf dieser Seite auswählen</string>
+    <string name="wifi_remote_selection_all">Alle geladenen Fotos auswählen</string>
     <string name="wifi_remote_batch_formats">Formate zum Herunterladen auswählen</string>
     <string name="wifi_remote_batch_formats_hint">Lädt die Dateien der ausgewählten Fotos in den gewünschten Formaten herunter. Du kannst mehrere Formate auswählen. Dateien, die in dieser Sitzung bereits gespeichert wurden oder das Downloadlimit überschreiten, werden übersprungen.</string>
     <string name="wifi_remote_batch_file_count">%1$d Dateien</string>
@@ -426,12 +426,11 @@
     <string name="wifi_remote_browser_hint">Lade JPEG-, RAW- und HEIF-Originaldateien in deine Fotomediathek herunter. Bei neueren Kameras werden die Fotos von Karte 1 angezeigt. Die Dateien bleiben auf der Kamera erhalten. Lass diesen Bildschirm geöffnet, bis der Download abgeschlossen ist.</string>
     <string name="wifi_remote_browser_loading">Fotos auf der Kamera werden gelesen…</string>
     <string name="wifi_remote_browser_failed">Die Fotos auf der Kamera konnten nicht gelesen oder der Übertragungsmodus konnte nicht gewechselt werden. Versuche es erneut. Falls die Kamera beschäftigt ist, trenne die Verbindung und stelle sie erneut her.</string>
-    <string name="wifi_remote_browser_empty">Keine unterstützten Fotos auf dieser Seite.</string>
+    <string name="wifi_remote_browser_empty">Keine unterstützten Fotos auf dieser Speicherkarte.</string>
     <string name="wifi_remote_browser_refresh">Aktualisieren</string>
     <string name="wifi_remote_browser_back">Zurück zur Fernsteuerung</string>
     <string name="wifi_remote_browser_previous">Zurück</string>
     <string name="wifi_remote_browser_next">Weiter</string>
-    <string name="wifi_remote_browser_page">Seite %1$d</string>
     <string name="wifi_remote_photo_size">%1$d KB</string>
     <string name="wifi_remote_download">Herunterladen</string>
     <string name="wifi_remote_download_saved">Gespeichert</string>

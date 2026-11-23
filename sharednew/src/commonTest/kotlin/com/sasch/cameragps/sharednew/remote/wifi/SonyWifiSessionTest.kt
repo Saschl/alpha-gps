@@ -28,6 +28,8 @@ class SonyWifiSessionTest : WifiLoggingTest() {
         var mediaServer = "Enable"
         var vendorOpen = true
         var initialTransfer = false
+        var contentCatalog = false
+        var rejectCatalog = false
         var mtpMetadata = false
         var rejectOpenSession = 0
         var blockOpenSession = 0
@@ -73,6 +75,7 @@ class SonyWifiSessionTest : WifiLoggingTest() {
                 operations += Triple(session, code, params)
                 if (code == 0x9210 && session == blockOpenSession) return
                 val rejected = (code == 0x9210 && session == rejectOpenSession) ||
+                        (code == 0x923c && rejectCatalog) ||
                         (code == 0x9212 && params[1] == 0L && rejectExit)
                 if (code == 0x9210 && !rejected) mode = params[1]
                 val data: ByteArray? = when (code) {
@@ -80,6 +83,7 @@ class SonyWifiSessionTest : WifiLoggingTest() {
                         val ops =
                             listOf(0x1001, 0x1002, 0x1003, 0x9201, 0x9202, 0x9207, 0x9209, 0x923a) +
                                     (if (vendorOpen) listOf(0x9210) else emptyList()) +
+                                    (if (contentCatalog) listOf(0x923c, 0x923d) else emptyList()) +
                                     (if (initialTransfer || mode == 1L) listOf(
                                         0x1004, 0x1007, 0x9211, 0x9212,
                                         if (mtpMetadata) 0x9805 else 0x1008
@@ -101,8 +105,14 @@ class SonyWifiSessionTest : WifiLoggingTest() {
                     }
 
                     0x9201 -> ByteArray(8)
-                    0x9202 -> number(300, 2) + number(1, 4) + number(0xd295, 2) +
-                            number(2, 4) + number(0xd2c1, 2) + number(0xd2c2, 2)
+                    0x9202 -> {
+                        val controls = if (contentCatalog) listOf(0xd2c1, 0xd2c2, 0xd30f, 0xd313)
+                            else listOf(0xd2c1, 0xd2c2)
+                        number(300, 2) + number(1, 4) + number(0xd295, 2) +
+                                number(controls.size.toLong(), 4) + controls.flatMap { number(it.toLong(), 2).toList() }.toByteArray()
+                    }
+
+                    0x923c -> ByteArray(140) + number(1, 4) + number(0, 4)
 
                     0x9209 -> number(1, 8) + number(0xd295, 2) + number(4, 2) +
                             byteArrayOf(0, 1) + number(0, 2) + number(1, 2) + byteArrayOf(0)
@@ -243,6 +253,41 @@ class SonyWifiSessionTest : WifiLoggingTest() {
                 connection.close()
             }
         }
+    }
+
+    @Test
+    fun combinedSessionCanRetryCardReadAndResumeLiveViewWithoutSwitchingModes() = runTest {
+        val camera = Camera().apply {
+            version = "4.00"
+            initialTransfer = true
+            contentCatalog = true
+            rejectCatalog = true
+        }
+        val registry = CameraSessionRegistry()
+        val controller = WifiRemoteController(backgroundScope, registry, { _, scope -> camera.open(scope) }, {}, {})
+        controller.connect("camera", "192.168.1.1")
+        runCurrent()
+        assertEquals(1, camera.previewOpened)
+        controller.browsePhotos("camera")
+        runCurrent()
+        assertEquals(1, camera.previewClosed)
+        assertTrue(registry.get("camera")!!.wifiRemote.photoBrowser.failed)
+        camera.rejectCatalog = false
+        controller.browsePhotos("camera")
+        runCurrent()
+        val browser = registry.get("camera")!!.wifiRemote.photoBrowser
+        assertTrue(browser.open)
+        assertFalse(browser.failed)
+        assertFalse(browser.loading)
+        assertEquals(2, camera.operations.count { it.second == 0x923c })
+        controller.leavePhotoBrowser("camera")
+        runCurrent()
+        assertFalse(registry.get("camera")!!.wifiRemote.photoBrowser.open)
+        assertEquals(2, camera.previewOpened)
+        assertEquals(listOf(listOf(1L, 2L)), camera.openModes())
+        assertTrue(camera.operations.none { it.second == 0x9212 || it.second == 0x9207 && it.third.first() == 0xd30fL })
+        assertEquals(0, camera.releaseCount)
+        controller.closeAndJoin()
     }
 
     @Test

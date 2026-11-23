@@ -392,7 +392,7 @@
     <string name="wifi_remote_selection_start">Pilih foto</string>
     <string name="wifi_remote_selection_count">%1$d dipilih</string>
     <string name="wifi_remote_selection_clear">Batalkan pilihan</string>
-    <string name="wifi_remote_selection_all">Pilih semua di halaman</string>
+    <string name="wifi_remote_selection_all">Pilih semua foto yang dimuat</string>
     <string name="wifi_remote_batch_formats">Pilih format untuk diunduh</string>
     <string name="wifi_remote_batch_formats_hint">Mengunduh file dengan format yang sesuai dari foto yang dipilih. Anda dapat memilih lebih dari satu format. File yang sudah disimpan dalam sesi ini atau melebihi batas unduhan akan dilewati.</string>
     <string name="wifi_remote_batch_file_count">%1$d file</string>
@@ -408,12 +408,11 @@
     <string name="wifi_remote_browser_hint">Unduh file JPEG, RAW, dan HEIF asli ke pustaka foto Anda. Pada kamera yang lebih baru, foto ditelusuri dari slot kartu 1. File tetap ada di kamera. Biarkan layar ini terbuka hingga unduhan selesai.</string>
     <string name="wifi_remote_browser_loading">Membaca foto dari kamera…</string>
     <string name="wifi_remote_browser_failed">Tidak dapat membaca foto dari kamera atau mengubah mode transfer. Coba lagi, atau putuskan lalu sambungkan kembali jika kamera sedang sibuk.</string>
-    <string name="wifi_remote_browser_empty">Tidak ada foto yang didukung di halaman ini.</string>
+    <string name="wifi_remote_browser_empty">Tidak ada foto yang didukung di kartu ini.</string>
     <string name="wifi_remote_browser_refresh">Muat ulang</string>
     <string name="wifi_remote_browser_back">Kembali ke pemotretan jarak jauh</string>
     <string name="wifi_remote_browser_previous">Sebelumnya</string>
     <string name="wifi_remote_browser_next">Berikutnya</string>
-    <string name="wifi_remote_browser_page">Halaman %1$d</string>
     <string name="wifi_remote_photo_size">%1$d KB</string>
     <string name="wifi_remote_download">Unduh</string>
     <string name="wifi_remote_download_saved">Disimpan</string>

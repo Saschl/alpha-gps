@@ -168,12 +168,13 @@ class SonyImageTransferTest : WifiLoggingTest() {
         assertEquals((transport.objectCount.toLong() downTo 6L).toList(), first.photos.map { it.handle })
         val second = transfer.page(SonyImageTransfer.PAGE_SIZE)
         assertEquals((5L downTo 1L).toList(), second.photos.map { it.handle })
-        val result = transfer.download(4L) { progress += it }
+        val earlierHandle = first.photos.first().handle
+        val result = transfer.download(earlierHandle) { progress += it }
         assertEquals(WifiImageTransferStatus.Saved, result.status)
         assertTrue(
             outputs.single().let { it.committed && !it.aborted && it.received == transport.size })
         val reads = transport.operations.filter { it.first == 0x9211 }.map { it.second }
-        assertEquals(listOf(listOf(4L, 0L, 0L, 524288L), listOf(4L, 524288L, 0L, 75712L)), reads)
+        assertEquals(listOf(listOf(earlierHandle, 0L, 0L, 524288L), listOf(earlierHandle, 524288L, 0L, 75712L)), reads)
         assertEquals(0x9212 to listOf(2L, 1L, 0L), transport.operations.first())
         assertEquals(
             listOf(0x10001L, 0L, 0L),

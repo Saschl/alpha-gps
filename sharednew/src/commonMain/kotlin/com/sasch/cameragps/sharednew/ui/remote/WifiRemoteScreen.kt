@@ -83,7 +83,6 @@ import cameragps.sharednew.generated.resources.wifi_remote_title
 import cameragps.sharednew.generated.resources.wifi_remote_wifi_disabled
 import com.diamondedge.logging.logging
 import com.sasch.cameragps.sharednew.remote.BulbTimerState
-import com.sasch.cameragps.sharednew.remote.wifi.SonyImageTransfer
 import com.sasch.cameragps.sharednew.remote.wifi.WifiPhotoDownload
 import com.sasch.cameragps.sharednew.remote.wifi.WifiRemoteController
 import com.sasch.cameragps.sharednew.remote.wifi.WifiRemoteFailure
@@ -111,7 +110,7 @@ class WifiRemoteViewModel(val identifier: String, val controller: WifiRemoteCont
         val index = groupCameraPhotos(state.photoBrowser.photos).indexOfFirst { it.id == captureId }
         if (index >= 0) {
             controller.clearPhotoTransferResult(identifier)
-            viewedPhotoIndex = state.photoBrowser.offset + index
+            viewedPhotoIndex = index
             viewPhotoAt(viewedPhotoIndex!!)
         }
     }
@@ -128,24 +127,15 @@ class WifiRemoteViewModel(val identifier: String, val controller: WifiRemoteCont
         val browser = state.photoBrowser
         if (!browser.open) return
         val captures = groupCameraPhotos(browser.photos)
-        val count = captures.size
-        if (index in browser.offset until browser.offset + count) {
+        if (index in captures.indices) {
             if (viewedPhotoIndex != index) controller.clearPhotoTransferResult(identifier)
             viewedPhotoIndex = index
-            controller.showPhotoPreview(identifier, captures[index - browser.offset].preview.handle)
-        } else if (!browser.loading && !state.imageTransfer.busy) {
-            val offset = when {
-                index == browser.offset - 1 && browser.offset > 0 -> maxOf(
-                    0,
-                    browser.offset - SonyImageTransfer.PAGE_SIZE
-                )
-
-                index == browser.offset + count && browser.hasMore -> browser.offset + SonyImageTransfer.PAGE_SIZE
-                else -> return
-            }
+            controller.showPhotoPreview(identifier, captures[index].preview.handle)
+        } else if (index == captures.size && browser.hasMore && !browser.loading && !state.imageTransfer.busy) {
             controller.clearPhotoTransferResult(identifier)
             viewedPhotoIndex = index
-            controller.browsePhotos(identifier, offset, preferredPhotoIndex = index)
+            controller.clearPhotoPreview(identifier)
+            controller.loadMorePhotos(identifier)
         }
     }
 
@@ -255,6 +245,7 @@ fun WifiRemoteScreen(viewModel: WifiRemoteViewModel, onConnect: (String) -> Unit
     )
     LaunchedEffect(ready, state.photoBrowser.open) {
         if (!ready || state.photoBrowser.open) viewModel.collapsePreview()
+        if (!state.photoBrowser.open) browserStateHolder.removeState("photos")
     }
     LaunchedEffect(
         ready,

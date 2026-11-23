@@ -1,6 +1,7 @@
 package com.sasch.cameragps.sharednew.remote.wifi
 
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
@@ -17,9 +18,9 @@ class SonyContentCatalogTest : WifiLoggingTest() {
                 number(1, 4) + number(6000, 4) + number(4000, 4) + number(0, 4) + number(0, 4)
     }
 
-    private fun content(id: Int, time: Long, vararg files: ByteArray): ByteArray =
+    private fun content(id: Int, time: Long, vararg files: ByteArray, localTime: Long = time): ByteArray =
         number(1, 4) + number(id.toLong(), 4) + ByteArray(20) + number(time, 8) + number(3000, 8) +
-                number(time, 8) + number(3000, 8) + ByteArray(12) + number(
+                number(localTime, 8) + number(3000, 8) + ByteArray(12) + number(
             0,
             4
         ) + number(files.size.toLong(), 4) +
@@ -72,19 +73,116 @@ class SonyContentCatalogTest : WifiLoggingTest() {
         assertEquals("DSC00001.JPG", result.files.single().photo.filename)
     }
 
-    private class EventConnection : PtpIpPacketConnection {
-        val packets = Channel<PtpIpPacket>(Channel.UNLIMITED)
-        override suspend fun send(packet: PtpIpPacket) {}
-        override suspend fun receive() = packets.receive()
-        override suspend fun close() {
-            packets.close()
+    private fun TestScope.catalog(
+        dateIndex: Boolean,
+        respond: (Int, List<Long>) -> ByteArray
+    ): SonyContentCatalog {
+        val replies = Channel<PtpIpPacket>(Channel.UNLIMITED)
+        val transport = object : PtpIpCommandTransport {
+            override suspend fun receive() = replies.receive()
+            override suspend fun send(packet: PtpIpPacket) {
+                fun read(at: Int, size: Int) = (0 until size).fold(0L) { value, i ->
+                    value or ((packet.body[at + i].toLong() and 255) shl (8 * i))
+                }
+                val params = (10 until packet.body.size step 4).map { read(it, 4) }
+                val data = respond(read(4, 2).toInt(), params)
+                val id = read(6, 4).toInt()
+                replies.send(PtpIpOperations.startData(id, data.size))
+                replies.send(PtpIpOperations.endData(id, data))
+                replies.send(PtpIpPacket(7, number(0x2001, 2) + number(id.toLong(), 4)))
+            }
         }
+        val operations = if (dateIndex) setOf(0x923b, 0x923c, 0x923d) else setOf(0x923c, 0x923d)
+        val capabilities = SonyPtpInitializationResult.Ready("4.00", 310,
+            SonyExtendedDeviceInfo(300, emptySet(), emptySet()), PtpDeviceInfo(operations), null)
+        return SonyContentCatalog(PtpIpCommandQueue(transport, backgroundScope), capabilities)
     }
 
     @Test
-    fun versionFourUsesContentCommandsAndVendorEventBeforeListingAndDownload() = runTest {
-        val connection = EventConnection()
-        val events = PtpIpEventMonitor(connection, backgroundScope)
+    fun dateIndexLoadsNewestFirstAcrossDenseDaysAndRetriesTheSameOlderDay() = runTest {
+        val day = 86_400_000L
+        val newest = 2 * day
+        val reads = mutableListOf<Long>()
+        val records = (1..130).map { id ->
+            val time = newest + id * 600_000
+            time to content(id, time - 3_600_000, jpeg, raw, localTime = time)
+        }
+        val older = day + 10
+        val all = listOf(older to content(0, older - 3_600_000, jpeg, localTime = older)) + records
+        var rejectOlder = true
+        val catalog = catalog(dateIndex = true) { code, params ->
+            if (code == 0x923b) {
+                check(params == listOf(1L))
+                number(3, 4) + number(day, 8) + number(newest, 8) + number(day, 8)
+            } else {
+                check(code == 0x923c && params.last() == 1L)
+                val from = params[0] or (params[1] shl 32)
+                reads += from
+                check(from != day || !rejectOlder)
+                val matching = all.filter { it.first >= from }
+                val returned = if (matching.isEmpty()) all.takeLast(100) else matching
+                batch(*returned.take(params[2].toInt()).map { it.second }.toTypedArray())
+            }
+        }
+        var page = catalog.open()
+        assertTrue(page.hasMore)
+        assertEquals(null, page.totalObjects)
+        val loaded = mutableListOf<Int>()
+        while (true) {
+            val captures = groupCameraPhotos(page.photos)
+            assertTrue(captures.all { it.files.size == 2 })
+            loaded += captures.map { (it.preview.handle and 0xffffffffL).toInt() }
+            assertTrue(reads.all { it >= newest }, "Older days must wait for scrolling")
+            if (loaded.size == 130) break
+            page = catalog.page(loaded.size)
+        }
+        assertEquals((130 downTo 1).toList(), loaded)
+        assertFailsWith<IllegalStateException> { catalog.page(loaded.size) }
+        rejectOlder = false
+        val last = catalog.page(loaded.size)
+        assertEquals(131, last.totalObjects)
+        assertEquals(false, last.hasMore)
+        assertEquals(0L, last.photos.single().handle and 0xffffffffL)
+        assertEquals("DSC00001.JPG", catalog.revalidate(last.photos.single().handle).filename)
+        assertEquals(older, reads.last(), "Revalidate using camera-local time")
+    }
+
+    @Test
+    fun indexedCameraRepeatingItsFirstHundredRecordsStillShowsAndRevalidatesTheTail() = runTest {
+        val day = 86_400_000L
+        val records = (1..105).map { id -> content(id, day + id * 800_000L, jpeg) }
+        val catalog = catalog(dateIndex = true) { code, params ->
+            if (code == 0x923b) number(1, 4) + number(day, 8)
+            else batch(*records.take(params[2].toInt()).toTypedArray())
+        }
+        var page = catalog.open()
+        val handles = page.photos.map { it.handle }.toMutableList()
+        while (page.hasMore) {
+            page = catalog.page(handles.size)
+            handles += page.photos.map { it.handle }
+        }
+        assertEquals((105L downTo 1L).toList(), handles.map { it and 0xffffffffL })
+        assertEquals("DSC00001.JPG", catalog.revalidate(handles.first()).filename)
+    }
+
+    @Test
+    fun repeatedFullUtcBatchRetainsPhotosAndRecoversTheTailWithAWiderRead() = runTest {
+        val reads = mutableListOf<Pair<Long, Int>>()
+        val records = (1..103).map { content(it, it.toLong(), jpeg) }
+        val catalog = catalog(dateIndex = false) { _, params ->
+            val limit = params[2].toInt()
+            reads += params.first() to limit
+            batch(*records.take(limit).toTypedArray())
+        }
+        val first = catalog.open()
+        assertEquals(103, first.totalObjects)
+        val files = first.photos + catalog.page(40).photos + catalog.page(80).photos
+        assertEquals((103L downTo 1L).toList(), files.map { it.handle and 0xffffffffL })
+        assertEquals(listOf(0L to 100, 100L to 100, 101L to 100, 101L to 200), reads)
+    }
+
+    @Test
+    fun versionFourListsAndDownloadsPhoneSelectedPhotosWithoutOnCameraSelection() = runTest {
         val requests = mutableListOf<Pair<Int, List<Long>>>()
         val replies = Channel<PtpIpPacket>(Channel.UNLIMITED)
         var cardIdentity: Byte = 1
@@ -123,16 +221,6 @@ class SonyContentCatalogTest : WifiLoggingTest() {
 
                     0x923d -> ByteArray(params.last().toInt()) { 7 }
                     0x923e -> if (params.last() == 1L || previewResponse == 0x2001L) heifThumbnail else null
-                    0x9207 -> {
-                        connection.packets.send(
-                            PtpIpPacket(
-                                8, number(0xc222, 2) + number(id.toLong(), 4) +
-                                        number(0x9207d30f, 4) + number(1, 4)
-                            )
-                        )
-                        null
-                    }
-
                     else -> error("Unexpected operation $code")
                 }
                 if (data != null) {
@@ -154,13 +242,13 @@ class SonyContentCatalogTest : WifiLoggingTest() {
         val queue = PtpIpCommandQueue(transport, backgroundScope)
         val ready = SonyPtpInitializationResult.Ready(
             "4.00", 310,
-            SonyExtendedDeviceInfo(300, emptySet(), setOf(0xd30f)),
+            SonyExtendedDeviceInfo(300, emptySet(), emptySet()),
             PtpDeviceInfo(setOf(0x9207, 0x923c, 0x923d, 0x923e)), null
         )
         var committed = false
         var aborted = false
         var received = 0
-        val transfer = SonyImageTransfer(queue, ready, events, decodeNonJpegThumbnail = { bytes ->
+        val transfer = SonyImageTransfer(queue, ready, decodeNonJpegThumbnail = { bytes ->
             decodedThumbnail = bytes
             null
         }, decodePreview = { bytes ->
@@ -186,8 +274,7 @@ class SonyContentCatalogTest : WifiLoggingTest() {
         val handle = page.photos.first { it.mimeType == "image/x-sony-arw" }.handle
         val previewHandle = page.photos.first { it.mimeType == "image/jpeg" }.handle
         assertEquals(3, page.photos.size)
-        assertEquals(0x9207 to listOf(0xd30fL, 1L), requests.first())
-        assertEquals(0x923c to listOf(0L, 0L, 100L, 1L, 0L), requests[1])
+        assertEquals(listOf(0x923c to listOf(0L, 0L, 100L, 1L, 0L)), requests)
         val heifHandle = page.photos.first { it.mimeType == "image/heif" }.handle
         assertEquals(null, transfer.thumbnail(heifHandle))
         assertContentEquals(heifThumbnail, decodedThumbnail)
@@ -251,9 +338,10 @@ class SonyContentCatalogTest : WifiLoggingTest() {
         assertEquals(1L, lastPage.photos.first().handle and 0xffffffffL)
         assertEquals(false, lastPage.hasMore)
         assertEquals(catalogRequests, requests.count { it.first == 0x923c })
+        val requestsBeforeClose = requests.size
         transfer.closeBrowser()
-        assertEquals(0x9207, requests.last().first)
+        assertEquals(requestsBeforeClose, requests.size)
+        assertTrue(requests.none { it.first == 0x9207 })
         queue.close()
-        events.close()
     }
 }

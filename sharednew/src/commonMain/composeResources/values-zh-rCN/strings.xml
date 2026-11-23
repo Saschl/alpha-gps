@@ -392,7 +392,7 @@
     <string name="wifi_remote_selection_start">选择照片</string>
     <string name="wifi_remote_selection_count">已选 %1$d 张</string>
     <string name="wifi_remote_selection_clear">取消选择</string>
-    <string name="wifi_remote_selection_all">全选本页</string>
+    <string name="wifi_remote_selection_all">选择所有已加载的照片</string>
     <string name="wifi_remote_batch_formats">选择下载格式</string>
     <string name="wifi_remote_batch_formats_hint">下载所选照片中符合格式的文件。可同时选择多种格式。本次会话中已保存或超过下载大小限制的文件会被跳过。</string>
     <string name="wifi_remote_batch_file_count">%1$d 个文件</string>
@@ -408,12 +408,11 @@
     <string name="wifi_remote_browser_hint">将原始 JPEG、RAW 和 HEIF 文件下载到手机相册。较新的相机仅浏览卡槽 1。相机上的文件会保留。请在下载完成前保持此页面打开。</string>
     <string name="wifi_remote_browser_loading">正在读取相机照片…</string>
     <string name="wifi_remote_browser_failed">无法读取相机照片或切换传输模式。请重试；如果相机正忙，请断开连接后重新连接。</string>
-    <string name="wifi_remote_browser_empty">此页没有支持的照片。</string>
+    <string name="wifi_remote_browser_empty">此存储卡上没有支持的照片。</string>
     <string name="wifi_remote_browser_refresh">刷新</string>
     <string name="wifi_remote_browser_back">返回遥控拍摄</string>
-    <string name="wifi_remote_browser_previous">上一页</string>
-    <string name="wifi_remote_browser_next">下一页</string>
-    <string name="wifi_remote_browser_page">第 %1$d 页</string>
+    <string name="wifi_remote_browser_previous">上一张</string>
+    <string name="wifi_remote_browser_next">下一张</string>
     <string name="wifi_remote_photo_size">%1$d KB</string>
     <string name="wifi_remote_download">下载</string>
     <string name="wifi_remote_download_saved">已保存</string>

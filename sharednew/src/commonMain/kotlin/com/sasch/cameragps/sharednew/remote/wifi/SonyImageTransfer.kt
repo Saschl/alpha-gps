@@ -83,7 +83,7 @@ internal data class SonyImageInfo(
 internal data class CameraPhotoPage(
     val photos: List<WifiCameraPhoto>,
     val offset: Int,
-    val totalObjects: Int,
+    val totalObjects: Int?,
     val hasMore: Boolean = false
 )
 
@@ -91,13 +91,12 @@ internal data class CameraPhotoPage(
 internal class SonyImageTransfer(
     private val commands: PtpIpCommandQueue,
     private val capabilities: SonyPtpInitializationResult.Ready,
-    events: PtpIpEventMonitor? = null,
     private val decodeNonJpegThumbnail: (ByteArray) -> ImageBitmap? = { null },
     private val decodePreview: (ByteArray) -> ImageBitmap? = { null },
     private val store: CameraImageStore,
 ) {
-    private val catalog = if (events != null && SonyContentCatalog.supported(capabilities))
-        SonyContentCatalog(commands, capabilities, events) else null
+    private val catalog = if (SonyContentCatalog.supported(capabilities))
+        SonyContentCatalog(commands, capabilities) else null
     val supported: Boolean = catalog != null || listOf(
         GET_STORAGE_IDS,
         GET_HANDLES,
@@ -114,11 +113,12 @@ internal class SonyImageTransfer(
             capabilities.extendedInfo.supportsProperty(TRANSFER_ENABLED)
     private var modeRequested = false
     private var captures = emptyList<WifiCameraCapture>()
-    private var pagePhotos = emptyList<WifiCameraPhoto>()
+    private val listedPhotos = mutableMapOf<Long, WifiCameraPhoto>()
 
     suspend fun openBrowser(): CameraPhotoPage {
         check(supported)
-        catalog?.let { return it.open().also { page -> pagePhotos = page.photos } }
+        listedPhotos.clear()
+        catalog?.let { return it.open().also(::rememberPage) }
         if (!modeRequested) {
             modeRequested = true
             accepted(commands.executeNoData(SET_TRANSFER_MODE, listOf(2L, 1L, 0L)))
@@ -154,14 +154,18 @@ internal class SonyImageTransfer(
     }
 
     suspend fun page(offset: Int): CameraPhotoPage {
-        catalog?.let { return it.page(offset).also { page -> pagePhotos = page.photos } }
+        catalog?.let { return it.page(offset).also(::rememberPage) }
         check(modeRequested)
-        return cameraPhotoPage(captures, offset).also { pagePhotos = it.photos }
+        return cameraPhotoPage(captures, offset).also(::rememberPage)
+    }
+
+    private fun rememberPage(page: CameraPhotoPage) {
+        page.photos.associateByTo(listedPhotos) { it.handle }
     }
 
     suspend fun thumbnail(handle: Long): ImageBitmap? {
         if (!(catalog?.hasThumbnails
-                ?: capabilities.deviceInfo.supports(GET_THUMB)) || pagePhotos.none { it.handle == handle }
+                ?: capabilities.deviceInfo.supports(GET_THUMB)) || handle !in listedPhotos
         ) return null
         return try {
             val bytes = catalog?.thumbnail(handle) ?: data(GET_THUMB, listOf(handle), 512 * 1024)
@@ -180,7 +184,7 @@ internal class SonyImageTransfer(
     }
 
     suspend fun preview(handle: Long): ImageBitmap? {
-        val photo = pagePhotos.firstOrNull { it.handle == handle } ?: return null
+        val photo = listedPhotos[handle] ?: return null
         if (photo.mimeType == "image/x-sony-arw") {
             try {
                 val embedded = SonyArwPreview.read(photo.size) { offset, length ->
@@ -223,7 +227,7 @@ internal class SonyImageTransfer(
         format: WifiPhotoDownloadFormat = WifiPhotoDownloadFormat.Original,
         onProgress: (WifiImageTransferState) -> Unit
     ): WifiImageTransferState {
-        val photo = pagePhotos.singleOrNull { it.handle == handle && it.downloadable }
+        val photo = listedPhotos[handle]?.takeIf { it.downloadable }
             ?: return WifiImageTransferState(WifiImageTransferStatus.Failed)
         val convert = format == WifiPhotoDownloadFormat.Jpeg
         if (convert && (photo.mimeType != "image/heif" || !store.canConvertHeif)) {
@@ -290,13 +294,13 @@ internal class SonyImageTransfer(
     }
 
     suspend fun closeBrowser() {
-        catalog?.let { it.close(); pagePhotos = emptyList(); return }
+        catalog?.let { it.clear(); listedPhotos.clear(); return }
         if (!modeRequested) return
         // A failed exit must not restart shutter/live view while the camera is still in transfer mode.
         accepted(commands.executeNoData(SET_TRANSFER_MODE, listOf(2L, 0L, 0L)))
         modeRequested = false
         captures = emptyList()
-        pagePhotos = emptyList()
+        listedPhotos.clear()
     }
 
     private suspend fun data(

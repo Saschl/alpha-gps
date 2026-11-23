@@ -28,7 +28,6 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -70,180 +69,172 @@ internal fun WifiPhotoViewer(
 ) {
     val browser = state.photoBrowser
     val captures = remember(browser.photos) { groupCameraPhotos(browser.photos) }
-    val thumbnails by viewModel.controller.thumbnails.collectAsState()
     val preview by viewModel.controller.photoPreview.collectAsState()
     DisposableEffect(viewModel) {
         onDispose { viewModel.controller.clearPhotoPreview(viewModel.identifier) }
     }
-    key(browser.offset) {
-        val preceding = if (browser.offset > 0) 1 else 0
-        val count = captures.size + preceding + if (browser.hasMore) 1 else 0
-        val initialPage =
-            ((viewModel.viewedPhotoIndex ?: browser.offset) - browser.offset + preceding)
-                .coerceIn(0, maxOf(0, count - 1))
-        val pager = rememberPagerState(initialPage = initialPage) { count }
-        val scope = rememberCoroutineScope()
-        var showDetails by rememberSaveable { mutableStateOf(false) }
-        val current = captures.getOrNull(pager.currentPage - preceding)
-        val index = browser.offset + pager.currentPage - preceding
-        val changingPage = browser.loading && (viewModel.viewedPhotoIndex ?: browser.offset) !in
-                browser.offset until browser.offset + captures.size
+    val count = captures.size + if (browser.hasMore) 1 else 0
+    val initialPage = (viewModel.viewedPhotoIndex ?: 0).coerceIn(0, maxOf(0, count - 1))
+    val pager = rememberPagerState(initialPage = initialPage) { count }
+    val scope = rememberCoroutineScope()
+    var showDetails by rememberSaveable { mutableStateOf(false) }
+    val current = captures.getOrNull(pager.currentPage)
+    val changingPage = browser.loading && current == null
 
-        LaunchedEffect(
-            pager.settledPage,
-            browser.loading,
-            browser.failed,
-            state.imageTransfer.busy
-        ) {
-            if (captures.isNotEmpty()) {
-                val settledIndex = pager.settledPage - preceding
-                if (settledIndex in captures.indices || !browser.failed) {
-                    viewModel.viewPhotoAt(browser.offset + settledIndex)
-                }
+    LaunchedEffect(
+        pager.settledPage,
+        browser.loading,
+        browser.failed,
+        captures.size,
+        state.imageTransfer.busy
+    ) {
+        if (captures.isNotEmpty()) {
+            val settledIndex = pager.settledPage
+            if (settledIndex in captures.indices || !browser.failed) {
+                viewModel.viewPhotoAt(settledIndex)
             }
         }
-        PhotoViewerTheme {
-            Column(
-                Modifier.fillMaxSize().background(Color.Black)
-                    .windowInsetsPadding(WindowInsets.safeDrawing)
+    }
+    PhotoViewerTheme {
+        Column(
+            Modifier.fillMaxSize().background(Color.Black)
+                .windowInsetsPadding(WindowInsets.safeDrawing)
+        ) {
+            Row(
+                Modifier.fillMaxWidth().padding(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Row(
-                    Modifier.fillMaxWidth().padding(8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    IconButton(onClick = viewModel::closePhoto) {
-                        Icon(
-                            painterResource(Res.drawable.arrow_back_24px),
-                            contentDescription = stringResource(Res.string.wifi_remote_viewer_back),
-                            tint = Color.White
-                        )
-                    }
-                    Text(
-                        current?.name ?: stringResource(Res.string.wifi_remote_browser_title),
-                        modifier = Modifier.weight(1f),
-                        style = MaterialTheme.typography.titleMedium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    if (current != null) Text(
-                        stringResource(
-                            Res.string.wifi_remote_viewer_position,
-                            index + 1, browser.totalObjects
-                        ), style = MaterialTheme.typography.labelLarge
+                IconButton(onClick = viewModel::closePhoto) {
+                    Icon(
+                        painterResource(Res.drawable.arrow_back_24px),
+                        contentDescription = stringResource(Res.string.wifi_remote_viewer_back),
+                        tint = Color.White
                     )
                 }
-                if (captures.isEmpty()) {
-                    Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        Text(stringResource(Res.string.wifi_remote_browser_empty))
-                    }
-                } else HorizontalPager(
-                    state = pager, modifier = Modifier.weight(1f).fillMaxWidth(),
-                    userScrollEnabled = !changingPage,
-                    key = { page -> captures.getOrNull(page - preceding)?.id ?: "boundary:$page" },
-                ) { page ->
-                    val capture = captures.getOrNull(page - preceding)
-                    val screenPreview = preview?.takeIf { it.handle == capture?.preview?.handle }
-                    val image =
-                        screenPreview?.image ?: capture?.let { thumbnails[it.thumbnail.handle] }
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        when {
-                            capture == null -> Column(
-                                Modifier.padding(24.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-                                when {
-                                    browser.failed -> {
-                                        Text(stringResource(Res.string.wifi_remote_browser_failed))
-                                        TextButton(
-                                            onClick = { viewModel.viewPhotoAt(browser.offset + page - preceding) },
-                                            enabled = !browser.loading && !state.imageTransfer.busy
-                                        ) {
-                                            Text(stringResource(Res.string.wifi_remote_viewer_retry))
-                                        }
-                                    }
-
-                                    state.imageTransfer.busy -> Text(stringResource(Res.string.wifi_remote_viewer_transfer_wait))
-                                    else -> {
-                                        CircularProgressIndicator(color = Color.White)
-                                        Text(stringResource(Res.string.wifi_remote_browser_loading))
+                Text(
+                    current?.name ?: stringResource(Res.string.wifi_remote_browser_title),
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                if (current != null) Text(
+                    browser.totalObjects?.let {
+                        stringResource(Res.string.wifi_remote_viewer_position, pager.currentPage + 1, it)
+                    } ?: (pager.currentPage + 1).toString(), style = MaterialTheme.typography.labelLarge
+                )
+            }
+            if (captures.isEmpty()) {
+                Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    Text(stringResource(Res.string.wifi_remote_browser_empty))
+                }
+            } else HorizontalPager(
+                state = pager, modifier = Modifier.weight(1f).fillMaxWidth(),
+                userScrollEnabled = !changingPage,
+                key = { page -> captures.getOrNull(page)?.id ?: "boundary:$page" },
+            ) { page ->
+                val capture = captures.getOrNull(page)
+                val screenPreview = preview?.takeIf { it.handle == capture?.preview?.handle }
+                val thumbnail = capture?.let { rememberPhotoThumbnail(viewModel, it.thumbnail.handle, state.imageTransfer.busy) }
+                val image = screenPreview?.image ?: thumbnail?.image
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    when {
+                        capture == null -> Column(
+                            Modifier.padding(24.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            when {
+                                browser.failed -> {
+                                    Text(stringResource(Res.string.wifi_remote_browser_failed))
+                                    TextButton(
+                                        onClick = { viewModel.viewPhotoAt(page) },
+                                        enabled = !browser.loading && !state.imageTransfer.busy
+                                    ) {
+                                        Text(stringResource(Res.string.wifi_remote_viewer_retry))
                                     }
                                 }
+
+                                state.imageTransfer.busy -> Text(stringResource(Res.string.wifi_remote_viewer_transfer_wait))
+                                else -> {
+                                    CircularProgressIndicator(color = Color.White)
+                                    Text(stringResource(Res.string.wifi_remote_browser_loading))
+                                }
                             }
-
-                            image != null -> Image(
-                                image, contentDescription = capture.name,
-                                modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Fit
-                            )
-
-                            browser.loading || screenPreview?.loading == true -> CircularProgressIndicator(
-                                color = Color.White
-                            )
-                            else -> Text(stringResource(Res.string.wifi_remote_preview_unavailable))
                         }
-                    }
-                }
-                Column(
-                    Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    PhotoTransferStatus(state.imageTransfer)
-                    if (state.imageTransfer.busy || browser.loading) {
-                        TextButton(onClick = { viewModel.controller.cancelPhotoOperation(viewModel.identifier) }) {
-                            Text(stringResource(Res.string.wifi_remote_transfer_cancel))
-                        }
-                    }
-                }
-                Row(
-                    Modifier.fillMaxWidth().padding(8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    TextButton(
-                        onClick = { scope.launch { pager.animateScrollToPage(pager.currentPage - 1) } },
-                        enabled = pager.currentPage > 0 && !changingPage && !pager.isScrollInProgress
-                    ) {
-                        Text(stringResource(Res.string.wifi_remote_browser_previous))
-                    }
-                    TextButton(onClick = {
-                        viewModel.controller.clearPhotoTransferResult(viewModel.identifier)
-                        showDetails = true
-                    }, enabled = current != null) {
-                        Text(stringResource(Res.string.wifi_remote_viewer_details))
-                    }
-                    TextButton(
-                        onClick = { scope.launch { pager.animateScrollToPage(pager.currentPage + 1) } },
-                        enabled = pager.currentPage < count - 1 && !changingPage && !pager.isScrollInProgress
-                    ) {
-                        Text(stringResource(Res.string.wifi_remote_browser_next))
+
+                        image != null -> Image(
+                            image, contentDescription = capture.name,
+                            modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Fit
+                        )
+
+                        browser.loading || screenPreview?.loading == true || thumbnail?.loading == true -> CircularProgressIndicator(
+                            color = Color.White
+                        )
+                        else -> Text(stringResource(Res.string.wifi_remote_preview_unavailable))
                     }
                 }
             }
-        }
-        if (showDetails && current != null) {
-            val screenPreview = preview?.takeIf { it.handle == current.preview.handle }
-            PhotoDetailsSheet(
-                capture = current,
-                image = screenPreview?.image ?: thumbnails[current.thumbnail.handle],
-                state = state,
-                previewLoading = screenPreview?.loading == true,
-                onDismiss = {
+            Column(
+                Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                PhotoTransferStatus(state.imageTransfer)
+                if (state.imageTransfer.busy || browser.loading) {
+                    TextButton(onClick = { viewModel.controller.cancelPhotoOperation(viewModel.identifier) }) {
+                        Text(stringResource(Res.string.wifi_remote_transfer_cancel))
+                    }
+                }
+            }
+            Row(
+                Modifier.fillMaxWidth().padding(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                TextButton(
+                    onClick = { scope.launch { pager.animateScrollToPage(pager.currentPage - 1) } },
+                    enabled = pager.currentPage > 0 && !changingPage && !pager.isScrollInProgress
+                ) {
+                    Text(stringResource(Res.string.wifi_remote_browser_previous))
+                }
+                TextButton(onClick = {
                     viewModel.controller.clearPhotoTransferResult(viewModel.identifier)
-                    showDetails = false
-                },
-                onDownload = { handle, format ->
-                    onDownload(
-                        listOf(
-                            WifiPhotoDownload(
-                                handle,
-                                format
-                            )
+                    showDetails = true
+                }, enabled = current != null) {
+                    Text(stringResource(Res.string.wifi_remote_viewer_details))
+                }
+                TextButton(
+                    onClick = { scope.launch { pager.animateScrollToPage(pager.currentPage + 1) } },
+                    enabled = pager.currentPage < count - 1 && !changingPage && !pager.isScrollInProgress
+                ) {
+                    Text(stringResource(Res.string.wifi_remote_browser_next))
+                }
+            }
+        }
+    }
+    if (showDetails && current != null) {
+        val screenPreview = preview?.takeIf { it.handle == current.preview.handle }
+        PhotoDetailsSheet(
+            capture = current,
+            image = screenPreview?.image ?: rememberPhotoThumbnail(viewModel, current.thumbnail.handle, state.imageTransfer.busy).image,
+            state = state,
+            previewLoading = screenPreview?.loading == true,
+            onDismiss = {
+                viewModel.controller.clearPhotoTransferResult(viewModel.identifier)
+                showDetails = false
+            },
+            onDownload = { handle, format ->
+                onDownload(
+                    listOf(
+                        WifiPhotoDownload(
+                            handle,
+                            format
                         )
                     )
-                },
-                onCancel = { viewModel.controller.cancelPhotoOperation(viewModel.identifier) })
-        }
+                )
+            },
+            onCancel = { viewModel.controller.cancelPhotoOperation(viewModel.identifier) })
     }
 }
 

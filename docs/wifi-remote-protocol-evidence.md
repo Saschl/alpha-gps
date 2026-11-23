@@ -293,20 +293,20 @@ There are two distinct APIs in Creators' App 3.5.0:
 
 The version-4 path (`SonyContentCatalog`):
 
-1. Stop live view and wait for its control cleanup. `PtpContentsBrowser` enables browsing through
-   `SetSelectOnCameraTransferEnable`: `0x9207`, control `0xd30f`, 16-bit down value `2`. Vendor
-   version 310 adds parameter `1`. Subscribe to the
-   `0xc222` operation result before sending; result `1` confirms the transition. Exit uses up value
-   `1` and requires confirmation before restarting preview.
-2. `BasePtpManager.getContentsInfoList` / `ContentsInfoListGetter` use `0x923c`
-   parameters `[timeLow, timeHigh, count, slot, useLocalTime]`. The implementation follows
-   `PtpSimpleDifferencePullContainer`'s UTC traversal from time `0`, count `100`, slot `1`,
-   local-time flag `0`. It deduplicates boundary records and follows the APK's last-timestamp cursor
-   rule. The full catalog is read before the first page so photos can be ordered newest first; UI
-   pages contain 40 captures. Files sharing a slot and content ID appear as one thumbnail, with
-   individual originals offered in the details sheet's format selector. A capture containing RAW
-   uses the RAW preview rather than its JPEG/HEIF companion. Slot 2 selection is not implemented
-   yet.
+1. Stop live view and wait for its control cleanup. The phone's photo list in
+   `MtpListViewController` initializes `PtpContentsRoot` with `REMOTE_DEVICE`. In that branch,
+   `PtpContentsRoot.initialize` marks the card browsable immediately. The app reads the catalog
+   in the current session and restarts preview when the browser closes. Sony sends
+   `SetSelectOnCameraTransferEnable` (`0xd30f`) when the photographer selects files on the camera.
+2. The a6700 advertises `0x923b`, Sony's captured-date list. Creators' App reads slot 1's
+   dates, orders them newest first, and queries `0x923c` from a camera-local timestamp with
+   parameters `[timeLow, timeHigh, count, slot, 1]`. See `PtpContentsRoot`, `PtpItemList`,
+   and `BasePtpManager.getContentsInfoList`. Alpha GPS starts with the newest day and splits
+   full time intervals to return recent photos on demand. Each interval has disjoint timestamp
+   bounds. A wider read covers bursts at the same timestamp. Cameras without the date operation
+   use the UTC traversal from `PtpSimpleDifferencePullContainer` and sort before paging.
+   The grid appends up to 40 captures per request. Files sharing a slot and content ID appear as
+   one capture with individually downloadable originals. Slot 1 is supported.
 3. The dataset contains management info (version + reserved), database timestamp, 64-byte
    physical-media and database IDs, slot, record count, and variable
    `ContentInfo` / `ContentFile` records. Optional video/audio metadata must be consumed even though

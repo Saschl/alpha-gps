@@ -1,8 +1,7 @@
 package com.sasch.cameragps.sharednew.remote.wifi
 
-import kotlinx.coroutines.CoroutineStart
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
+import com.diamondedge.logging.logging
+import kotlinx.coroutines.CancellationException
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import kotlin.time.Instant
@@ -10,7 +9,8 @@ import kotlin.time.Instant
 internal data class SonyContentFile(
     val photo: WifiCameraPhoto,
     val created: Long,
-    val modified: Long
+    val modified: Long,
+    val localCreated: Long,
 )
 
 internal data class SonyContentBatch(
@@ -22,7 +22,7 @@ internal data class SonyContentBatch(
 
 /** Version-4 content records, including optional video/audio fields on mixed cards. */
 internal object SonyContentParser {
-    fun parse(data: ByteArray): SonyContentBatch {
+    fun parse(data: ByteArray, localTime: Boolean = false): SonyContentBatch {
         var offset = 0
         fun take(size: Int): Int {
             require(size >= 0 && size <= data.size - offset) { "Truncated camera content list" }
@@ -53,7 +53,7 @@ internal object SonyContentParser {
             val localCreated = number(8)
             number(8)
             require(created >= 0 && modified >= 0 && localCreated >= 0)
-            timestamps += created
+            timestamps += if (localTime) localCreated else created
             take(8) // Rating, protection flag.
             val dummy = number(4) != 0L
             take(count(4096)) // Shot marks.
@@ -91,7 +91,7 @@ internal object SonyContentParser {
                             id, name, size, mime, date,
                             size in 1..SonyImageTransfer.MAX_IMAGE_BYTES,
                             captureId = "content:$slot:$contentId"
-                        ), created, modified
+                        ), created, modified, localCreated
                     )
                 }
             }
@@ -106,52 +106,119 @@ internal object SonyContentParser {
 /** Sony's version-4 card catalog uses 64-bit content IDs, not PTP object handles. */
 internal class SonyContentCatalog(
     private val commands: PtpIpCommandQueue,
-    private val capabilities: SonyPtpInitializationResult.Ready,
-    private val events: PtpIpEventMonitor,
+    capabilities: SonyPtpInitializationResult.Ready,
 ) {
     val hasThumbnails = capabilities.deviceInfo.supports(0x923e)
-    private var requested = false
-    private var enabled = false
+    private val log = logging("SonyContentCatalog")
     private var identity: List<Byte>? = null
     private val files = linkedMapOf<Long, SonyContentFile>()
-    private var captures = emptyList<WifiCameraCapture>()
+    private val captures = mutableListOf<WifiCameraCapture>()
+    private val hasDateIndex = capabilities.deviceInfo.supports(0x923b)
+    private val remainingPeriods = ArrayDeque<LongRange>()
 
     suspend fun open(): CameraPhotoPage {
-        if (!enabled) {
-            requested = true
-            control(true)
-            enabled = true
+        clear()
+        log.i { "Wi-Fi photo browser reading the slot 1 catalog" }
+        if (hasDateIndex) {
+            val data = data(0x923b, listOf(1L), 4 + 8 * 100_000)
+            parseCaptureDays(data).forEach { day -> remainingPeriods.addLast(day until day + DAY_MS) }
+        } else {
+            readUtcCatalog()
         }
-        identity = null
-        files.clear()
-        captures = emptyList()
-        var cursor = 0L
-        while (true) {
-            val batch = fetch(cursor)
-            verifyIdentity(batch)
-            val previousCount = files.size
-            batch.files.forEach { files[it.photo.handle] = it }
-            require(files.size <= 100_000) { "Too many camera photos" }
-            if (batch.timestamps.size < 100) break
-            val last = batch.timestamps.last()
-            require(last >= cursor) { "Camera catalog did not advance" }
-            cursor =
-                if (last == batch.timestamps.first() || files.size == previousCount) last + 1 else last
-        }
-        captures = groupCameraPhotos(files.values.sortedByDescending { it.created }.map { it.photo })
         return page(0)
     }
 
-    fun page(offset: Int): CameraPhotoPage {
-        return cameraPhotoPage(captures, offset)
+    suspend fun page(offset: Int): CameraPhotoPage {
+        require(offset in 0..captures.size)
+        while (offset == captures.size && remainingPeriods.isNotEmpty()) readNextPeriod()
+        val page = cameraPhotoPage(captures, offset)
+        return if (remainingPeriods.isEmpty()) page else page.copy(totalObjects = null, hasMore = true)
+    }
+
+    private suspend fun readNextPeriod() {
+        val period = remainingPeriods.first()
+        var limit = BATCH_SIZE
+        while (true) {
+            val batch = fetch(period.first, limit, localTime = true)
+            verifyIdentity(batch)
+            val last = batch.timestamps.maxOrNull()
+            val repeatedBoundary = last != null && (last < period.first ||
+                (last in period && batch.timestamps.first() == last))
+            if (batch.timestamps.size == limit && repeatedBoundary && limit < MAX_BATCH_SIZE) {
+                limit = minOf(limit * 2, MAX_BATCH_SIZE)
+                continue
+            }
+            if (batch.timestamps.size < limit || last == null || last !in period) {
+                addCaptures(batch.files.filter { it.localCreated in period })
+                remainingPeriods.removeFirst()
+                return
+            }
+            if (period.first == period.last) {
+                // A burst can share one millisecond. Fetch the whole group before publishing it.
+                check(limit < MAX_BATCH_SIZE) { "Camera catalog timestamp group exceeds the record limit" }
+                limit = minOf(limit * 2, MAX_BATCH_SIZE)
+                continue
+            }
+            // Sony reads forward from an inclusive timestamp. Split a full interval so we can
+            // return its newest captures before reading the rest of a large shooting day.
+            val middle = period.first + (period.last - period.first) / 2 + 1
+            val split = maxOf(middle, last)
+            remainingPeriods.removeFirst()
+            remainingPeriods.addFirst(period.first until split)
+            remainingPeriods.addFirst(split..period.last)
+            return
+        }
+    }
+
+    private suspend fun readUtcCatalog() {
+        val found = linkedMapOf<Long, SonyContentFile>()
+        var cursor = 0L
+        var limit = BATCH_SIZE
+        while (true) {
+            val batch = fetch(cursor, limit)
+            verifyIdentity(batch)
+            batch.files.associateByTo(found) { it.photo.handle }
+            require(found.size <= 100_000) { "Too many camera photos" }
+            if (batch.timestamps.size < limit) break
+            val last = batch.timestamps.max()
+            if (last < cursor || (last == cursor && batch.timestamps.all { it == cursor })) {
+                if (limit == MAX_BATCH_SIZE) {
+                    log.w { "Camera repeated a full catalog batch at the record limit" }
+                    break
+                }
+                limit = minOf(limit * 2, MAX_BATCH_SIZE)
+            } else {
+                if (last == Long.MAX_VALUE) break
+                cursor = if (last == cursor) last + 1 else last
+                limit = BATCH_SIZE
+            }
+        }
+        addCaptures(found.values)
+    }
+
+    private fun addCaptures(batch: Collection<SonyContentFile>) {
+        val newFiles = batch.filter { it.photo.handle !in files }
+        require(files.size + newFiles.size <= 100_000) { "Too many camera photos" }
+        newFiles.associateByTo(files) { it.photo.handle }
+        captures += groupCameraPhotos(newFiles.sortedByDescending { it.created }.map { it.photo })
     }
 
     suspend fun revalidate(handle: Long): SonyImageInfo {
         val file = checkNotNull(files[handle])
-        val batch = fetch(file.created)
-        verifyIdentity(batch)
-        val fresh = batch.files.singleOrNull { it.photo.handle == handle }
-        check(fresh == file) { "Camera file changed; refresh the browser" }
+        val cursor = if (hasDateIndex) file.localCreated else file.created
+        var limit = BATCH_SIZE
+        while (true) {
+            val batch = fetch(cursor, limit, localTime = hasDateIndex)
+            verifyIdentity(batch)
+            val fresh = batch.files.singleOrNull { it.photo.handle == handle }
+            if (fresh != null || batch.timestamps.size < limit || batch.timestamps.any { it > cursor } ||
+                limit == MAX_BATCH_SIZE
+            ) {
+                check(fresh == file) { "Camera file changed; refresh the browser" }
+                break
+            }
+            limit = minOf(limit * 2, MAX_BATCH_SIZE)
+        }
         return SonyImageInfo(
             file.photo.size,
             file.photo.filename,
@@ -191,31 +258,11 @@ internal class SonyContentCatalog(
         listOf(handle and 0xffffffffL, handle ushr 32, 2L), 8 * 1024 * 1024
     )
 
-    suspend fun close() {
-        if (!requested) return
-        control(false)
-        requested = false
-        enabled = false
+    fun clear() {
+        identity = null
         files.clear()
-        captures = emptyList()
-    }
-
-    private suspend fun control(down: Boolean) = coroutineScope {
-        val result =
-            async(start = CoroutineStart.UNDISPATCHED) { events.awaitControlResult(0xd30f, 3_000) }
-        try {
-            val flags =
-                if ((capabilities.vendorCodeVersion ?: 0) >= 310) listOf(1L) else emptyList()
-            val response = commands.executeDataOut(
-                0x9207,
-                listOf(0xd30fL) + flags,
-                byteArrayOf(if (down) 2 else 1, 0)
-            )
-            check(response is PtpIpTransactionResult.Response && response.response.code == 0x2001)
-            check(result.await() == 1L) { "Camera did not confirm transfer mode" }
-        } finally {
-            result.cancel()
-        }
+        captures.clear()
+        remainingPeriods.clear()
     }
 
     private fun verifyIdentity(batch: SonyContentBatch) {
@@ -224,22 +271,47 @@ internal class SonyContentCatalog(
         identity = batch.mediaIdentity
     }
 
-    private suspend fun fetch(time: Long) = SonyContentParser.parse(
-        data(
-            0x923c,
-            listOf(time and 0xffffffffL, time ushr 32, 100L, 1L, 0L), 2 * 1024 * 1024
+    private suspend fun fetch(time: Long, limit: Int = BATCH_SIZE, localTime: Boolean = false): SonyContentBatch = try {
+        val bytes = data(
+            0x923c, listOf(time and 0xffffffffL, time ushr 32, limit.toLong(), 1L, if (localTime) 1L else 0L), 2 * 1024 * 1024
         )
-    )
+        SonyContentParser.parse(bytes, localTime)
+    } catch (cancelled: CancellationException) {
+        throw cancelled
+    } catch (failure: Exception) {
+        log.w { "Wi-Fi slot 1 photo catalog read failed: ${failure.message}" }
+        throw failure
+    }
 
     private suspend fun data(code: Int, parameters: List<Long>, limit: Int): ByteArray {
         val result = commands.executeDataIn(code, parameters, maxDataBytes = limit)
-        check(result is PtpIpTransactionResult.Response && result.response.code == 0x2001)
+        check(result is PtpIpTransactionResult.Response && result.response.code == 0x2001) {
+            "Wi-Fi photo operation 0x${code.toString(16)}: ${result.diagnosticSummary()}"
+        }
         return result.data ?: error("Missing camera catalog data")
     }
 
     companion object {
+        private const val BATCH_SIZE = 100
+        private const val MAX_BATCH_SIZE = 1000
+        private const val DAY_MS = 86_400_000L
+
+        private fun parseCaptureDays(data: ByteArray): List<Long> {
+            fun number(at: Int, size: Int) = (0 until size).fold(0L) { value, i ->
+                value or ((data[at + i].toLong() and 255) shl (8 * i))
+            }
+            require(data.size >= 4)
+            val count = number(0, 4)
+            require(data.size.toLong() == 4 + count * 8) { "Invalid camera capture dates" }
+            return List(count.toInt()) { index ->
+                val time = number(4 + index * 8, 8)
+                require(time in 0..Long.MAX_VALUE - DAY_MS)
+                time - time % DAY_MS
+            }.distinct().sortedDescending()
+        }
+
         fun supported(capabilities: SonyPtpInitializationResult.Ready) =
-            listOf(0x9207, 0x923c, 0x923d).all(capabilities.deviceInfo::supports) &&
-                    capabilities.extendedInfo.supportsControl(0xd30f)
+            capabilities.isRemoteWithTransfer && capabilities.deviceInfo.supports(0x923c) &&
+                    capabilities.deviceInfo.supports(0x923d)
     }
 }

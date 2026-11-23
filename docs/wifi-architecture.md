@@ -189,13 +189,12 @@ press. Acceptance of a command is not proof that a photo completed. Missing conf
 ## Browsing and switching sessions
 
 The entry point is `WifiRemoteController.browsePhotos()`. It calls
-`previewJob.cancelAndJoin()` before `connection.openPhotoBrowser()`: the old preview's cleanup must
-finish before changing camera mode. Capture is also blocked while browsing.
+`previewJob.cancelAndJoin()` to finish live-view cleanup before `connection.openPhotoBrowser()`.
+Capture is also blocked while browsing.
 
-For a modern combined session, `openPhotoBrowser()` uses the existing
-`SonyImageTransfer`. Returning disables browser transfer mode and restarts the HTTP preview on the
-same PTP connections. “Combined” describes protocol support; our UI still pauses live view while
-browsing.
+In a combined session with Sony's content catalog, `openPhotoBrowser()` reads the catalog over
+the existing PTP connection. Returning to shooting clears the cached catalog and restarts the HTTP
+preview. Both PTP channels stay open throughout.
 
 For the separate-session path, the flow is:
 
@@ -361,8 +360,8 @@ than prompting a blind retry.
 
 Per-camera connection and feature state lives in `CameraSession.wifiRemote` using
 [WifiRemoteState][state]. Large image payloads live in the controller's separate
-`image`, `thumbnails`, and `photoPreview` flows. This keeps the registry focused on state rather
-than carrying a new bitmap on every preview frame.
+`image` and `photoPreview` flows. Visible photo cells request thumbnails on demand and share a
+bounded cache in the controller.
 
 ## Where to read or change the code
 

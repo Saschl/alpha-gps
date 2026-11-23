@@ -33,7 +33,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Surface
@@ -42,13 +41,15 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -65,9 +66,6 @@ import cameragps.sharednew.generated.resources.wifi_remote_batch_progress
 import cameragps.sharednew.generated.resources.wifi_remote_browser_back
 import cameragps.sharednew.generated.resources.wifi_remote_browser_empty
 import cameragps.sharednew.generated.resources.wifi_remote_browser_failed
-import cameragps.sharednew.generated.resources.wifi_remote_browser_next
-import cameragps.sharednew.generated.resources.wifi_remote_browser_page
-import cameragps.sharednew.generated.resources.wifi_remote_browser_previous
 import cameragps.sharednew.generated.resources.wifi_remote_browser_refresh
 import cameragps.sharednew.generated.resources.wifi_remote_browser_tap_hint
 import cameragps.sharednew.generated.resources.wifi_remote_browser_title
@@ -94,16 +92,18 @@ import cameragps.sharednew.generated.resources.wifi_remote_transfer_cancelled
 import cameragps.sharednew.generated.resources.wifi_remote_transfer_failed
 import cameragps.sharednew.generated.resources.wifi_remote_transfer_progress
 import cameragps.sharednew.generated.resources.wifi_remote_transfer_saved
-import com.sasch.cameragps.sharednew.remote.wifi.SonyImageTransfer
+import cameragps.sharednew.generated.resources.wifi_remote_viewer_retry
 import com.sasch.cameragps.sharednew.remote.wifi.WifiCameraCapture
 import com.sasch.cameragps.sharednew.remote.wifi.WifiImageTransferState
 import com.sasch.cameragps.sharednew.remote.wifi.WifiImageTransferStatus
 import com.sasch.cameragps.sharednew.remote.wifi.WifiPhotoDownload
 import com.sasch.cameragps.sharednew.remote.wifi.WifiPhotoDownloadFormat
+import com.sasch.cameragps.sharednew.remote.wifi.WifiPhotoPreview
 import com.sasch.cameragps.sharednew.remote.wifi.WifiRemoteState
 import com.sasch.cameragps.sharednew.remote.wifi.formatLabel
 import com.sasch.cameragps.sharednew.remote.wifi.groupCameraPhotos
 import com.sasch.cameragps.sharednew.ui.components.verticalScrollbar
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 
@@ -115,18 +115,18 @@ internal fun WifiPhotoBrowser(
     val controller = viewModel.controller
     val identifier = viewModel.identifier
     val browser = state.photoBrowser
-    val thumbnails by controller.thumbnails.collectAsState()
     val captures = remember(browser.photos) { groupCameraPhotos(browser.photos) }
     val transfer = state.imageTransfer
     val busy = browser.loading || transfer.busy
     val selectedIds = viewModel.selectedPhotoIds
     val selecting = selectedIds.isNotEmpty()
     val gridState = rememberLazyGridState()
-    var gridOffset by rememberSaveable { mutableStateOf(browser.offset) }
-    LaunchedEffect(browser.offset) {
-        if (gridOffset != browser.offset) {
-            gridState.scrollToItem(0)
-            gridOffset = browser.offset
+    LaunchedEffect(gridState, captures.size, browser.hasMore, browser.failed, busy) {
+        if (browser.hasMore && !busy && !browser.failed) {
+            // The grid has one header before the captures. Prefetch the next few rows.
+            snapshotFlow { gridState.layoutInfo.visibleItemsInfo.lastOrNull()?.index }
+                .first { it != null && it >= captures.size - 6 }
+            controller.loadMorePhotos(identifier)
         }
     }
     var showBatchOptions by rememberSaveable { mutableStateOf(false) }
@@ -186,15 +186,18 @@ internal fun WifiPhotoBrowser(
                                 Text(stringResource(Res.string.wifi_remote_browser_back))
                             }
                             TextButton(
-                                onClick = { controller.browsePhotos(identifier) },
+                                onClick = {
+                                    gridState.requestScrollToItem(0)
+                                    controller.browsePhotos(identifier)
+                                },
                                 enabled = !busy
                             ) {
                                 Text(stringResource(Res.string.wifi_remote_browser_refresh))
                             }
                         }
                     }
-                    if (browser.loading) LinearProgressIndicator(Modifier.fillMaxWidth())
-                    if (browser.failed) Text(
+                    if (browser.loading && captures.isEmpty()) LinearProgressIndicator(Modifier.fillMaxWidth())
+                    if (browser.failed && (captures.isEmpty() || !browser.hasMore)) Text(
                         stringResource(Res.string.wifi_remote_browser_failed),
                         color = MaterialTheme.colorScheme.error
                     )
@@ -231,7 +234,8 @@ internal fun WifiPhotoBrowser(
                     },
                 ) {
                     Box {
-                        PhotoPreview(thumbnails[capture.thumbnail.handle], browser.loading)
+                        val thumbnail = rememberPhotoThumbnail(viewModel, capture.thumbnail.handle, transfer.busy)
+                        PhotoPreview(thumbnail.image, thumbnail.loading)
                         if (selecting) Surface(
                             modifier = Modifier.align(Alignment.TopEnd).padding(4.dp),
                             shape = RoundedCornerShape(24.dp),
@@ -256,35 +260,15 @@ internal fun WifiPhotoBrowser(
                     }
                 }
             }
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                Row(
-                    Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    OutlinedButton(
-                        onClick = {
-                            controller.browsePhotos(
-                                identifier,
-                                maxOf(0, browser.offset - SonyImageTransfer.PAGE_SIZE)
-                            )
-                        },
-                        enabled = !busy && !selecting && browser.offset > 0
-                    ) { Text(stringResource(Res.string.wifi_remote_browser_previous)) }
-                    if (browser.totalObjects > 0) Text(
-                        stringResource(
-                            Res.string.wifi_remote_browser_page,
-                            browser.offset / SonyImageTransfer.PAGE_SIZE + 1
-                        )
-                    )
-                    OutlinedButton(
-                        onClick = {
-                            controller.browsePhotos(
-                                identifier,
-                                browser.offset + SonyImageTransfer.PAGE_SIZE
-                            )
-                        },
-                        enabled = !busy && !selecting && browser.hasMore
-                    ) { Text(stringResource(Res.string.wifi_remote_browser_next)) }
+            if (captures.isNotEmpty() && browser.hasMore && (browser.loading || browser.failed)) {
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    if (browser.loading) LinearProgressIndicator(Modifier.fillMaxWidth())
+                    else Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(stringResource(Res.string.wifi_remote_browser_failed))
+                        TextButton(onClick = { controller.loadMorePhotos(identifier) }, enabled = !busy) {
+                            Text(stringResource(Res.string.wifi_remote_viewer_retry))
+                        }
+                    }
                 }
             }
         }
@@ -296,6 +280,19 @@ internal fun WifiPhotoBrowser(
             onDownload = { downloads -> showBatchOptions = false; onDownload(downloads) },
         )
     }
+}
+
+@Composable
+internal fun rememberPhotoThumbnail(
+    viewModel: WifiRemoteViewModel, handle: Long, transferBusy: Boolean
+): WifiPhotoPreview = key(viewModel, handle) {
+    val thumbnail by produceState(WifiPhotoPreview(handle), transferBusy) {
+        if (!transferBusy) {
+            val image = viewModel.controller.photoThumbnail(viewModel.identifier, handle)
+            value = WifiPhotoPreview(handle, image, loading = false)
+        }
+    }
+    thumbnail
 }
 
 @Composable

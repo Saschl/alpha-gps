@@ -84,7 +84,6 @@ private class SonyWifiConnection(
         val transfer = SonyImageTransfer(
             ptp.commands,
             ready,
-            ptp.events,
             decodeThumbnail,
             decodePreview,
             store

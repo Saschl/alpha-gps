@@ -3,6 +3,10 @@ package com.sasch.cameragps.sharednew.remote.wifi
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.ImageBitmapConfig
 import androidx.compose.ui.graphics.colorspace.ColorSpaces
+import com.diamondedge.logging.FixedLogLevel
+import com.diamondedge.logging.KmLogging
+import com.diamondedge.logging.Logger
+import com.diamondedge.logging.PrintLogger
 import com.sasch.cameragps.sharednew.bluetooth.session.CameraSessionRegistry
 import com.sasch.cameragps.sharednew.remote.BulbExposure
 import com.sasch.cameragps.sharednew.remote.BulbPhase
@@ -12,13 +16,16 @@ import com.sasch.cameragps.sharednew.ui.remote.WifiRemoteViewModel
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertIs
 import kotlin.test.assertNull
+import kotlin.test.assertSame
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -28,6 +35,7 @@ import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class WifiRemoteControllerTest : WifiLoggingTest() {
@@ -228,8 +236,9 @@ class WifiRemoteControllerTest : WifiLoggingTest() {
         controller.browsePhotos("camera")
         runCurrent()
         assertTrue(connection.screenPreviewRequests.isEmpty())
-        val thumbnails = controller.thumbnails.value
-        assertEquals(160, thumbnails.getValue(77L).width)
+        assertTrue(connection.thumbnailRequests.isEmpty())
+        val thumbnail = controller.photoThumbnail("camera", 77L)
+        assertEquals(160, thumbnail!!.width)
         connection.screenPreviewGate = CompletableDeferred()
         model.openPhoto("photo:38")
         runCurrent()
@@ -240,7 +249,7 @@ class WifiRemoteControllerTest : WifiLoggingTest() {
         runCurrent()
         assertEquals(1600, controller.photoPreview.value!!.image!!.width)
         assertFalse(controller.photoPreview.value!!.loading)
-        assertEquals(thumbnails, controller.thumbnails.value)
+        assertSame(thumbnail, controller.photoThumbnail("camera", 77L))
         model.viewPhotoAt(38)
         runCurrent()
         assertEquals(listOf(76L), connection.screenPreviewRequests)
@@ -345,18 +354,18 @@ class WifiRemoteControllerTest : WifiLoggingTest() {
         runCurrent()
         assertEquals(40, model.viewedPhotoIndex)
         assertEquals(listOf(40), connection.pageRequests)
-        assertEquals(0, registry.get("camera")!!.wifiRemote.photoBrowser.offset)
+        assertEquals(40, registry.get("camera")!!.wifiRemote.photoBrowser.loadedCaptures)
         assertEquals(
             40, groupCameraPhotos(registry.get("camera")!!.wifiRemote.photoBrowser.photos).size,
-            "Keep the current page until its replacement arrives"
+            "Keep earlier photos available during append"
         )
         model.viewPhotoAt(40)
         assertEquals(listOf(40), connection.pageRequests)
         connection.pageGate!!.complete(Unit)
         runCurrent()
-        assertEquals(40, registry.get("camera")!!.wifiRemote.photoBrowser.offset)
+        assertEquals(42, registry.get("camera")!!.wifiRemote.photoBrowser.loadedCaptures)
         assertEquals(
-            listOf("photo:40", "photo:41"),
+            (0..41).map { "photo:$it" },
             groupCameraPhotos(registry.get("camera")!!.wifiRemote.photoBrowser.photos).map { it.id })
         model.viewPhotoAt(41)
         model.viewPhotoAt(42)
@@ -365,17 +374,13 @@ class WifiRemoteControllerTest : WifiLoggingTest() {
         model.viewPhotoAt(40)
         model.viewPhotoAt(39)
         runCurrent()
-        assertEquals(listOf(40, 0), connection.pageRequests)
-        assertEquals(
-            79L, connection.thumbnailRequests.takeLast(40).first(),
-            "Load the displayed photo first when entering the previous page at its end"
-        )
+        assertEquals(listOf(40), connection.pageRequests, "Earlier photos stay loaded")
         assertEquals(
             39,
             model.viewedPhotoIndex,
             "Returning to the previous page selects its last capture"
         )
-        assertEquals(0, registry.get("camera")!!.wifiRemote.photoBrowser.offset)
+        assertEquals(42, registry.get("camera")!!.wifiRemote.photoBrowser.loadedCaptures)
         model.navigateBack { error("Viewer must return to grid") }
         assertNull(model.viewedPhotoIndex)
         assertTrue(registry.get("camera")!!.wifiRemote.photoBrowser.open)
@@ -385,6 +390,89 @@ class WifiRemoteControllerTest : WifiLoggingTest() {
         assertFalse(registry.get("camera")!!.wifiRemote.photoBrowser.open)
         assertEquals(2, connection.previewStarts)
         controller.closeAndJoin()
+    }
+
+    @Test
+    fun gridAppendsOncePreservesSelectionAndRefreshRestartsAtTheBeginning() = runTest {
+        val registry = CameraSessionRegistry()
+        val connection = pagedConnection()
+        val controller = WifiRemoteController(backgroundScope, registry, { _, _ -> connection }, {}, {})
+        val model = WifiRemoteViewModel("camera", controller)
+        controller.connect("camera", "127.0.0.1")
+        runCurrent()
+        controller.browsePhotos("camera")
+        runCurrent()
+        model.togglePhotoSelection("photo:1")
+        connection.pageGate = CompletableDeferred()
+        repeat(2) { controller.loadMorePhotos("camera") }
+        runCurrent()
+        assertEquals(listOf(40), connection.pageRequests)
+        connection.pageGate!!.complete(Unit)
+        runCurrent()
+        model.reconcilePhotoSelection()
+        assertEquals(setOf("photo:1"), model.selectedPhotoIds)
+        model.togglePhotoSelection("photo:41")
+        assertEquals(setOf("photo:1", "photo:41"), model.selectedPhotoIds)
+        controller.loadMorePhotos("camera")
+        runCurrent()
+        assertEquals(listOf(40), connection.pageRequests)
+        assertTrue(connection.thumbnailRequests.isEmpty())
+        controller.photoThumbnail("camera", 3)
+        controller.photoThumbnail("camera", 3)
+        assertEquals(listOf(3L), connection.thumbnailRequests)
+        controller.browsePhotos("camera")
+        runCurrent()
+        model.reconcilePhotoSelection()
+        assertEquals(setOf("photo:1"), model.selectedPhotoIds)
+        assertEquals(40, registry.get("camera")!!.wifiRemote.photoBrowser.loadedCaptures)
+        controller.photoThumbnail("camera", 3)
+        assertEquals(listOf(3L, 3L), connection.thumbnailRequests)
+        controller.closeAndJoin()
+    }
+
+    @Test
+    fun catalogErrorsAndTimeoutsReachTheErrorLoggerOnceAndUserCancellationIsSilent() = runTest {
+        val errors = mutableListOf<Pair<String, Throwable?>>()
+        KmLogging.setLoggers(object : Logger by PrintLogger(FixedLogLevel(false)) {
+            override fun isLoggingError() = true
+            override fun error(tag: String, msg: String, t: Throwable?) {
+                errors += msg to t
+            }
+        })
+        val registry = CameraSessionRegistry()
+        val catalogError = IllegalArgumentException("Camera catalog did not advance")
+        var stall = false
+        val connection = object : WifiRemoteConnection by Connection() {
+            override suspend fun openPhotoBrowser(): CameraPhotoPage {
+                if (stall) withTimeout(1.seconds) { awaitCancellation() }
+                throw catalogError
+            }
+        }
+        val controller = WifiRemoteController(backgroundScope, registry, { _, _ -> connection }, {}, {})
+        controller.connect("camera", "127.0.0.1")
+        runCurrent()
+        controller.browsePhotos("camera")
+        runCurrent()
+        assertTrue(registry.get("camera")!!.wifiRemote.photoBrowser.failed)
+        assertEquals("Failed to open the photo catalog over Wi-Fi", errors.single().first)
+        assertSame(catalogError, errors.single().second)
+
+        stall = true
+        controller.browsePhotos("camera")
+        advanceTimeBy(1.seconds)
+        runCurrent()
+        assertTrue(registry.get("camera")!!.wifiRemote.photoBrowser.failed)
+        assertEquals(2, errors.size)
+        assertIs<TimeoutCancellationException>(errors.last().second)
+
+        controller.browsePhotos("camera")
+        runCurrent()
+        controller.cancelPhotoOperation("camera")
+        runCurrent()
+        controller.browsePhotos("camera")
+        runCurrent()
+        controller.closeAndJoin()
+        assertEquals(2, errors.size)
     }
 
     @Test
@@ -407,13 +495,13 @@ class WifiRemoteControllerTest : WifiLoggingTest() {
         assertTrue(failed.failed)
         assertFalse(failed.loading)
         assertEquals(originalPage, failed.photos)
-        assertEquals(0, failed.offset)
+        assertEquals(40, failed.loadedCaptures)
         assertEquals(40, model.viewedPhotoIndex)
         connection.failPage = false
         model.viewPhotoAt(40)
         runCurrent()
         assertEquals(listOf(40, 40), connection.pageRequests)
-        assertEquals(40, registry.get("camera")!!.wifiRemote.photoBrowser.offset)
+        assertEquals(42, registry.get("camera")!!.wifiRemote.photoBrowser.loadedCaptures)
         assertFalse(registry.get("camera")!!.wifiRemote.photoBrowser.failed)
         controller.closeAndJoin()
         model.reconcilePhotoSelection()
@@ -460,7 +548,7 @@ class WifiRemoteControllerTest : WifiLoggingTest() {
         runCurrent()
         model.reconcilePhotoSelection()
         assertNull(model.viewedPhotoIndex, "Completing a page load must not reopen the viewer")
-        assertEquals(40, registry.get("camera")!!.wifiRemote.photoBrowser.offset)
+        assertEquals(42, registry.get("camera")!!.wifiRemote.photoBrowser.loadedCaptures)
         controller.closeAndJoin()
     }
 
@@ -1245,6 +1333,7 @@ class WifiRemoteControllerTest : WifiLoggingTest() {
         runCurrent()
         controller.browsePhotos("camera")
         runCurrent()
+        groupCameraPhotos(connection.photos).forEach { controller.photoThumbnail("camera", it.thumbnail.handle) }
         assertEquals(listOf(43L, 45L, 46L), connection.thumbnailRequests)
             controller.showPhotoPreview("camera", 42L)
             runCurrent()
@@ -1284,16 +1373,16 @@ class WifiRemoteControllerTest : WifiLoggingTest() {
             runCurrent()
             controller.browsePhotos("camera")
             runCurrent()
+            val thumbnail = controller.photoThumbnail("camera", 43L)
             assertEquals(listOf(43L), connection.thumbnailRequests)
-            val thumbnails = controller.thumbnails.value
-            assertEquals(160, thumbnails.getValue(43L).width)
+            assertEquals(160, thumbnail!!.width)
             model.openPhoto("one")
             runCurrent()
             assertEquals(listOf(42L, 43L), connection.screenPreviewRequests)
             assertEquals(42L, controller.photoPreview.value!!.handle)
             assertEquals(connection.screenPreviewImage, controller.photoPreview.value!!.image)
             assertFalse(controller.photoPreview.value!!.loading)
-            assertEquals(thumbnails, controller.thumbnails.value)
+            assertSame(thumbnail, controller.photoThumbnail("camera", 43L))
             controller.closeAndJoin()
         }
     }
@@ -1324,7 +1413,7 @@ class WifiRemoteControllerTest : WifiLoggingTest() {
             groupCameraPhotos(registry.get("camera")!!.wifiRemote.photoBrowser.photos).single()
         assertEquals(
             connection.thumbnailImage,
-            controller.thumbnails.value[capture.thumbnail.handle]
+            controller.photoThumbnail("camera", capture.thumbnail.handle)
         )
         assertFalse(registry.get("camera")!!.wifiRemote.photoBrowser.failed)
         controller.closeAndJoin()
@@ -1606,7 +1695,7 @@ class WifiRemoteControllerTest : WifiLoggingTest() {
             listOf("download", "browse-close", "wifi-off", "connection"),
             connection.cleanup.takeLast(4)
         )
-        assertTrue(controller.thumbnails.value.isEmpty())
+        assertNull(controller.photoThumbnail("camera", 42L))
     }
 
     @Test
