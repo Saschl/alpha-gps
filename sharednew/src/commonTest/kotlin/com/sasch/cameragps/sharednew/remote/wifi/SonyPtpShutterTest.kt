@@ -1,14 +1,17 @@
 package com.sasch.cameragps.sharednew.remote.wifi
 
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.async
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.test.runCurrent
-import kotlinx.coroutines.test.advanceTimeBy
-import kotlinx.coroutines.test.runTest
+import com.sasch.cameragps.sharednew.remote.BulbExposure
+import com.sasch.cameragps.sharednew.remote.BulbPhase
+import com.sasch.cameragps.sharednew.remote.BulbTimerState
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.async
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.runTest
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class SonyPtpShutterTest : WifiLoggingTest() {
@@ -30,6 +33,93 @@ class SonyPtpShutterTest : WifiLoggingTest() {
         deviceInfo = PtpDeviceInfo(setOf(SonyPtpOperation.SDIO_CONTROL_DEVICE)),
         deviceDescription = null,
     )
+
+    @Test
+    fun bulbHoldsPastOrdinaryCaptureTimeoutThenWaitsForProcessing() = runTest {
+        val transport = Transport()
+        val eventConnection = TestEventConnection()
+        val monitor = PtpIpEventMonitor(eventConnection, backgroundScope)
+        val queue = PtpIpCommandQueue(transport, backgroundScope)
+        val shutter = SonyPtpShutter(queue, ready(), monitor)
+        val states = mutableListOf<BulbTimerState>()
+        val bulb = BulbExposure(30, states::add, testScheduler.timeSource)
+        (1..4).forEach(transport::response)
+        val result = async { shutter.captureStill(bulb) }
+        runCurrent()
+        advanceTimeBy(500)
+        runCurrent()
+        assertEquals(
+            listOf(2, 2),
+            transport.sent.filter { it.type == 12 }.map { it.body[4].toInt() })
+        advanceTimeBy(30_000)
+        runCurrent()
+        assertEquals(
+            listOf(2, 2, 1, 1),
+            transport.sent.filter { it.type == 12 }.map { it.body[4].toInt() })
+        assertEquals(BulbPhase.Processing, states.last().phase)
+        advanceTimeBy(5000)
+        eventConnection.captured()
+        runCurrent()
+        assertEquals(SonyPtpCaptureResult.CaptureEventObserved, result.await())
+        queue.close()
+        monitor.close()
+    }
+
+    @Test
+    fun bulbStopBeforeFullPressDoesNotTakeAPhoto() = runTest {
+        val transport = Transport()
+        val queue = PtpIpCommandQueue(transport, backgroundScope)
+        val bulb = BulbExposure(30, {}, testScheduler.timeSource)
+        (1..2).forEach(transport::response)
+        val result = async { SonyPtpShutter(queue, ready()).captureStill(bulb) }
+        runCurrent()
+        bulb.stop()
+        advanceTimeBy(500)
+        runCurrent()
+        assertEquals(SonyPtpCaptureResult.StoppedBeforeExposure, result.await())
+        assertEquals(
+            listOf(2, 1),
+            transport.sent.filter { it.type == 12 }.map { it.body[4].toInt() })
+        queue.close()
+    }
+
+    @Test
+    fun bulbStopReleasesEarlyOnlyOnce() = runTest {
+        val transport = Transport()
+        val queue = PtpIpCommandQueue(transport, backgroundScope)
+        val bulb = BulbExposure(30, {}, testScheduler.timeSource)
+        (1..4).forEach(transport::response)
+        val result = async { SonyPtpShutter(queue, ready()).captureStill(bulb) }
+        advanceTimeBy(1000)
+        bulb.stop()
+        bulb.stop()
+        runCurrent()
+        assertEquals(SonyPtpCaptureResult.Submitted, result.await())
+        assertEquals(
+            listOf(2, 2, 1, 1),
+            transport.sent.filter { it.type == 12 }.map { it.body[4].toInt() })
+        queue.close()
+    }
+
+    @Test
+    fun bulbCancellationWhileExposingReleasesBothButtons() = runTest {
+        val transport = Transport()
+        val queue = PtpIpCommandQueue(transport, backgroundScope)
+        (1..4).forEach(transport::response)
+        val result = async {
+            SonyPtpShutter(queue, ready()).captureStill(
+                BulbExposure(30, {})
+            )
+        }
+        advanceTimeBy(1000)
+        result.cancel()
+        runCurrent()
+        result.join()
+        assertEquals(
+            listOf(2, 2, 1, 1),
+            transport.sent.filter { it.type == 12 }.map { it.body[4].toInt() })
+        queue.close()
+    }
 
     @Test
     fun sendsOneFullPressAndReleasesInReverseOrder() = runTest {

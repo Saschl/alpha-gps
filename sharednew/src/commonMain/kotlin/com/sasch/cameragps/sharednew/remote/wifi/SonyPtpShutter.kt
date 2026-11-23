@@ -1,12 +1,16 @@
 package com.sasch.cameragps.sharednew.remote.wifi
 
-import kotlinx.coroutines.NonCancellable
+import com.sasch.cameragps.sharednew.remote.BulbExposure
+import com.sasch.cameragps.sharednew.remote.BulbPhase
+import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 
 internal object SonyPtpControlCode {
     const val HALF_PRESS = 0xd2c1
@@ -19,6 +23,7 @@ internal sealed interface SonyPtpCaptureResult {
     data object Submitted : SonyPtpCaptureResult
     data object CaptureEventObserved : SonyPtpCaptureResult
     data object Busy : SonyPtpCaptureResult
+    data object StoppedBeforeExposure : SonyPtpCaptureResult
     data object Unsupported : SonyPtpCaptureResult
     data class Rejected(val responseCode: Int) : SonyPtpCaptureResult
     /** A timeout or lost response may have happened after the camera acted. Never retry automatically. */
@@ -43,7 +48,7 @@ internal class SonyPtpShutter(
             byteArrayOf(if (down) 2 else 1, 0), operationTimeoutMs = if (down) 15_000 else 3_000)
     }
 
-    suspend fun captureStill(): SonyPtpCaptureResult {
+    suspend fun captureStill(bulb: BulbExposure? = null): SonyPtpCaptureResult {
         if (!capabilities.deviceInfo.supports(SonyPtpOperation.SDIO_CONTROL_DEVICE) ||
             !capabilities.extendedInfo.supportsControl(SonyPtpControlCode.HALF_PRESS) ||
             !capabilities.extendedInfo.supportsControl(SonyPtpControlCode.FULL_PRESS)) {
@@ -52,44 +57,60 @@ internal class SonyPtpShutter(
         if (captureInProgress) return SonyPtpCaptureResult.Busy
         captureInProgress = true
         return try {
-            pressAndRelease()
+            pressAndRelease(bulb)
         } finally {
             captureInProgress = false
         }
     }
 
-    private suspend fun pressAndRelease(): SonyPtpCaptureResult = coroutineScope {
+    private suspend fun pressAndRelease(bulb: BulbExposure?): SonyPtpCaptureResult =
+        coroutineScope {
         var halfMayBePressed = false
         var fullMayBePressed = false
         var releaseFailed = false
         var submitted = false
         var captureEvent: Deferred<Boolean>? = null
-        try {
-            halfMayBePressed = true
-            val half = control(SonyPtpControlCode.HALF_PRESS, down = true)
-            val halfOutcome = outcome(half)
-            if (halfOutcome != SonyPtpCaptureResult.Submitted) return@coroutineScope halfOutcome
+            val attempt = try {
+                run attempt@{
+                    halfMayBePressed = true
+                    val half = control(SonyPtpControlCode.HALF_PRESS, down = true)
+                    val halfOutcome = outcome(half)
+                    if (halfOutcome != SonyPtpCaptureResult.Submitted) return@attempt halfOutcome
 
-            // The confirmed manual-focus probe included this pause; autofocus readiness is still unverified.
-            delay(halfPressHoldMs)
-            captureEvent = events?.let { monitor ->
-                async(start = CoroutineStart.UNDISPATCHED) { monitor.awaitCapture() }
-            }
-            fullMayBePressed = true
-            val full = control(SonyPtpControlCode.FULL_PRESS, down = true)
-            val fullOutcome = outcome(full)
-            if (fullOutcome != SonyPtpCaptureResult.Submitted) return@coroutineScope fullOutcome
-            submitted = true
+                    // The confirmed manual-focus probe included this pause; autofocus readiness is still unverified.
+                    delay(halfPressHoldMs)
+                    if (bulb?.stopRequested == true) return@attempt SonyPtpCaptureResult.StoppedBeforeExposure
+                    captureEvent = events?.let { monitor ->
+                        async(start = CoroutineStart.UNDISPATCHED) {
+                            monitor.awaitCapture(if (bulb == null) 20_000 else (bulb.seconds * 2L + 30) * 1000)
+                        }
+                    }
+                    fullMayBePressed = true
+                    val full = control(SonyPtpControlCode.FULL_PRESS, down = true)
+                    val fullOutcome = outcome(full)
+                    if (fullOutcome != SonyPtpCaptureResult.Submitted) return@attempt fullOutcome
+                    submitted = true
+                    bulb?.hold()
+                    SonyPtpCaptureResult.Submitted
+                }
         } finally {
             withContext(NonCancellable) {
                 if (fullMayBePressed) {
-                    val release = control(SonyPtpControlCode.FULL_PRESS, down = false)
+                    val release = try {
+                        control(SonyPtpControlCode.FULL_PRESS, down = false)
+                    } catch (_: Exception) {
+                        null
+                    }
                     if (release !is PtpIpTransactionResult.Response || release.response.code != 0x2001) {
                         releaseFailed = true
                     }
                 }
                 if (halfMayBePressed) {
-                    val release = control(SonyPtpControlCode.HALF_PRESS, down = false)
+                    val release = try {
+                        control(SonyPtpControlCode.HALF_PRESS, down = false)
+                    } catch (_: Exception) {
+                        null
+                    }
                     if (release !is PtpIpTransactionResult.Response || release.response.code != 0x2001) {
                         releaseFailed = true
                     }
@@ -98,10 +119,18 @@ internal class SonyPtpShutter(
             if (!submitted || releaseFailed) captureEvent?.cancel()
         }
         if (releaseFailed) SonyPtpCaptureResult.Uncertain
-        else when (captureEvent?.await()) {
-            true -> SonyPtpCaptureResult.CaptureEventObserved
-            false -> SonyPtpCaptureResult.Uncertain
-            null -> SonyPtpCaptureResult.Submitted
+        else if (attempt != SonyPtpCaptureResult.Submitted) attempt
+        else try {
+            bulb?.phase(BulbPhase.Processing)
+            val confirmed = if (bulb == null) captureEvent?.await() else
+                withTimeoutOrNull(bulb.elapsed + 30.seconds) { captureEvent?.await() }
+            when {
+                confirmed == true -> SonyPtpCaptureResult.CaptureEventObserved
+                captureEvent == null -> SonyPtpCaptureResult.Submitted
+                else -> SonyPtpCaptureResult.Uncertain
+            }
+        } finally {
+            captureEvent?.cancel()
         }
     }
 

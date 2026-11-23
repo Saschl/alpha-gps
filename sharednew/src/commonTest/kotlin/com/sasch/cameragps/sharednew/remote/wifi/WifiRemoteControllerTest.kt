@@ -4,7 +4,16 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.ImageBitmapConfig
 import androidx.compose.ui.graphics.colorspace.ColorSpaces
 import com.sasch.cameragps.sharednew.bluetooth.session.CameraSessionRegistry
+import com.sasch.cameragps.sharednew.remote.BulbExposure
+import com.sasch.cameragps.sharednew.remote.BulbPhase
+import com.sasch.cameragps.sharednew.remote.BulbTimerState
 import com.sasch.cameragps.sharednew.ui.remote.WifiRemoteViewModel
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
+import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -18,12 +27,6 @@ import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertNull
-import kotlin.test.assertTrue
-import kotlin.time.Duration.Companion.seconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class WifiRemoteControllerTest : WifiLoggingTest() {
@@ -42,6 +45,17 @@ class WifiRemoteControllerTest : WifiLoggingTest() {
     private class Connection : WifiRemoteConnection {
         override val cameraName = "Test camera"
         override val canCapture = true
+        override val canCaptureBulb = true
+        override suspend fun captureBulb(exposure: BulbExposure): WifiCaptureStatus {
+            captures++
+            try {
+                exposure.hold()
+                exposure.phase(BulbPhase.Processing)
+                return result.await()
+            } finally {
+                cleanup += "bulb"
+            }
+        }
         override val canTransferImages = true
         override var canConvertHeif = true
         var browsing = false
@@ -730,6 +744,51 @@ class WifiRemoteControllerTest : WifiLoggingTest() {
         assertFalse(registry.get("camera")!!.wifiRemote.photoBrowser.open)
         assertEquals(2, connection.previewStarts)
         controller.closeAndJoin()
+    }
+
+    @Test
+    fun bulbBlocksCaptureAndBrowsingUntilStopAndProcessingComplete() = runTest {
+        val registry = CameraSessionRegistry()
+        val connection = Connection()
+        val controller =
+            WifiRemoteController(backgroundScope, registry, { _, _ -> connection }, {}, {})
+        controller.connect("camera", "127.0.0.1")
+        runCurrent()
+        assertTrue(controller.startBulbTimer("camera", 30))
+        runCurrent()
+        controller.capture("camera")
+        controller.browsePhotos("camera")
+        assertFalse(controller.startBulbTimer("camera", 5))
+        assertEquals(1, connection.captures)
+        assertFalse(connection.browsing)
+        controller.stopBulbTimer("camera")
+        controller.stopBulbTimer("camera")
+        runCurrent()
+        assertEquals(BulbPhase.Processing, registry.get("camera")!!.bulbTimer.phase)
+        assertFalse(controller.startBulbTimer("camera", 5))
+        connection.result.complete(WifiCaptureStatus.Captured)
+        runCurrent()
+        assertEquals(BulbPhase.Finished, registry.get("camera")!!.bulbTimer.phase)
+        assertEquals(1, connection.cleanup.count { it == "bulb" })
+        controller.closeAndJoin()
+    }
+
+    @Test
+    fun wifiCannotTakeOverAnActiveBluetoothBulbTimer() = runTest {
+        val registry = CameraSessionRegistry()
+        registry.upsert("camera") {
+            it.copy(
+                bulbTimer = BulbTimerState(
+                    BulbPhase.Exposing, 5
+                )
+            )
+        }
+        val controller = WifiRemoteController(
+            backgroundScope, registry,
+            { _, _ -> error("Must not connect during exposure") }, {}, {})
+        controller.connect("camera", "127.0.0.1")
+        runCurrent()
+        assertNull(controller.owner.value)
     }
 
     @Test

@@ -455,4 +455,19 @@
     <string name="report_preparing">Bericht wird erstellt…</string>
     <string name="report_error">Der Bericht konnte nicht erstellt oder geteilt werden. Bitte versuche es erneut.</string>
     <string name="report_copied">Zusammenfassung in die Zwischenablage kopiert.</string>
+    <string name="bulb_title">Bulb-Timer</string>
+    <string name="bulb_setup">Kamera auf M → BULB, Einzelaufnahme und manuellen Fokus stellen. Den eingebauten Bulb-Timer ausschalten. Diese Ansicht geöffnet lassen; beim Verlassen oder Wechsel in den Hintergrund wird die Aufnahme vorzeitig beendet.</string>
+    <string name="bulb_duration">Belichtungsdauer in Sekunden (1–3600)</string>
+    <string name="bulb_start">Belichtung starten</string>
+    <string name="bulb_stop">Belichtung stoppen</string>
+    <string name="bulb_starting">Belichtung wird gestartet…</string>
+    <string name="bulb_remaining">Noch %1$d Sekunden</string>
+    <string name="bulb_stopping">Belichtung wird beendet…</string>
+    <string name="bulb_processing">Kamera verarbeitet die Aufnahme…</string>
+    <string name="bulb_finished">Timer beendet</string>
+    <string name="bulb_uncertain">Belichtungsstatus unklar. Vor einer weiteren Aufnahme die Kamera prüfen.</string>
+    <string name="bulb_failed">Belichtung konnte nicht gestartet werden.</string>
+    <string name="wifi_remote_hold_hint">Tippen zum Auslösen. Für Bulb gedrückt halten, zum Beenden loslassen. Kamera auf BULB stellen.</string>
+    <string name="wifi_remote_photos">Fotos</string>
+    <string name="wifi_remote_connection_options">Verbindungsoptionen</string>
 </resources>

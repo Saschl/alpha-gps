@@ -2,6 +2,7 @@ package com.sasch.cameragps.sharednew.bluetooth.coordinator
 
 import com.sasch.cameragps.sharednew.bluetooth.session.CameraAutoCorrectionSetting
 import com.sasch.cameragps.sharednew.bluetooth.session.CameraSettingState
+import com.sasch.cameragps.sharednew.remote.BulbTimerState
 
 /**
  * Platform abstraction over BLE GATT I/O operations.
@@ -13,6 +14,14 @@ import com.sasch.cameragps.sharednew.bluetooth.session.CameraSettingState
  * All identifiers are uppercase MAC addresses (Android) or UUID strings (iOS).
  */
 interface BleGattPort {
+    /** Await delivery through the same operation queue; never infer delivery from enqueue success. */
+    suspend fun writeCharacteristicAwait(
+        identifier: String,
+        characteristicUuid: String,
+        value: ByteArray
+    ): Boolean
+
+    fun setBulbTimerState(identifier: String, state: BulbTimerState)
     /**
      * Write [value] to the characteristic identified by [characteristicUuid] on device [identifier].
      * Returns `true` if the write was successfully enqueued.

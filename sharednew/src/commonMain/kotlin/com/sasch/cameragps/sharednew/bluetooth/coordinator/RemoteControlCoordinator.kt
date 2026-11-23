@@ -2,10 +2,15 @@ package com.sasch.cameragps.sharednew.bluetooth.coordinator
 
 import com.diamondedge.logging.logging
 import com.sasch.cameragps.sharednew.bluetooth.SonyBluetoothConstants
+import com.sasch.cameragps.sharednew.remote.BulbExposure
+import com.sasch.cameragps.sharednew.remote.BulbPhase
+import kotlin.time.Duration.Companion.milliseconds
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
@@ -16,8 +21,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
-import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Shared remote control coordinator. Owns:
@@ -38,6 +43,7 @@ class RemoteControlCoordinator(
     private val monitoredDevices = mutableSetOf<String>()
 
     private val activeSequenceJobs = mutableMapOf<String, Job>()
+    private val bulbExposures = mutableMapOf<String, BulbExposure>()
 
     /** Devices with a running command sequence — suppresses the automatic shutter-up. */
     private val sequenceOwners = mutableSetOf<String>()
@@ -122,6 +128,7 @@ class RemoteControlCoordinator(
      */
     fun sendCommand(identifier: String, command: RemoteCommand): Boolean {
         val normalized = identifier.uppercase()
+        if (normalized in bulbExposures) return false
         if (normalized in wifiOwners && command !in setOf(RemoteCommand.ShutterFullRelease,
                 RemoteCommand.ShutterHalfRelease, RemoteCommand.AfOnRelease)) return false
 
@@ -161,6 +168,7 @@ class RemoteControlCoordinator(
      */
     fun startShutterSequence(identifier: String): Boolean {
         val normalized = identifier.uppercase()
+        if (normalized in bulbExposures) return false
         if (normalized in wifiOwners) return false
         if (!port.isConnected(normalized)) return false
         if (!port.isRemoteFeatureActive(normalized)) return false
@@ -191,6 +199,86 @@ class RemoteControlCoordinator(
         port.setShutterSequenceActive(normalized, true)
         job.start()
         return true
+    }
+
+    fun startBulbTimer(identifier: String, seconds: Int): Boolean {
+        require(seconds in 1..3600)
+        val id = identifier.uppercase()
+        if (id in wifiOwners || id in activeSequenceJobs || id in bulbExposures || !port.isConnected(
+                id
+            ) ||
+            !port.isRemoteFeatureActive(id)
+        ) return false
+        val exposure = BulbExposure(seconds, { port.setBulbTimerState(id, it) })
+        bulbExposures[id] = exposure
+        stopProbeLoop(id)
+        sequenceOwners.add(id)
+        exposure.phase(BulbPhase.Starting)
+        port.subscribeToNotifications(id, SonyBluetoothConstants.REMOTE_STATUS_UUID)
+        val job = scope.launch(start = CoroutineStart.LAZY) { runBulb(id, exposure) }
+        activeSequenceJobs[id] = job
+        job.invokeOnCompletion {
+            if (activeSequenceJobs[id] === job) activeSequenceJobs.remove(id)
+            bulbExposures.remove(id)
+            sequenceOwners.remove(id)
+        }
+        job.start()
+        return true
+    }
+
+    fun stopBulbTimer(identifier: String) {
+        bulbExposures[identifier.uppercase()]?.stop()
+    }
+
+    fun isBulbActive(identifier: String) = identifier.uppercase() in bulbExposures
+
+    private suspend fun runBulb(id: String, exposure: BulbExposure) = coroutineScope {
+        var attempted = false
+        var started = false
+        var released = false
+        var stopped = false
+        var cancelled = false
+        suspend fun write(command: RemoteCommand): Boolean = try {
+            port.isConnected(id) && port.writeCharacteristicAwait(
+                id,
+                SonyBluetoothConstants.REMOTE_CHARACTERISTIC_UUID,
+                command.payload
+            )
+        } catch (_: Exception) {
+            false
+        }
+        try {
+            if (exposure.stopRequested) return@coroutineScope
+            withContext(NonCancellable) {
+                attempted = true
+                try {
+                    started = write(RemoteCommand.ShutterFullPress)
+                } finally {
+                    released = write(RemoteCommand.ShutterFullRelease)
+                }
+            }
+            if (!started || !released) return@coroutineScope
+            exposure.hold()
+        } catch (failure: CancellationException) {
+            cancelled = true
+            throw failure
+        } finally {
+            exposure.phase(BulbPhase.Stopping)
+            withContext(NonCancellable) {
+                // A failed start is ambiguous. Never toggle again unless start delivery was confirmed.
+                if (started && released && port.isConnected(id)) {
+                    try {
+                        stopped = write(RemoteCommand.ShutterFullPress)
+                    } finally {
+                        released = write(RemoteCommand.ShutterFullRelease)
+                    }
+                }
+            }
+            exposure.phase(
+                if (stopped && released && !cancelled) BulbPhase.Finished
+                else if (exposure.stopRequested && !attempted) BulbPhase.Finished else BulbPhase.Uncertain
+            )
+        }
     }
 
     private enum class StepResult { NotSent, TimedOut, Confirmed }
@@ -318,6 +406,7 @@ class RemoteControlCoordinator(
     /** Finish BLE button releases before Wi-Fi takes ownership of camera controls. */
     suspend fun claimWifiControls(identifier: String) {
         val id = identifier.uppercase()
+        check(id !in bulbExposures) { "Stop the bulb exposure before switching connections" }
         wifiOwners.add(id)
         val probe = activeProbeJobs.remove(id)
         val sequence = activeSequenceJobs[id]
@@ -361,6 +450,7 @@ class RemoteControlCoordinator(
     // ---- Internal probe loop ----
 
     private fun startProbeLoop(identifier: String) {
+        if (identifier in bulbExposures) return
         if (identifier in wifiOwners) return
         if (activeProbeJobs.containsKey(identifier)) return
         if (!port.hasRemoteControlCharacteristic(identifier)) return

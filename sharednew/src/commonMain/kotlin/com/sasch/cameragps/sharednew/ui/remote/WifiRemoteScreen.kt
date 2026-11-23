@@ -12,6 +12,10 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -30,12 +34,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.navigationevent.NavigationEventInfo
 import androidx.navigationevent.compose.NavigationBackHandler
 import androidx.navigationevent.compose.rememberNavigationEventState
+import cameragps.sharednew.generated.resources.settings_24px
+import cameragps.sharednew.generated.resources.wifi_remote_connection_options
 import cameragps.sharednew.generated.resources.Res
 import cameragps.sharednew.generated.resources.wifi_connection_failed
 import cameragps.sharednew.generated.resources.wifi_remote_address_failed
@@ -43,15 +50,10 @@ import cameragps.sharednew.generated.resources.wifi_remote_approval
 import cameragps.sharednew.generated.resources.wifi_remote_auto_connect
 import cameragps.sharednew.generated.resources.wifi_remote_auto_setup
 import cameragps.sharednew.generated.resources.wifi_remote_bluetooth_required
-import cameragps.sharednew.generated.resources.wifi_remote_browse
-import cameragps.sharednew.generated.resources.wifi_remote_browse_unsupported
 import cameragps.sharednew.generated.resources.wifi_remote_browser_back
-import cameragps.sharednew.generated.resources.wifi_remote_capture
-import cameragps.sharednew.generated.resources.wifi_remote_captured
 import cameragps.sharednew.generated.resources.wifi_remote_close
 import cameragps.sharednew.generated.resources.wifi_remote_closing
 import cameragps.sharednew.generated.resources.wifi_remote_connect
-import cameragps.sharednew.generated.resources.wifi_remote_connected
 import cameragps.sharednew.generated.resources.wifi_remote_credentials_failed
 import cameragps.sharednew.generated.resources.wifi_remote_disconnect
 import cameragps.sharednew.generated.resources.wifi_remote_failed
@@ -69,22 +71,19 @@ import cameragps.sharednew.generated.resources.wifi_remote_permission
 import cameragps.sharednew.generated.resources.wifi_remote_prepare_only
 import cameragps.sharednew.generated.resources.wifi_remote_prepare_only_hint
 import cameragps.sharednew.generated.resources.wifi_remote_preparing
-import cameragps.sharednew.generated.resources.wifi_remote_rejected
 import cameragps.sharednew.generated.resources.wifi_remote_selection_clear
 import cameragps.sharednew.generated.resources.wifi_remote_settings
 import cameragps.sharednew.generated.resources.wifi_remote_setup
 import cameragps.sharednew.generated.resources.wifi_remote_setup_detect_address
 import cameragps.sharednew.generated.resources.wifi_remote_setup_failed
-import cameragps.sharednew.generated.resources.wifi_remote_shooting
 import cameragps.sharednew.generated.resources.wifi_remote_shutdown_requested
 import cameragps.sharednew.generated.resources.wifi_remote_shutdown_unavailable
 import cameragps.sharednew.generated.resources.wifi_remote_shutdown_unconfirmed
 import cameragps.sharednew.generated.resources.wifi_remote_title
-import cameragps.sharednew.generated.resources.wifi_remote_uncertain
 import cameragps.sharednew.generated.resources.wifi_remote_wifi_disabled
 import com.diamondedge.logging.logging
+import com.sasch.cameragps.sharednew.remote.BulbTimerState
 import com.sasch.cameragps.sharednew.remote.wifi.SonyImageTransfer
-import com.sasch.cameragps.sharednew.remote.wifi.WifiCaptureStatus
 import com.sasch.cameragps.sharednew.remote.wifi.WifiPhotoDownload
 import com.sasch.cameragps.sharednew.remote.wifi.WifiRemoteController
 import com.sasch.cameragps.sharednew.remote.wifi.WifiRemoteFailure
@@ -92,6 +91,7 @@ import com.sasch.cameragps.sharednew.remote.wifi.WifiRemotePhase
 import com.sasch.cameragps.sharednew.remote.wifi.WifiRemoteState
 import com.sasch.cameragps.sharednew.remote.wifi.WifiShutdownStatus
 import com.sasch.cameragps.sharednew.remote.wifi.groupCameraPhotos
+import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 
 class WifiRemoteViewModel(val identifier: String, val controller: WifiRemoteController) : ViewModel() {
@@ -179,6 +179,7 @@ class WifiRemoteViewModel(val identifier: String, val controller: WifiRemoteCont
     }
 
     fun expandPreview() {
+        if (controller.sessions.value[identifier.uppercase()]?.bulbTimer?.active == true) return
         val state = controller.sessions.value[identifier.uppercase()]?.wifiRemote ?: return
         if (state.phase == WifiRemotePhase.Ready && state.hasLiveView && !state.photoBrowser.open) {
             fullScreenPreview = true
@@ -236,7 +237,12 @@ fun WifiRemoteScreen(viewModel: WifiRemoteViewModel, onConnect: (String) -> Unit
     val image by controller.image.collectAsState()
     val id = viewModel.identifier.uppercase()
     val state = sessions[id]?.wifiRemote ?: WifiRemoteState()
+    BulbTimerLifecycle(
+        id, sessions[id]?.bulbTimer ?: BulbTimerState(),
+        onStop = { controller.stopBulbTimer(id) }, keepAwake = false
+    )
     val ready = state.phase == WifiRemotePhase.Ready
+    var connectionMenu by remember { mutableStateOf(false) }
     val busy = state.phase !in setOf(WifiRemotePhase.Idle, WifiRemotePhase.Failed)
     val otherCamera = owner != null && owner != id
     var manual by remember { mutableStateOf(!controller.supportsAutomaticConnection && !controller.supportsManualSetup) }
@@ -260,7 +266,10 @@ fun WifiRemoteScreen(viewModel: WifiRemoteViewModel, onConnect: (String) -> Unit
     }
     if (viewModel.fullScreenPreview && ready && !state.photoBrowser.open) {
         WifiFullScreenPreview(image, state, onCollapse = viewModel::collapsePreview,
-            onCapture = { controller.capture(id) })
+            onCapture = { controller.capture(id) },
+            bulb = sessions[id]?.bulbTimer ?: BulbTimerState(),
+            onHoldStart = { controller.startBulbTimer(id, 3600) },
+            onHoldEnd = { controller.stopBulbTimer(id) })
         return
     }
     if (viewModel.viewedPhotoIndex != null && ready && state.photoBrowser.open) {
@@ -268,7 +277,31 @@ fun WifiRemoteScreen(viewModel: WifiRemoteViewModel, onConnect: (String) -> Unit
         return
     }
     Scaffold(topBar = {
-        TopAppBar(title = { Text(stringResource(Res.string.wifi_remote_title)) }, navigationIcon = {
+        TopAppBar(title = {
+            Column {
+                Text(stringResource(Res.string.wifi_remote_title))
+                if (ready) Text(
+                    state.cameraName, style = MaterialTheme.typography.labelSmall,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis
+                )
+            }
+        }, actions = {
+            if (ready && !state.photoBrowser.open) {
+                IconButton(onClick = { connectionMenu = true }) {
+                    Icon(
+                        painterResource(Res.drawable.settings_24px),
+                        contentDescription = stringResource(Res.string.wifi_remote_connection_options)
+                    )
+                }
+                DropdownMenu(
+                    expanded = connectionMenu,
+                    onDismissRequest = { connectionMenu = false }) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(Res.string.wifi_remote_disconnect)) },
+                        onClick = { connectionMenu = false; controller.disconnect(id) })
+                }
+            }
+        }, navigationIcon = {
             TextButton(onClick = back,
                 enabled = viewModel.selectedPhotoIds.isNotEmpty() || !state.photoBrowser.open ||
                         (!state.photoBrowser.loading && !state.imageTransfer.busy)
@@ -379,29 +412,19 @@ fun WifiRemoteScreen(viewModel: WifiRemoteViewModel, onConnect: (String) -> Unit
                     if (noticeAcknowledged && onAppSettings != null) {
                         WifiConnectionHelp(state.failure, onAppSettings)
                     }
-                    if (ready) {
-                        Text(stringResource(Res.string.wifi_remote_connected, state.cameraName))
-                        if (state.canTransferImages) OutlinedButton(
-                            onClick = { controller.browsePhotos(id) },
-                            enabled = state.capture != WifiCaptureStatus.Shooting
-                        ) {
-                            Text(stringResource(Res.string.wifi_remote_browse))
-                        } else Text(stringResource(Res.string.wifi_remote_browse_unsupported))
-                        Button(onClick = { controller.capture(id) },
-                            enabled = state.canCaptureStill && state.capture != WifiCaptureStatus.Shooting && !state.imageTransfer.busy
-                        ) {
-                            Text(stringResource(if (state.capture == WifiCaptureStatus.Shooting)
-                                Res.string.wifi_remote_shooting else Res.string.wifi_remote_capture))
-                        }
-                        val result = when (state.capture) {
-                            WifiCaptureStatus.Captured -> Res.string.wifi_remote_captured
-                            WifiCaptureStatus.Uncertain -> Res.string.wifi_remote_uncertain
-                            WifiCaptureStatus.Rejected -> Res.string.wifi_remote_rejected
-                            else -> null
-                        }
-                        result?.let { Text(stringResource(it)) }
-                    }
-                    if (busy) OutlinedButton(onClick = { controller.disconnect(id) }, enabled = state.phase != WifiRemotePhase.Closing) {
+                    if (ready) WifiCaptureControls(
+                        identifier = id,
+                        state = state,
+                        bulb = sessions[id]?.bulbTimer ?: BulbTimerState(),
+                        onCapture = { controller.capture(id) },
+                        onStartTimer = { controller.startBulbTimer(id, it) },
+                        onStopTimer = { controller.stopBulbTimer(id) },
+                        onBrowsePhotos = { controller.browsePhotos(id) },
+                    )
+                    if (busy && !ready) OutlinedButton(
+                        onClick = { controller.disconnect(id) },
+                        enabled = state.phase != WifiRemotePhase.Closing
+                    ) {
                         Text(stringResource(Res.string.wifi_remote_disconnect))
                     }
                 }
@@ -411,7 +434,7 @@ fun WifiRemoteScreen(viewModel: WifiRemoteViewModel, onConnect: (String) -> Unit
                 controls(Modifier.widthIn(max = 300.dp).fillMaxHeight())
             } else Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 preview(Modifier.fillMaxWidth().weight(1f))
-                controls(Modifier.fillMaxWidth().weight(1f))
+                controls(if (ready) Modifier.fillMaxWidth() else Modifier.fillMaxWidth().weight(1f))
             }
         }
     }

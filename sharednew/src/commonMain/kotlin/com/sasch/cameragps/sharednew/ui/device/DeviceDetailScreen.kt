@@ -66,8 +66,11 @@ import cameragps.sharednew.generated.resources.wifi_remote_title
 import com.sasch.cameragps.sharednew.bluetooth.BleSessionPhase
 import com.sasch.cameragps.sharednew.bluetooth.session.CameraAutoCorrectionSetting
 import com.sasch.cameragps.sharednew.bluetooth.session.CameraSettingState
+import com.sasch.cameragps.sharednew.remote.BulbTimerState
 import com.sasch.cameragps.sharednew.ui.components.ScreenContent
 import com.sasch.cameragps.sharednew.ui.components.ScrollbarLazyColumn
+import com.sasch.cameragps.sharednew.ui.remote.BulbTimerCard
+import com.sasch.cameragps.sharednew.ui.remote.BulbTimerLifecycle
 import com.sasch.cameragps.sharednew.util.KotlinPlatform
 import com.sasch.cameragps.sharednew.util.currentPlatform
 import org.jetbrains.compose.resources.painterResource
@@ -93,6 +96,10 @@ fun DeviceDetailContent(
     val sessions by viewModel.sessions.collectAsState()
     val session = sessions[deviceId.uppercase()]
     val cameraReady = session?.phase == BleSessionPhase.Transmitting
+    val bulb = session?.bulbTimer ?: BulbTimerState()
+    BulbTimerLifecycle(
+        deviceId, bulb,
+        onStop = { viewModel.bulbControls?.stopBulbTimer(deviceId) })
 
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         viewModel.refreshCameraSettings(deviceId)
@@ -120,7 +127,7 @@ fun DeviceDetailContent(
                 item {
                     Button(
                         onClick = onWifiRemote,
-                        enabled = state.isDeviceEnabled,
+                        enabled = state.isDeviceEnabled && !bulb.active,
                         modifier = Modifier.fillMaxWidth().heightIn(min = 88.dp),
                         shape = MaterialTheme.shapes.large,
                         contentPadding = PaddingValues(20.dp),
@@ -156,6 +163,18 @@ fun DeviceDetailContent(
                 }
             }
 
+            viewModel.bulbControls?.let { controls ->
+                item(key = "bulb_timer") {
+                    BulbTimerCard(
+                        deviceId, bulb,
+                        enabled = state.isDeviceEnabled && session?.remoteFeatureActive == true &&
+                                !session.shutterSequenceActive,
+                        onStart = { controls.startBulbTimer(deviceId, it) },
+                        onStop = { controls.stopBulbTimer(deviceId) },
+                    )
+                }
+            }
+
             if (renameEnabled) {
                 item {
                     DeviceRenameRow(
@@ -170,7 +189,7 @@ fun DeviceDetailContent(
                 DeviceToggleRow(
                     title = stringResource(Res.string.enable_device),
                     checked = state.isDeviceEnabled,
-                    enabled = !state.isAlwaysOnEnabled && state.buttonEnabled,
+                    enabled = !bulb.active && !state.isAlwaysOnEnabled && state.buttonEnabled,
                     onCheckedChange = { enabled ->
                         viewModel.setDeviceEnabled(enabled, deviceId, onDeviceEnabledChanged)
                     },
@@ -183,7 +202,7 @@ fun DeviceDetailContent(
                     DeviceToggleRow(
                         title = stringResource(Res.string.enableConstantly),
                         checked = state.isAlwaysOnEnabled,
-                        enabled = state.isDeviceEnabled && state.buttonEnabled,
+                        enabled = !bulb.active && state.isDeviceEnabled && state.buttonEnabled,
                         onCheckedChange = { enabled ->
                             viewModel.setAlwaysOnEnabled(enabled, deviceId)
                         },
@@ -197,7 +216,7 @@ fun DeviceDetailContent(
                 DeviceToggleRow(
                     title = stringResource(Res.string.enable_remote_control),
                     checked = state.isRemoteControlEnabled,
-                    enabled = state.isDeviceEnabled && state.buttonEnabled,
+                    enabled = !bulb.active && state.isDeviceEnabled && state.buttonEnabled,
                     onCheckedChange = { enabled ->
                         viewModel.setRemoteControlStatus(enabled, deviceId)
                     },

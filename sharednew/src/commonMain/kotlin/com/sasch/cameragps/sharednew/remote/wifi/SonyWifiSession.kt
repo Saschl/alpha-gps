@@ -2,6 +2,9 @@ package com.sasch.cameragps.sharednew.remote.wifi
 
 import androidx.compose.ui.graphics.ImageBitmap
 import com.diamondedge.logging.logging
+import com.sasch.cameragps.sharednew.remote.BulbExposure
+import kotlin.random.Random
+import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
@@ -23,8 +26,6 @@ import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
-import kotlin.random.Random
-import kotlin.time.Duration.Companion.seconds
 
 /** The platform supplies network mechanics; Sony session behavior is shared. */
 internal suspend fun openSonyWifiSession(
@@ -157,10 +158,18 @@ private class SonyWifiConnection(
         emitAll(session.preview.images(session.endpoint.resolve(host)))
     }
 
-    override suspend fun capture(): WifiCaptureStatus {
+    override val canCaptureBulb: Boolean get() = canCapture
+
+    override suspend fun captureBulb(exposure: BulbExposure): WifiCaptureStatus =
+        captureWithBulb(exposure)
+
+    override suspend fun capture(): WifiCaptureStatus = captureWithBulb(null)
+
+    private suspend fun captureWithBulb(exposure: BulbExposure?): WifiCaptureStatus {
         if (!canCapture) return WifiCaptureStatus.Rejected
-        return when (checkNotNull(current).shutter.captureStill()) {
+        return when (checkNotNull(current).shutter.captureStill(exposure)) {
             SonyPtpCaptureResult.CaptureEventObserved -> WifiCaptureStatus.Captured
+            SonyPtpCaptureResult.StoppedBeforeExposure -> WifiCaptureStatus.Idle
             is SonyPtpCaptureResult.Rejected, SonyPtpCaptureResult.Unsupported -> WifiCaptureStatus.Rejected
             else -> WifiCaptureStatus.Uncertain
         }

@@ -3,12 +3,11 @@ package com.sasch.cameragps.sharednew
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
-import com.sasch.cameragps.sharednew.remote.wifi.IosWifiRemoteScreen
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import cameragps.sharednew.generated.resources.Res
@@ -17,6 +16,7 @@ import cameragps.sharednew.generated.resources.back
 import com.sasch.cameragps.sharednew.bluetooth.BluetoothDeviceInfo
 import com.sasch.cameragps.sharednew.bluetooth.IosBluetoothController
 import com.sasch.cameragps.sharednew.bluetooth.IosBluetoothController.ensureDeviceRecord
+import com.sasch.cameragps.sharednew.remote.wifi.IosWifiRemoteScreen
 import com.sasch.cameragps.sharednew.ui.device.DeviceDetailContent
 import com.sasch.cameragps.sharednew.ui.device.DeviceDetailDataSource
 import com.sasch.cameragps.sharednew.ui.device.DeviceDetailViewModel
@@ -87,6 +87,7 @@ internal fun IosDeviceDetailScreen(
             dataSource = deviceDetailDataSource,
             serviceActions = IosDeviceDetailServiceActions(),
             cameraSettings = IosBluetoothController.autoCorrectionControls,
+            bulbControls = IosBluetoothController.bulbControls,
         )
     }
 

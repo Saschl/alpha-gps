@@ -3,17 +3,20 @@ package com.sasch.cameragps.sharednew.bluetooth.coordinator
 import com.diamondedge.logging.FixedLogLevel
 import com.diamondedge.logging.KmLogging
 import com.diamondedge.logging.PlatformLogger
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.StandardTestDispatcher
-import kotlinx.coroutines.test.TestScope
-import kotlinx.coroutines.test.advanceTimeBy
-import kotlinx.coroutines.test.runTest
+import com.sasch.cameragps.sharednew.remote.BulbPhase
+import com.sasch.cameragps.sharednew.remote.BulbTimerState
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.runTest
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class RemoteControlCoordinatorTest {
@@ -156,6 +159,65 @@ class RemoteControlCoordinatorTest {
     }
 
     @Test
+    fun bulbUsesTwoClicksAndBlocksOtherShutterActions() = runTest {
+        val port = FakeBleGattPort().apply {
+            connectedDevices.add("CAMERA")
+            remoteActiveDevices.add("CAMERA")
+        }
+        val coordinator = RemoteControlCoordinator(port, backgroundScope)
+        assertTrue(coordinator.startBulbTimer("camera", 5))
+        runCurrent()
+        assertFalse(coordinator.startBulbTimer("camera", 5))
+        assertFalse(coordinator.startShutterSequence("camera"))
+        assertFalse(coordinator.sendCommand("camera", RemoteCommand.ShutterFullPress))
+        assertFalse(coordinator.onRemoteStatusChanged("camera", byteArrayOf(2, 0xa0.toByte(), 0)))
+        assertEquals(2, port.writtenCharacteristics.size)
+        advanceTimeBy(5000)
+        coordinator.stopBulbTimer("camera")
+        coordinator.stopBulbTimer("camera")
+        runCurrent()
+        assertEquals(
+            listOf("0109", "0108", "0109", "0108"),
+            port.writtenCharacteristics.map {
+                it.third.joinToString("") { byte ->
+                    byte.toUByte().toString(16).padStart(2, '0')
+                }
+            })
+        assertEquals(BulbPhase.Finished, port.bulbState.phase)
+    }
+
+    @Test
+    fun uncertainBulbStartOnlyReleasesAndNeverRetriesToggle() = runTest {
+        val port = FakeBleGattPort().apply {
+            connectedDevices.add("CAMERA")
+            remoteActiveDevices.add("CAMERA")
+            awaitResults.add(false)
+        }
+        val coordinator = RemoteControlCoordinator(port, backgroundScope)
+        coordinator.startBulbTimer("camera", 5)
+        runCurrent()
+        assertEquals(2, port.writtenCharacteristics.size)
+        assertEquals(BulbPhase.Uncertain, port.bulbState.phase)
+    }
+
+    @Test
+    fun bulbDisconnectDoesNotSendAnotherToggle() = runTest {
+        val port = FakeBleGattPort().apply {
+            connectedDevices.add("CAMERA")
+            remoteActiveDevices.add("CAMERA")
+        }
+        val coordinator = RemoteControlCoordinator(port, backgroundScope)
+        coordinator.startBulbTimer("camera", 5)
+        runCurrent()
+        port.connectedDevices.clear()
+        coordinator.cancelProbe("camera")
+        runCurrent()
+        advanceTimeBy(6000)
+        assertEquals(2, port.writtenCharacteristics.size)
+        assertEquals(BulbPhase.Uncertain, port.bulbState.phase)
+    }
+
+    @Test
     fun identifiers_are_uppercased() = runTest {
         val port = FakeBleGattPort()
         port.connectedDevices.add("AA:BB:CC:DD:EE:FF")
@@ -172,6 +234,21 @@ class RemoteControlCoordinatorTest {
  * Minimal fake for testing the shared coordinator without real BLE.
  */
 private class FakeBleGattPort : BleGattPort {
+    val awaitResults = ArrayDeque<Boolean>()
+    var bulbState = BulbTimerState()
+    override suspend fun writeCharacteristicAwait(
+        identifier: String,
+        characteristicUuid: String,
+        value: ByteArray
+    ): Boolean {
+        writeCharacteristic(identifier, characteristicUuid, value)
+        return awaitResults.removeFirstOrNull() ?: true
+    }
+
+    override fun setBulbTimerState(identifier: String, state: BulbTimerState) {
+        bulbState = state
+    }
+
     override fun setAutoCorrectionState(
         identifier: String,
         setting: com.sasch.cameragps.sharednew.bluetooth.session.CameraAutoCorrectionSetting,

@@ -1,13 +1,13 @@
 [versions]
 exifinterface = "1.4.2"
-agp = "9.5.1"
+agp = "9.5.2"
 kotlin = "2.4.21"
 coreKtx = "1.19.1"
 junit = "4.13.2"
 junitVersion = "1.3.0"
 espressoCore = "3.7.0"
 activityCompose = "1.13.0"
-composeBom = "2026.09.00"
+composeBom = "2026.11.01"
 googlePlayServicesLocation = "21.4.0"
 accompanist = "0.37.3"
 lifecycleRuntimeCompose = "2.11.0"
@@ -22,13 +22,13 @@ sentry = "8.64.0"
 # set ONLY, so the Android foss (F-Droid) flavor never sees Sentry. The Cocoa
 # version is pinned by the KMP SDK release notes and MUST match the Swift
 # package pinned in iosApp/alphagps.xcodeproj.
-sentryKotlinMultiplatform = "0.29.0"
+sentryKotlinMultiplatform = "0.30.0"
 sentryCocoa = "8.58.2"
 room = "2.8.5"
-runtimeLivedata = "1.12.1"
+runtimeLivedata = "1.13.0"
 coreSplashscreen = "1.2.0"
-lifecycle = "2.11.0"
-navigation3 = "1.2.1"
+lifecycle = "2.11.1"
+navigation3 = "1.2.2"
 kotlinxSerializationCore = "1.13.0"
 kotlinSerialization = "2.4.21"
 appCompat = "1.8.0"
@@ -96,9 +96,6 @@ androidx-runner = { group = "androidx.test", name = "runner", version.ref = "run
 androidx-core = { group = "androidx.test", name = "core", version.ref = "core" }
 androidx-sqlite-bundled = { module = "androidx.sqlite:sqlite-bundled", version.ref = "sqlite" }
 kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinxDatetime" }
-androidx-lifecycle-viewmodel = { module = "org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycle" }
-
-
 
 
 [plugins]

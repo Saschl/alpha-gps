@@ -17,10 +17,12 @@ import com.sasch.cameragps.sharednew.bluetooth.transport.BleOperationStatus
 import com.sasch.cameragps.sharednew.bluetooth.transport.BlePeripheralTransport
 import com.sasch.cameragps.sharednew.bluetooth.transport.BleTransportEvent
 import com.sasch.cameragps.sharednew.database.devices.CameraDeviceDAO
+import com.sasch.cameragps.sharednew.remote.BulbTimerControls
 import com.sasch.cameragps.sharednew.remote.wifi.CameraWifiCredentials
 import com.sasch.cameragps.sharednew.remote.wifi.SonyWifiBootstrap
 import com.sasch.cameragps.sharednew.remote.wifi.WifiRemoteConnectException
 import com.sasch.cameragps.sharednew.remote.wifi.WifiRemoteFailure
+import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.delay
@@ -28,7 +30,6 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * The common session orchestrator. Owns the per-device session registry, the
@@ -58,7 +59,7 @@ class CameraSessionOrchestrator(
     private val shouldRemainConnected: suspend (String) -> Boolean = { true },
     /** iOS: app-level transmission toggle for the location manager. */
     isTransmissionAllowed: () -> Boolean = { true },
-) : CameraAutoCorrectionControls {
+) : CameraAutoCorrectionControls, BulbTimerControls {
     private val log = logging()
 
     val registry = CameraSessionRegistry()
@@ -167,6 +168,11 @@ class CameraSessionOrchestrator(
     fun onConnectFailed(identifier: String) {
         registry.updateIfPresent(identifier) { it.copy(phase = BleSessionPhase.Error) }
     }
+
+    override fun startBulbTimer(identifier: String, seconds: Int) =
+        remoteControl.startBulbTimer(identifier, seconds)
+
+    override fun stopBulbTimer(identifier: String) = remoteControl.stopBulbTimer(identifier)
 
     fun triggerRemoteShutter(identifier: String): Boolean =
         sendRemoteCommand(identifier, RemoteCommand.ShutterFullPress)

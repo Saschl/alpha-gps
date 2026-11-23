@@ -5,18 +5,19 @@ import com.diamondedge.logging.KmLogging
 import com.diamondedge.logging.PlatformLogger
 import com.sasch.cameragps.sharednew.bluetooth.SonyBluetoothConstants
 import com.sasch.cameragps.sharednew.bluetooth.coordinator.BleGattPort
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.test.advanceTimeBy
-import kotlinx.coroutines.test.runCurrent
-import kotlinx.coroutines.test.runTest
+import com.sasch.cameragps.sharednew.remote.BulbTimerState
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import kotlin.time.Clock
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.runTest
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class LocationTransmissionStateTest {
@@ -94,6 +95,15 @@ class LocationTransmissionStateTest {
     }
 
     private class FakePort : BleGattPort {
+        override suspend fun writeCharacteristicAwait(
+            identifier: String,
+            characteristicUuid: String,
+            value: ByteArray
+        ) =
+            writeCharacteristic(identifier, characteristicUuid, value)
+
+        override fun setBulbTimerState(identifier: String, state: BulbTimerState) = Unit
+
         override fun setAutoCorrectionState(
             identifier: String,
             setting: com.sasch.cameragps.sharednew.bluetooth.session.CameraAutoCorrectionSetting,

@@ -5,6 +5,7 @@ import com.sasch.cameragps.sharednew.bluetooth.coordinator.BleGattPort
 import com.sasch.cameragps.sharednew.bluetooth.transport.BleOperation
 import com.sasch.cameragps.sharednew.bluetooth.transport.BleOperationQueue
 import com.sasch.cameragps.sharednew.bluetooth.transport.BlePeripheralTransport
+import com.sasch.cameragps.sharednew.remote.BulbTimerState
 import com.sasch.cameragps.sharednew.remote.wifi.WifiBootstrapBlePort
 
 /**
@@ -18,6 +19,17 @@ internal class QueuedBleGattPort(
     private val transport: BlePeripheralTransport,
     private val registry: CameraSessionRegistry,
 ) : BleGattPort, WifiBootstrapBlePort {
+    override suspend fun writeCharacteristicAwait(
+        identifier: String,
+        characteristicUuid: String,
+        value: ByteArray
+    ) =
+        execute(identifier, BleOperation.Write(characteristicUuid, value)) is
+                com.sasch.cameragps.sharednew.bluetooth.transport.BleOperationResult.Success
+
+    override fun setBulbTimerState(identifier: String, state: BulbTimerState) {
+        registry.updateIfPresent(identifier) { it.copy(bulbTimer = state) }
+    }
 
     override suspend fun execute(identifier: String, operation: BleOperation) =
         queue.execute(identifier.uppercase(), operation)

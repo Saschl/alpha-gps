@@ -475,4 +475,19 @@
     <string name="report_preparing">Preparing report…</string>
     <string name="report_error">Could not prepare or share the report. Please try again.</string>
     <string name="report_copied">Summary copied to clipboard.</string>
+    <string name="bulb_title">Bulb timer</string>
+    <string name="bulb_setup">Set the camera to M → BULB, single-shot drive and manual focus. Disable its built-in Bulb timer. Keep this screen open; leaving it or backgrounding the app requests an early stop.</string>
+    <string name="bulb_duration">Exposure seconds (1–3600)</string>
+    <string name="bulb_start">Start exposure</string>
+    <string name="bulb_stop">Stop exposure</string>
+    <string name="bulb_starting">Starting exposure…</string>
+    <string name="bulb_remaining">%1$d seconds remaining</string>
+    <string name="bulb_stopping">Stopping exposure…</string>
+    <string name="bulb_processing">Camera is processing…</string>
+    <string name="bulb_finished">Timer finished</string>
+    <string name="bulb_uncertain">Exposure status is uncertain. Check the camera before starting again.</string>
+    <string name="bulb_failed">Could not start exposure.</string>
+    <string name="wifi_remote_hold_hint">Tap to shoot. Hold for Bulb; release to stop. Camera must be set to BULB.</string>
+    <string name="wifi_remote_photos">Photos</string>
+    <string name="wifi_remote_connection_options">Connection options</string>
 </resources>

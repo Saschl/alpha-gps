@@ -118,6 +118,7 @@ fun DeviceDetailScreen(
             dataSource = createAndroidDataSource(dao),
             serviceActions = AndroidDeviceDetailServiceActions(context.applicationContext),
             cameraSettings = AppServices.from(context).orchestrator,
+            bulbControls = AppServices.from(context).orchestrator,
         )
     }
 

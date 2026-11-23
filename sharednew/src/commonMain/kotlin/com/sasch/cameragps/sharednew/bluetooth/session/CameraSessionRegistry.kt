@@ -1,6 +1,8 @@
 package com.sasch.cameragps.sharednew.bluetooth.session
 
 import com.sasch.cameragps.sharednew.bluetooth.BleSessionPhase
+import com.sasch.cameragps.sharednew.remote.BulbPhase
+import com.sasch.cameragps.sharednew.remote.BulbTimerState
 import com.sasch.cameragps.sharednew.remote.wifi.WifiRemotePhase
 import com.sasch.cameragps.sharednew.remote.wifi.WifiRemoteState
 import com.sasch.cameragps.sharednew.remote.wifi.WifiShutdownStatus
@@ -18,6 +20,7 @@ data class CameraSession(
     val remoteFeatureActive: Boolean = false,
     /** A shutter sequence is currently running (UI feedback on the shutter button). */
     val shutterSequenceActive: Boolean = false,
+    val bulbTimer: BulbTimerState = BulbTimerState(),
     /** Consecutive auth-error retries (iOS pairing); reset on any success. */
     val pairingRetryCount: Int = 0,
     /** One-shot retry guard for the config read (intermittent GATT 133 on Android). */
@@ -70,13 +73,17 @@ class CameraSessionRegistry {
     fun markBleDisconnected(identifier: String) {
         val id = identifier.uppercase()
         val current = _sessions.value[id] ?: return
-        if (current.wifiRemote.phase == WifiRemotePhase.Idle) {
+        if (current.wifiRemote.phase == WifiRemotePhase.Idle && !current.bulbTimer.active &&
+            current.bulbTimer.phase != BulbPhase.Uncertain
+        ) {
             remove(id)
         } else {
             _sessions.value = _sessions.value + (id to current.copy(
                 phase = BleSessionPhase.Disconnected,
                 remoteFeatureActive = false,
                 shutterSequenceActive = false,
+                bulbTimer = if (current.wifiRemote.phase == WifiRemotePhase.Idle && current.bulbTimer.active)
+                    BulbTimerState(BulbPhase.Uncertain) else current.bulbTimer,
                 locationDisabledByCamera = false,
                 autoTimeCorrection = CameraSettingState(),
                 autoAreaAdjustment = CameraSettingState(),
@@ -89,6 +96,7 @@ class CameraSessionRegistry {
         val id = identifier.uppercase()
         val current = _sessions.value[id] ?: return
         if (state.phase == WifiRemotePhase.Idle && current.phase == BleSessionPhase.Disconnected &&
+            !current.bulbTimer.active && current.bulbTimer.phase != BulbPhase.Uncertain &&
             state.wifiShutdown == WifiShutdownStatus.NotRequested
         ) {
             remove(id)

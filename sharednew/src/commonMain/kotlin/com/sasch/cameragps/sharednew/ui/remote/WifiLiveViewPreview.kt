@@ -2,7 +2,6 @@ package com.sasch.cameragps.sharednew.ui.remote
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -11,10 +10,9 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -26,9 +24,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.LiveRegionMode
-import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import cameragps.sharednew.generated.resources.Res
 import cameragps.sharednew.generated.resources.fullscreen_24px
@@ -42,6 +40,10 @@ import cameragps.sharednew.generated.resources.wifi_remote_preview_waiting
 import cameragps.sharednew.generated.resources.wifi_remote_rejected
 import cameragps.sharednew.generated.resources.wifi_remote_shooting
 import cameragps.sharednew.generated.resources.wifi_remote_uncertain
+import cameragps.sharednew.generated.resources.wifi_remote_hold_hint
+import cameragps.sharednew.generated.resources.bulb_start
+import cameragps.sharednew.generated.resources.bulb_stop
+import com.sasch.cameragps.sharednew.remote.BulbTimerState
 import com.sasch.cameragps.sharednew.remote.wifi.WifiCaptureStatus
 import com.sasch.cameragps.sharednew.remote.wifi.WifiPreviewStatus
 import com.sasch.cameragps.sharednew.remote.wifi.WifiRemoteState
@@ -82,6 +84,9 @@ internal fun WifiFullScreenPreview(
     state: WifiRemoteState,
     onCollapse: () -> Unit,
     onCapture: () -> Unit,
+    bulb: BulbTimerState,
+    onHoldStart: () -> Boolean,
+    onHoldEnd: () -> Unit,
 ) {
     BoxWithConstraints(Modifier.fillMaxSize().background(Color.Black)) {
         val landscape = maxWidth > maxHeight
@@ -94,21 +99,28 @@ internal fun WifiFullScreenPreview(
             }
             val shooting = state.capture == WifiCaptureStatus.Shooting
             val captureEnabled = state.canCaptureStill && !shooting && !state.imageTransfer.busy
-            val captureLabel = stringResource(if (shooting) Res.string.wifi_remote_shooting else Res.string.wifi_remote_capture)
+            val captureLabel = stringResource(
+                if (bulb.canStop) Res.string.bulb_stop
+                else if (shooting) Res.string.wifi_remote_shooting else Res.string.wifi_remote_capture
+            )
             Column(
-                modifier = Modifier.align(if (landscape) Alignment.CenterEnd else Alignment.BottomCenter),
+                modifier = Modifier.align(if (landscape) Alignment.CenterEnd else Alignment.BottomCenter)
+                    .widthIn(max = if (landscape) 160.dp else 280.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                IconButton(onClick = onCapture, enabled = captureEnabled,
-                    modifier = Modifier.size(80.dp)
-                        .background(Color.Black.copy(alpha = 0.45f), CircleShape)
-                        .border(3.dp, Color.White.copy(alpha = if (captureEnabled || shooting) 1f else 0.4f), CircleShape)
-                        .semantics { contentDescription = captureLabel }) {
-                    if (shooting) CircularProgressIndicator(Modifier.size(48.dp), color = Color.White)
-                    else Box(Modifier.size(64.dp).background(
-                        Color.White.copy(alpha = if (captureEnabled) 1f else 0.4f), CircleShape))
-                }
+                WifiPreviewShutterButton(
+                    enabled = captureEnabled, canHold = state.canCaptureBulb,
+                    shooting = shooting, exposing = bulb.canStop,
+                    label = captureLabel, holdLabel = stringResource(Res.string.bulb_start),
+                    onCapture = onCapture, onHoldStart = onHoldStart, onHoldEnd = onHoldEnd,
+                )
+                if (state.canCaptureBulb) Text(
+                    stringResource(Res.string.wifi_remote_hold_hint),
+                    color = Color.White, style = MaterialTheme.typography.labelSmall,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.background(Color.Black.copy(alpha = 0.6f)).padding(4.dp)
+                )
             }
             val result = when (state.capture) {
                 WifiCaptureStatus.Captured -> Res.string.wifi_remote_captured

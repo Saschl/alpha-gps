@@ -83,5 +83,8 @@ fastlane/test_output
 
 # Reproducible App Store screenshot exports
 /artifacts/app-store/
+/artifacts/app-store-new
 
 camerasim
+artifacts/apple-feedback
+tools

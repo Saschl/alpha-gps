@@ -23,7 +23,10 @@ import com.sasch.cameragps.sharednew.database.getDatabaseBuilder
 import com.sasch.cameragps.sharednew.database.logging.LogRepository
 import com.sasch.cameragps.sharednew.diagnostics.TroubleshootingSnapshot
 import com.sasch.cameragps.sharednew.logging.IosLogging
+import com.sasch.cameragps.sharednew.remote.BulbTimerControls
 import com.sasch.cameragps.sharednew.remote.wifi.createIosWifiRemoteController
+import kotlin.native.runtime.GC
+import kotlin.native.runtime.NativeRuntimeApi
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -35,8 +38,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import platform.CoreBluetooth.CBPeripheral
 import platform.CoreBluetooth.CBPeripheralStateConnected
-import kotlin.native.runtime.GC
-import kotlin.native.runtime.NativeRuntimeApi
 
 /**
  * iOS Bluetooth policy layer and the stable facade the shared Compose UI
@@ -120,6 +121,8 @@ object IosBluetoothController : BluetoothController {
     val sessions: StateFlow<Map<String, CameraSession>> get() = orchestrator.sessions
 
     internal val autoCorrectionControls: CameraAutoCorrectionControls
+        get() = orchestrator
+    internal val bulbControls: BulbTimerControls
         get() = orchestrator
 
     /** Global transmission gate (location updates running). */

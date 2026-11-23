@@ -4,6 +4,11 @@ import androidx.compose.ui.graphics.ImageBitmap
 import com.diamondedge.logging.logging
 import com.sasch.cameragps.sharednew.bluetooth.BleSessionPhase
 import com.sasch.cameragps.sharednew.bluetooth.session.CameraSessionRegistry
+import com.sasch.cameragps.sharednew.remote.BulbExposure
+import com.sasch.cameragps.sharednew.remote.BulbPhase
+import com.sasch.cameragps.sharednew.remote.BulbTimerControls
+import kotlin.math.abs
+import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -25,12 +30,12 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
-import kotlin.math.abs
-import kotlin.time.Duration.Companion.seconds
 
 internal interface WifiRemoteConnection {
     val cameraName: String
     val canCapture: Boolean
+    val canCaptureBulb: Boolean get() = false
+    suspend fun captureBulb(exposure: BulbExposure): WifiCaptureStatus = WifiCaptureStatus.Rejected
     val canTransferImages: Boolean get() = false
     val canConvertHeif: Boolean get() = false
     val photoHandlesSurviveModeSwitch: Boolean get() = true
@@ -96,7 +101,7 @@ class WifiRemoteController internal constructor(
     private val releaseControls: (String) -> Unit,
     private val automaticConnector: WifiAutomaticConnector? = null,
     private val manualSetupConnector: WifiManualSetupConnector? = null,
-) {
+) : BulbTimerControls {
     private val log = logging()
     private var attempt = 0
     val supportsAutomaticConnection get() = automaticConnector != null
@@ -117,7 +122,8 @@ class WifiRemoteController internal constructor(
     private var activeConnection: WifiRemoteConnection? = null
     private var previewJob: Job? = null
     private var photoJob: Job? = null
-    private var captureRequests: Channel<Unit>? = null
+    private var captureRequests: Channel<BulbExposure?>? = null
+    private var bulbExposure: BulbExposure? = null
     private var manualJoin: CompletableDeferred<Unit>? = null
 
     fun connect(identifier: String, host: String) {
@@ -175,6 +181,7 @@ class WifiRemoteController internal constructor(
 
     private fun start(identifier: String, phase: WifiRemotePhase,
                       open: suspend (String, CoroutineScope) -> WifiRemoteConnection) {
+        if (registry.get(identifier)?.bulbTimer?.active == true) return
         if (job != null) {
             log.w { "Wi-Fi remote connect ignored: previous attempt=$attempt is still active or closing" }
             return
@@ -203,11 +210,28 @@ class WifiRemoteController internal constructor(
     }
 
     fun capture(identifier: String) {
+        requestCapture(identifier, null)
+    }
+
+    override fun startBulbTimer(identifier: String, seconds: Int): Boolean {
+        require(seconds in 1..3600)
+        if (activeConnection?.canCaptureBulb != true) return false
+        val exposure = BulbExposure(seconds, { state ->
+            registry.updateIfPresent(identifier) { it.copy(bulbTimer = state) }
+        })
+        return requestCapture(identifier, exposure)
+    }
+
+    override fun stopBulbTimer(identifier: String) {
+        if (_owner.value.equals(identifier, true)) bulbExposure?.stop()
+    }
+
+    private fun requestCapture(identifier: String, exposure: BulbExposure?): Boolean {
         val id = identifier.uppercase()
-        val state = registry.get(id)?.wifiRemote ?: return
+        val state = registry.get(id)?.wifiRemote ?: return false
         if (_owner.value != id || state.phase != WifiRemotePhase.Ready || !state.canCaptureStill ||
             state.capture == WifiCaptureStatus.Shooting || state.photoBrowser.open || photoJob != null
-        ) return
+        ) return false
         registry.updateWifiRemote(
             id,
             state.copy(
@@ -215,7 +239,15 @@ class WifiRemoteController internal constructor(
                 imageTransfer = WifiImageTransferState()
             )
         )
-        if (captureRequests?.trySend(Unit)?.isSuccess != true) registry.updateWifiRemote(id, state)
+        bulbExposure = exposure
+        exposure?.phase(BulbPhase.Starting)
+        if (captureRequests?.trySend(exposure)?.isSuccess != true) {
+            registry.updateWifiRemote(id, state)
+            bulbExposure = null
+            exposure?.phase(BulbPhase.Failed)
+            return false
+        }
+        return true
     }
 
     fun browsePhotos(identifier: String, offset: Int? = null, preferredPhotoIndex: Int? = null) {
@@ -517,10 +549,11 @@ class WifiRemoteController internal constructor(
                 val opened = open(id, this)
                 connection = opened
                 log.i { "Wi-Fi remote attempt=$attempt ready; starting live view" }
-                val requests = Channel<Unit>(Channel.RENDEZVOUS)
+                val requests = Channel<BulbExposure?>(Channel.RENDEZVOUS)
                 captureRequests = requests
                 registry.updateWifiRemote(id, WifiRemoteState(phase = WifiRemotePhase.Ready,
                     canCaptureStill = opened.canCapture, cameraName = opened.cameraName,
+                    canCaptureBulb = opened.canCaptureBulb,
                     canTransferImages = opened.canTransferImages,
                     canConvertHeif = opened.canConvertHeif
                 )
@@ -534,11 +567,23 @@ class WifiRemoteController internal constructor(
                 startPreview(id, opened, this)
                 launch(start = CoroutineStart.UNDISPATCHED) {
                     var confirmationTimer: Job? = null
-                    for (ignored in requests) {
+                    for (exposure in requests) {
                         confirmationTimer?.cancel()
-                        val result = try { opened.capture() }
-                        catch (cancelled: CancellationException) { throw cancelled }
+                        val result = try {
+                            if (exposure == null) opened.capture() else opened.captureBulb(exposure)
+                        } catch (cancelled: CancellationException) {
+                            exposure?.phase(BulbPhase.Uncertain)
+                            throw cancelled
+                        }
                         catch (_: Exception) { WifiCaptureStatus.Uncertain }
+                        exposure?.phase(
+                            when (result) {
+                                WifiCaptureStatus.Captured, WifiCaptureStatus.Idle -> BulbPhase.Finished
+                                WifiCaptureStatus.Rejected -> BulbPhase.Failed
+                                else -> BulbPhase.Uncertain
+                            }
+                        )
+                        bulbExposure = null
                         updateReady(id) { it.copy(capture = result) }
                         confirmationTimer = if (result == WifiCaptureStatus.Captured) launch {
                             delay(3.seconds)
@@ -562,6 +607,8 @@ class WifiRemoteController internal constructor(
             log.w { "Wi-Fi remote attempt=$attempt failed: ${failed.message}" }
         }
         finally {
+            bulbExposure?.phase(BulbPhase.Uncertain)
+            bulbExposure = null
             sessionScope = null
             activeConnection = null
             previewJob = null

@@ -78,6 +78,7 @@ data class WifiRemoteState(
     val phase: WifiRemotePhase = WifiRemotePhase.Idle,
     val failure: WifiRemoteFailure? = null,
     val canCaptureStill: Boolean = false,
+    val canCaptureBulb: Boolean = false,
     val hasLiveView: Boolean = false,
     val cameraName: String = "",
     val capture: WifiCaptureStatus = WifiCaptureStatus.Idle,
