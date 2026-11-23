@@ -1,6 +1,5 @@
 package com.sasch.cameragps.sharednew.ui.remote
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -36,7 +35,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import cameragps.sharednew.generated.resources.Res
@@ -164,9 +162,9 @@ internal fun WifiPhotoViewer(
                             }
                         }
 
-                        image != null -> Image(
-                            image, contentDescription = capture.name,
-                            modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Fit
+                        image != null -> ZoomablePhotoPreview(
+                            image, contentDescription = capture.name, active = page == pager.settledPage,
+                            modifier = Modifier.fillMaxSize()
                         )
 
                         browser.loading || screenPreview?.loading == true || thumbnail?.loading == true -> CircularProgressIndicator(
