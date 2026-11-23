@@ -115,10 +115,10 @@ internal class SonyImageTransfer(
     private var captures = emptyList<WifiCameraCapture>()
     private val listedPhotos = mutableMapOf<Long, WifiCameraPhoto>()
 
-    suspend fun openBrowser(): CameraPhotoPage {
+    suspend fun openBrowser(dateRange: PhotoDateRange? = null): CameraPhotoPage {
         check(supported)
         listedPhotos.clear()
-        catalog?.let { return it.open().also(::rememberPage) }
+        catalog?.let { return it.open(dateRange).also(::rememberPage) }
         if (!modeRequested) {
             modeRequested = true
             accepted(commands.executeNoData(SET_TRANSFER_MODE, listOf(2L, 1L, 0L)))
@@ -144,7 +144,8 @@ internal class SonyImageTransfer(
         val photos = mutableListOf<WifiCameraPhoto>()
         for (handle in found.distinct().asReversed()) {
             val info = objectInfo(handle)
-            if (info.mimeType.isNotEmpty()) photos += WifiCameraPhoto(
+            if (info.mimeType.isEmpty() || dateRange?.containsCaptureDate(info.capturedAt) == false) continue
+            photos += WifiCameraPhoto(
                 handle, info.filename, info.size, info.mimeType, info.capturedAt,
                 info.size in 1..MAX_IMAGE_BYTES, info.captureId
             )

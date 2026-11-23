@@ -121,11 +121,11 @@ private class SonyWifiConnection(
         } == true
     override val lost: Flow<Unit> = merge(networkLost, disconnected.filter { it }.map { })
 
-    override suspend fun openPhotoBrowser(): CameraPhotoPage {
+    override suspend fun openPhotoBrowser(dateRange: PhotoDateRange?): CameraPhotoPage {
         if (separateTransfer && current?.ready?.purpose != SonySessionPurpose.ImageTransfer) {
             replaceSession(SonySessionPurpose.ImageTransfer)
         }
-        return checkNotNull(current).transfer.openBrowser()
+        return checkNotNull(current).transfer.openBrowser(dateRange)
     }
 
     override suspend fun photoPage(offset: Int) = checkNotNull(current).transfer.page(offset)

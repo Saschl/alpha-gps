@@ -34,6 +34,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalAccessibilityManager
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -83,6 +84,8 @@ import cameragps.sharednew.generated.resources.wifi_remote_title
 import cameragps.sharednew.generated.resources.wifi_remote_wifi_disabled
 import com.diamondedge.logging.logging
 import com.sasch.cameragps.sharednew.remote.BulbTimerState
+import com.sasch.cameragps.sharednew.remote.wifi.WifiImageTransferState
+import com.sasch.cameragps.sharednew.remote.wifi.WifiImageTransferStatus
 import com.sasch.cameragps.sharednew.remote.wifi.WifiPhotoDownload
 import com.sasch.cameragps.sharednew.remote.wifi.WifiRemoteController
 import com.sasch.cameragps.sharednew.remote.wifi.WifiRemoteFailure
@@ -90,8 +93,14 @@ import com.sasch.cameragps.sharednew.remote.wifi.WifiRemotePhase
 import com.sasch.cameragps.sharednew.remote.wifi.WifiRemoteState
 import com.sasch.cameragps.sharednew.remote.wifi.WifiShutdownStatus
 import com.sasch.cameragps.sharednew.remote.wifi.groupCameraPhotos
+import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
+
+private val DownloadConfirmationDuration = 4.seconds
 
 class WifiRemoteViewModel(val identifier: String, val controller: WifiRemoteController) : ViewModel() {
     var host by mutableStateOf("")
@@ -155,6 +164,14 @@ class WifiRemoteViewModel(val identifier: String, val controller: WifiRemoteCont
 
     fun clearPhotoSelection() {
         selectedPhotoIds = emptySet()
+    }
+
+    internal suspend fun dismissDownloadConfirmationAfter(result: WifiImageTransferState, timeout: Duration) {
+        if (result.status != WifiImageTransferStatus.Saved) return
+        delay(timeout)
+        if (controller.sessions.value[identifier.uppercase()]?.wifiRemote?.imageTransfer === result) {
+            controller.clearPhotoTransferResult(identifier)
+        }
     }
 
     fun reconcilePhotoSelection() {
@@ -238,6 +255,16 @@ fun WifiRemoteScreen(viewModel: WifiRemoteViewModel, onConnect: (String) -> Unit
     var manual by remember { mutableStateOf(!controller.supportsAutomaticConnection && !controller.supportsManualSetup) }
     val back = { viewModel.navigateBack(onClose) }
     val browserStateHolder = rememberSaveableStateHolder()
+    val transfer = state.imageTransfer
+    if (state.photoBrowser.open && transfer.status == WifiImageTransferStatus.Saved) {
+        val accessibility = LocalAccessibilityManager.current
+        LaunchedEffect(viewModel, transfer, state.photoBrowser.savedDownloads.size, accessibility) {
+            val timeout = accessibility?.calculateRecommendedTimeoutMillis(
+                DownloadConfirmationDuration.inWholeMilliseconds, containsText = true
+            )?.milliseconds ?: DownloadConfirmationDuration
+            viewModel.dismissDownloadConfirmationAfter(transfer, timeout)
+        }
+    }
     NavigationBackHandler(
         state = rememberNavigationEventState(NavigationEventInfo.None),
         isBackEnabled = true,

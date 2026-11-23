@@ -22,15 +22,19 @@ import androidx.compose.ui.platform.LocalView
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sasch.cameragps.sharednew.remote.wifi.WifiPhotoDownload
-import com.sasch.cameragps.sharednew.remote.wifi.WifiPhotoDownloadFormat
 import com.sasch.cameragps.sharednew.ui.remote.WifiRemoteScreen
 import com.sasch.cameragps.sharednew.ui.remote.WifiRemoteViewModel
 import com.saschl.cameragps.AppServices
 import com.saschl.cameragps.utils.PreferencesManager
+
+private class PendingPhotoDownloads : ViewModel() {
+    var downloads: List<WifiPhotoDownload> = emptyList()
+}
 
 @Composable
 fun AndroidWifiRemoteScreen(identifier: String, onClose: () -> Unit) {
@@ -61,15 +65,12 @@ fun AndroidWifiRemoteScreen(identifier: String, onClose: () -> Unit) {
             }
         }
     }
-    var pendingPhotos by rememberSaveable { mutableStateOf(emptyList<Long>()) }
-    var pendingPhotoFormats by rememberSaveable { mutableStateOf(emptyList<String>()) }
+    // A large date range can exceed the saved-state Bundle limit during the permission prompt.
+    val pendingPhotos = viewModel(key = "wifi-photo-permission-${identifier.uppercase()}") { PendingPhotoDownloads() }
     val storagePermission =
         rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-            val downloads = pendingPhotos.zip(pendingPhotoFormats) { handle, format ->
-                WifiPhotoDownload(handle, WifiPhotoDownloadFormat.valueOf(format))
-            }
-            pendingPhotos = emptyList()
-            pendingPhotoFormats = emptyList()
+            val downloads = pendingPhotos.downloads
+            pendingPhotos.downloads = emptyList()
             if (granted && downloads.isNotEmpty() && lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
                 controller.downloadPhotos(identifier, downloads)
             }
@@ -84,7 +85,12 @@ fun AndroidWifiRemoteScreen(identifier: String, onClose: () -> Unit) {
     }
     // Backgrounding keeps Wi-Fi alive; leaving remote or stopping the FGS closes it.
     DisposableEffect(identifier) {
-        onDispose { if (activity?.isChangingConfigurations != true) controller.disconnect(identifier) }
+        onDispose {
+            if (activity?.isChangingConfigurations != true) {
+                pendingPhotos.downloads = emptyList()
+                controller.disconnect(identifier)
+            }
+        }
     }
     val connect: (String?) -> Unit = { host ->
         val required = buildList {
@@ -126,8 +132,7 @@ fun AndroidWifiRemoteScreen(identifier: String, onClose: () -> Unit) {
                     android.Manifest.permission.WRITE_EXTERNAL_STORAGE
                 ) != PackageManager.PERMISSION_GRANTED
             ) {
-                pendingPhotos = downloads.map { it.handle }
-                pendingPhotoFormats = downloads.map { it.format.name }
+                pendingPhotos.downloads = downloads
                 storagePermission.launch(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
             } else controller.downloadPhotos(identifier, downloads)
         },

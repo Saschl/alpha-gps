@@ -72,6 +72,7 @@ data class WifiPhotoBrowserState(
     val totalObjects: Int? = null,
     val hasMore: Boolean = false,
     val savedDownloads: Set<WifiPhotoDownload> = emptySet(),
+    val dateRange: PhotoDateRange? = null,
 )
 
 data class WifiRemoteState(

@@ -345,7 +345,7 @@
     <string name="welcome_ready_body">Alpha GPS benötigt deinen genauen Standort, um deine Fotos mit Geodaten zu versehen. Mit Standortzugriff im Hintergrund läuft die Übertragung auch bei gesperrtem Handy weiter.</string>
     <string name="wifi_remote_experimental_title">Experimentelle WLAN-Fernbedienung</string>
     <string name="wifi_remote_experimental_message">WLAN-Fernbedienung ist experimentell und wurde bis jetzt nur auf meiner A6700 getestet. Andere Kameras könnten sich anders verhalten.\n\nBitte melde auftretende Fehler oder Probleme per Mail oder auf Github. Inkludiere dein Kamera-Modell und deine Betriebssysteme (Android oder iOS) und dessen Version.</string>
-    <string name="wifi_remote_title">WLAN-Fernbedienung (experimentell)</string>
+    <string name="wifi_remote_title">WLAN-Fernbedienung</string>
     <string name="wifi_remote_entry_hint">Live-Ansicht, Auslöser und Foto-Downloads</string>
     <string name="wifi_remote_setup">Starte an der Kamera die WLAN-Verbindung für Smartphones und trenne die Verbindung zur Creators’ App. Verbinde dich anschließend in den Einstellungen deines Smartphones mit dem WLAN der Kamera. Gib die IP-Adresse der Kamera ein.</string>
     <string name="wifi_remote_ip">IP-Adresse der Kamera</string>
@@ -426,6 +426,13 @@
     <string name="wifi_remote_browser_hint">Lade JPEG-, RAW- und HEIF-Originaldateien in deine Fotomediathek herunter. Bei neueren Kameras werden die Fotos von Karte 1 angezeigt. Die Dateien bleiben auf der Kamera erhalten. Lass diesen Bildschirm geöffnet, bis der Download abgeschlossen ist.</string>
     <string name="wifi_remote_browser_loading">Fotos auf der Kamera werden gelesen…</string>
     <string name="wifi_remote_browser_failed">Die Fotos auf der Kamera konnten nicht gelesen oder der Übertragungsmodus konnte nicht gewechselt werden. Versuche es erneut. Falls die Kamera beschäftigt ist, trenne die Verbindung und stelle sie erneut her.</string>
+    <string name="wifi_remote_all_dates">Alle Daten</string>
+    <string name="wifi_remote_today">Heute</string>
+    <string name="wifi_remote_choose_dates">Zeitraum wählen…</string>
+    <string name="wifi_remote_show_photos">Fotos anzeigen</string>
+    <string name="wifi_remote_download_all">Alle herunterladen</string>
+    <string name="wifi_remote_date_empty">Keine Aufnahmen in diesem Zeitraum.</string>
+    <string name="wifi_remote_loading_matches">Fotos im gewählten Zeitraum werden gesucht…</string>
     <string name="wifi_remote_browser_empty">Keine unterstützten Fotos auf dieser Speicherkarte.</string>
     <string name="wifi_remote_browser_refresh">Aktualisieren</string>
     <string name="wifi_remote_browser_back">Zurück zur Fernsteuerung</string>

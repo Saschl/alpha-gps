@@ -335,7 +335,7 @@ kotlin {
                 implementation(libs.components.resources)
                 implementation(libs.androidx.sqlite.bundled)
                 implementation(libs.logging)
-                implementation(libs.kotlinx.datetime)
+                api(libs.kotlinx.datetime)
                 implementation(libs.androidx.lifecycle.viewmodel.compose)
                 implementation(libs.lifecycle.runtime.compose)
 

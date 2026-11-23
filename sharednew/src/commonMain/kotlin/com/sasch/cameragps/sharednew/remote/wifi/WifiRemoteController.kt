@@ -1,5 +1,6 @@
 package com.sasch.cameragps.sharednew.remote.wifi
 
+import androidx.compose.runtime.mutableStateSetOf
 import androidx.compose.ui.graphics.ImageBitmap
 import com.diamondedge.logging.logging
 import com.sasch.cameragps.sharednew.bluetooth.BleSessionPhase
@@ -40,7 +41,7 @@ internal interface WifiRemoteConnection {
     val canTransferImages: Boolean get() = false
     val canConvertHeif: Boolean get() = false
     val photoHandlesSurviveModeSwitch: Boolean get() = true
-    suspend fun openPhotoBrowser(): CameraPhotoPage = error("Photo browsing unavailable")
+    suspend fun openPhotoBrowser(dateRange: PhotoDateRange? = null): CameraPhotoPage = error("Photo browsing unavailable")
     suspend fun photoPage(offset: Int): CameraPhotoPage = error("Photo browsing unavailable")
     suspend fun photoThumbnail(handle: Long): ImageBitmap? = null
     suspend fun photoPreview(handle: Long): ImageBitmap? = null
@@ -248,34 +249,49 @@ class WifiRemoteController internal constructor(
         return true
     }
 
-    fun browsePhotos(identifier: String) = loadPhotos(identifier, offset = null)
+    fun browsePhotos(
+        identifier: String,
+        dateRange: PhotoDateRange? = registry.get(identifier)?.wifiRemote?.photoBrowser?.dateRange,
+    ) = loadPhotos(identifier, offset = null, dateRange = dateRange)
 
-    fun loadMorePhotos(identifier: String) {
+    fun loadMorePhotos(identifier: String, allMatchingDates: Boolean = false) {
         val browser = registry.get(identifier)?.wifiRemote?.photoBrowser ?: return
-        if (browser.open && browser.hasMore && !browser.loading) loadPhotos(identifier, browser.loadedCaptures)
+        if (!browser.open || !browser.hasMore || browser.loading) return
+        if (allMatchingDates && browser.dateRange == null) return
+        loadPhotos(identifier, browser.loadedCaptures, browser.dateRange, allMatchingDates)
     }
 
-    private fun loadPhotos(identifier: String, offset: Int?) {
+    private fun loadPhotos(identifier: String, offset: Int?, dateRange: PhotoDateRange?, allPages: Boolean = false) {
         val operation = if (offset == null) "open the photo catalog" else "load a photo page"
         photoWork(identifier, operation, { state ->
-            val browser = if (offset == null) WifiPhotoBrowserState(savedDownloads = state.photoBrowser.savedDownloads)
-                else state.photoBrowser
+            val browser = if (offset == null) WifiPhotoBrowserState(
+                savedDownloads = state.photoBrowser.savedDownloads, dateRange = dateRange
+            ) else state.photoBrowser
             state.copy(photoBrowser = browser.copy(open = true, loading = true, failed = false))
         }) { id, connection ->
-            val page = if (offset == null) {
+            var page = if (offset == null) {
                 previewJob?.cancelAndJoin()
                 previewJob = null
                 _image.value = null
                 thumbnailCache = linkedMapOf()
                 updateReady(id) { it.copy(hasLiveView = false) }
-                connection.openPhotoBrowser()
+                connection.openPhotoBrowser(dateRange)
             } else connection.photoPage(offset)
-            val count = groupCameraPhotos(page.photos).size
-            check(page.offset == (offset ?: 0) && (count > 0 || !page.hasMore)) { "Invalid camera photo page" }
+            var nextOffset = offset ?: 0
+            val photos = mutableListOf<WifiCameraPhoto>()
+            while (true) {
+                val count = groupCameraPhotos(page.photos).size
+                check(page.offset == nextOffset && (count > 0 || !page.hasMore)) { "Invalid camera photo page" }
+                photos += page.photos
+                nextOffset += count
+                if (!allPages || !page.hasMore) break
+                currentCoroutineContext().ensureActive()
+                page = connection.photoPage(nextOffset)
+            }
             updateReady(id) {
                 it.copy(photoBrowser = it.photoBrowser.copy(
-                    photos = it.photoBrowser.photos + page.photos,
-                    loadedCaptures = page.offset + count,
+                    photos = it.photoBrowser.photos + photos,
+                    loadedCaptures = nextOffset,
                     totalObjects = page.totalObjects,
                     hasMore = page.hasMore
                 ))
@@ -372,6 +388,8 @@ class WifiRemoteController internal constructor(
                     )
                 )
             }) { id, connection ->
+            // Publish immutable snapshots without copying the whole set for every file in a date range.
+            val savedDownloads = mutableStateSetOf<WifiPhotoDownload>().apply { addAll(state.photoBrowser.savedDownloads) }
             for ((index, download) in pending.withIndex()) {
                 currentCoroutineContext().ensureActive()
                 updateReady(id) {
@@ -395,16 +413,14 @@ class WifiRemoteController internal constructor(
                         }
                     }
                 val saved = result.status == WifiImageTransferStatus.Saved
+                if (saved) savedDownloads.add(download)
                 updateReady(id) {
                     it.copy(
                         imageTransfer = result.copy(
                             status = if (saved && index < pending.lastIndex) WifiImageTransferStatus.Downloading else result.status,
                             completedFiles = index + if (saved) 1 else 0, totalFiles = pending.size
                         ),
-                        photoBrowser = it.photoBrowser.copy(
-                            savedDownloads = if (saved) it.photoBrowser.savedDownloads + download
-                            else it.photoBrowser.savedDownloads
-                        )
+                        photoBrowser = it.photoBrowser.copy(savedDownloads = savedDownloads.toSet())
                     )
                 }
                 if (!saved) break

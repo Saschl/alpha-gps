@@ -364,7 +364,7 @@
     <string name="welcome_ready_body">Alpha GPS needs precise location access to geotag your photos. Background access keeps location updates running while your phone is locked.</string>
     <string name="wifi_remote_experimental_title">Experimental Wi-Fi remote</string>
     <string name="wifi_remote_experimental_message">Wi-Fi remote is experimental and has currently only been validated with the developer’s Sony α6700. Other camera models may behave differently.\n\nPlease report any issues by email or on GitHub. Include your camera model and your phone’s operating system and version (Android or iOS).</string>
-    <string name="wifi_remote_title">Wi-Fi remote (experimental)</string>
+    <string name="wifi_remote_title">Wi-Fi remote</string>
     <string name="wifi_remote_entry_hint">Live view, shutter and photo downloads</string>
     <string name="wifi_remote_setup">Start the camera’s smartphone Wi-Fi connection, disconnect Creators’ App, then join the camera’s Wi-Fi in phone settings. Enter the camera IP address.</string>
     <string name="wifi_remote_ip">Camera IP address</string>
@@ -445,6 +445,13 @@
     <string name="wifi_remote_browser_hint">Download original JPEG, RAW and HEIF files to your photo library. Browses card slot 1 on newer cameras. Files stay on the camera. Keep this screen open until the download finishes.</string>
     <string name="wifi_remote_browser_loading">Reading camera photos…</string>
     <string name="wifi_remote_browser_failed">Could not read camera photos or change transfer mode. Retry, or disconnect and reconnect if the camera is busy.</string>
+    <string name="wifi_remote_all_dates">All dates</string>
+    <string name="wifi_remote_today">Today</string>
+    <string name="wifi_remote_choose_dates">Choose dates…</string>
+    <string name="wifi_remote_show_photos">Show photos</string>
+    <string name="wifi_remote_download_all">Download all</string>
+    <string name="wifi_remote_date_empty">No photos captured on these dates.</string>
+    <string name="wifi_remote_loading_matches">Finding all photos in this date range…</string>
     <string name="wifi_remote_browser_empty">No supported photos on this card.</string>
     <string name="wifi_remote_browser_refresh">Refresh</string>
     <string name="wifi_remote_browser_back">Back to remote shooting</string>

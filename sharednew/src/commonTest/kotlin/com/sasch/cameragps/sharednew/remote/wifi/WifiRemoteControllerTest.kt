@@ -21,6 +21,7 @@ import kotlin.test.assertNull
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.seconds
+import kotlinx.datetime.LocalDate
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -31,6 +32,7 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -67,6 +69,7 @@ class WifiRemoteControllerTest : WifiLoggingTest() {
         }
         override val canTransferImages = true
         override var canConvertHeif = true
+        private var catalog = emptyList<WifiCameraCapture>()
         var browsing = false
         var downloads = 0
         var photos = listOf(WifiCameraPhoto(42L, "DSC.JPG", 100L, "image/jpeg", ""))
@@ -81,6 +84,7 @@ class WifiRemoteControllerTest : WifiLoggingTest() {
         val failingPreviews = mutableSetOf<Long>()
         val pageRequests = mutableListOf<Int>()
         var pageGate: CompletableDeferred<Unit>? = null
+        var failAtOffset: Int? = null
         var failPage = false
         val downloadedHandles = mutableListOf<Long>()
         val downloadedFormats = mutableListOf<WifiPhotoDownloadFormat>()
@@ -88,17 +92,18 @@ class WifiRemoteControllerTest : WifiLoggingTest() {
         val downloadResult = CompletableDeferred<WifiImageTransferState>()
         var downloadResults: Channel<WifiImageTransferState>? = null
         var afterDownload: (() -> Unit)? = null
-        override suspend fun openPhotoBrowser(): CameraPhotoPage {
+        override suspend fun openPhotoBrowser(dateRange: PhotoDateRange?): CameraPhotoPage {
             browsing = true
             cleanup += "browse"
-            return cameraPhotoPage(groupCameraPhotos(photos), 0)
+            catalog = groupCameraPhotos(photos.filter { dateRange?.containsCaptureDate(it.capturedAt) != false })
+            return cameraPhotoPage(catalog, 0)
         }
 
         override suspend fun photoPage(offset: Int): CameraPhotoPage {
             pageRequests += offset
             pageGate?.await()
-            check(!failPage)
-            return cameraPhotoPage(groupCameraPhotos(photos), offset)
+            check(!failPage && offset != failAtOffset)
+            return cameraPhotoPage(catalog, offset)
         }
 
         override suspend fun photoThumbnail(handle: Long): ImageBitmap? {
@@ -393,6 +398,64 @@ class WifiRemoteControllerTest : WifiLoggingTest() {
     }
 
     @Test
+    fun dateBatchIncludesUnseenPagesAndRetriesWithoutDownloadingPartialResults() = runTest {
+        val registry = CameraSessionRegistry()
+        val date = LocalDate(2026, 11, 24)
+        val range = PhotoDateRange(date, date)
+        val connection = Connection().apply {
+            photos = (0L..83L).flatMap { id ->
+                val timestamp = if (id == 0L) "20261123T235959" else "20261124T000000"
+                listOf(
+                    WifiCameraPhoto(2 * id, "$id.JPG", 100, "image/jpeg", timestamp, captureId = "$id"),
+                    WifiCameraPhoto(2 * id + 1, "$id.ARW", 100, "image/x-sony-arw", timestamp, captureId = "$id")
+                )
+            }
+            downloadResult.complete(WifiImageTransferState(WifiImageTransferStatus.Saved))
+        }
+        val controller = WifiRemoteController(backgroundScope, registry, { _, _ -> connection }, {}, {})
+        fun browser() = registry.get("camera")!!.wifiRemote.photoBrowser
+        controller.connect("camera", "127.0.0.1")
+        runCurrent()
+        controller.browsePhotos("camera", range)
+        runCurrent()
+        assertEquals(40, browser().loadedCaptures)
+        controller.downloadPhoto("camera", 2)
+        runCurrent()
+
+        connection.failAtOffset = 80
+        controller.loadMorePhotos("camera", allMatchingDates = true)
+        runCurrent()
+        assertTrue(browser().failed)
+        assertTrue(browser().hasMore)
+        assertEquals(40, browser().loadedCaptures)
+        assertEquals(listOf(2L), connection.downloadedHandles)
+
+        connection.failAtOffset = null
+        controller.loadMorePhotos("camera", allMatchingDates = true)
+        runCurrent()
+        assertFalse(browser().hasMore)
+        assertEquals(83, browser().loadedCaptures)
+        assertEquals(listOf(40, 80, 40, 80), connection.pageRequests)
+        assertTrue(connection.thumbnailRequests.isEmpty())
+        val downloads = photoBatchDownloads(groupCameraPhotos(browser().photos),
+            setOf(WifiPhotoBatchFormat.Jpeg, WifiPhotoBatchFormat.Raw), browser().savedDownloads, false)
+        controller.downloadPhotos("camera", downloads)
+        runCurrent()
+        assertEquals((2L..167L).toList(), connection.downloadedHandles)
+
+        controller.browsePhotos("camera")
+        runCurrent()
+        assertEquals(range, browser().dateRange)
+        assertEquals(83, browser().totalObjects)
+        assertEquals(40, browser().loadedCaptures)
+        controller.browsePhotos("camera", null)
+        runCurrent()
+        assertNull(browser().dateRange)
+        assertEquals(84, browser().totalObjects)
+        controller.closeAndJoin()
+    }
+
+    @Test
     fun gridAppendsOncePreservesSelectionAndRefreshRestartsAtTheBeginning() = runTest {
         val registry = CameraSessionRegistry()
         val connection = pagedConnection()
@@ -443,7 +506,7 @@ class WifiRemoteControllerTest : WifiLoggingTest() {
         val catalogError = IllegalArgumentException("Camera catalog did not advance")
         var stall = false
         val connection = object : WifiRemoteConnection by Connection() {
-            override suspend fun openPhotoBrowser(): CameraPhotoPage {
+            override suspend fun openPhotoBrowser(dateRange: PhotoDateRange?): CameraPhotoPage {
                 if (stall) withTimeout(1.seconds) { awaitCancellation() }
                 throw catalogError
             }
@@ -1266,6 +1329,52 @@ class WifiRemoteControllerTest : WifiLoggingTest() {
         controller.downloadPhoto("camera", 0L)
         runCurrent()
         assertEquals(3, connection.downloads)
+        controller.closeAndJoin()
+    }
+
+    @Test
+    fun eachDownloadConfirmationGetsItsOwnTimeoutAndKeepsSavedFiles() = runTest {
+        val registry = CameraSessionRegistry()
+        val connection = pagedConnection().apply {
+            // Two different handles can have the same filename on the card.
+            photos = photos.map { it.copy(filename = "DSC.JPG") }
+            downloadResult.complete(WifiImageTransferState(WifiImageTransferStatus.Saved))
+        }
+        val controller = WifiRemoteController(backgroundScope, registry, { _, _ -> connection }, {}, {})
+        val model = WifiRemoteViewModel("camera", controller)
+        fun state() = registry.get("camera")!!.wifiRemote
+        fun startConfirmationTimer() {
+            val result = state().imageTransfer
+            launch { model.dismissDownloadConfirmationAfter(result, 4.seconds) }
+        }
+
+        controller.connect("camera", "127.0.0.1")
+        runCurrent()
+        controller.browsePhotos("camera")
+        runCurrent()
+        controller.downloadPhoto("camera", 0L)
+        runCurrent()
+        startConfirmationTimer()
+        advanceTimeBy(2.seconds)
+        controller.downloadPhoto("camera", 2L)
+        runCurrent()
+        startConfirmationTimer()
+        advanceTimeBy(2.seconds)
+        runCurrent()
+        assertEquals(WifiImageTransferStatus.Saved, state().imageTransfer.status)
+        advanceTimeBy(2.seconds)
+        runCurrent()
+        assertEquals(WifiImageTransferState(), state().imageTransfer)
+        assertEquals(setOf(WifiPhotoDownload(0L), WifiPhotoDownload(2L)), state().photoBrowser.savedDownloads)
+
+        controller.downloadPhotos("camera", listOf(WifiPhotoDownload(4L), WifiPhotoDownload(6L)))
+        runCurrent()
+        assertEquals(2, state().imageTransfer.completedFiles)
+        startConfirmationTimer()
+        advanceTimeBy(4.seconds)
+        runCurrent()
+        assertEquals(WifiImageTransferState(), state().imageTransfer)
+        assertEquals(4, state().photoBrowser.savedDownloads.size)
         controller.closeAndJoin()
     }
 

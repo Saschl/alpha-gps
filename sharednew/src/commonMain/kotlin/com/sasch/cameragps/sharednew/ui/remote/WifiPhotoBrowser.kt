@@ -24,6 +24,7 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
@@ -56,14 +57,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import cameragps.sharednew.generated.resources.Res
 import cameragps.sharednew.generated.resources.wifi_remote_batch_progress
-import cameragps.sharednew.generated.resources.wifi_remote_browser_back
 import cameragps.sharednew.generated.resources.wifi_remote_browser_empty
 import cameragps.sharednew.generated.resources.wifi_remote_browser_failed
 import cameragps.sharednew.generated.resources.wifi_remote_browser_refresh
@@ -71,12 +73,15 @@ import cameragps.sharednew.generated.resources.wifi_remote_browser_tap_hint
 import cameragps.sharednew.generated.resources.wifi_remote_browser_title
 import cameragps.sharednew.generated.resources.wifi_remote_conversion_failed
 import cameragps.sharednew.generated.resources.wifi_remote_converting_jpeg
+import cameragps.sharednew.generated.resources.wifi_remote_date_empty
 import cameragps.sharednew.generated.resources.wifi_remote_download
+import cameragps.sharednew.generated.resources.wifi_remote_download_all
 import cameragps.sharednew.generated.resources.wifi_remote_download_format
 import cameragps.sharednew.generated.resources.wifi_remote_download_saved
 import cameragps.sharednew.generated.resources.wifi_remote_download_too_large
 import cameragps.sharednew.generated.resources.wifi_remote_jpeg_copy
 import cameragps.sharednew.generated.resources.wifi_remote_jpeg_copy_hint
+import cameragps.sharednew.generated.resources.wifi_remote_loading_matches
 import cameragps.sharednew.generated.resources.wifi_remote_photo_captured
 import cameragps.sharednew.generated.resources.wifi_remote_photo_close
 import cameragps.sharednew.generated.resources.wifi_remote_photo_download_hint
@@ -107,6 +112,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 
+private enum class DownloadBatch { Selection, DateRange }
+
 @Composable
 internal fun WifiPhotoBrowser(
     state: WifiRemoteState, viewModel: WifiRemoteViewModel,
@@ -121,17 +128,22 @@ internal fun WifiPhotoBrowser(
     val selectedIds = viewModel.selectedPhotoIds
     val selecting = selectedIds.isNotEmpty()
     val gridState = rememberLazyGridState()
-    LaunchedEffect(gridState, captures.size, browser.hasMore, browser.failed, busy) {
-        if (browser.hasMore && !busy && !browser.failed) {
-            // The grid has one header before the captures. Prefetch the next few rows.
-            snapshotFlow { gridState.layoutInfo.visibleItemsInfo.lastOrNull()?.index }
-                .first { it != null && it >= captures.size - 6 }
-            controller.loadMorePhotos(identifier)
+    var batch by rememberSaveable { mutableStateOf<DownloadBatch?>(null) }
+    LaunchedEffect(gridState, captures.size, browser.hasMore, browser.failed, busy, batch) {
+        if (!browser.hasMore || busy || browser.failed) return@LaunchedEffect
+        when (batch) {
+            DownloadBatch.DateRange -> controller.loadMorePhotos(identifier, allMatchingDates = true)
+            DownloadBatch.Selection -> Unit
+            null -> {
+                // The grid has one header before the captures. Prefetch the next few rows.
+                snapshotFlow { gridState.layoutInfo.visibleItemsInfo.lastOrNull()?.index }
+                    .first { it != null && it >= captures.size - 6 }
+                controller.loadMorePhotos(identifier)
+            }
         }
     }
-    var showBatchOptions by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(selecting) {
-        if (!selecting) showBatchOptions = false
+        if (!selecting && batch == DownloadBatch.Selection) batch = null
     }
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         if (selecting) {
@@ -149,7 +161,7 @@ internal fun WifiPhotoBrowser(
                 ) {
                     Text(stringResource(Res.string.wifi_remote_selection_all))
                 }
-                Button(onClick = { showBatchOptions = true }, enabled = !busy) {
+                Button(onClick = { batch = DownloadBatch.Selection }, enabled = !busy) {
                     Text(stringResource(Res.string.wifi_remote_download))
                 }
             }
@@ -179,11 +191,11 @@ internal fun WifiPhotoBrowser(
                             Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            TextButton(
-                                onClick = { controller.leavePhotoBrowser(identifier) },
-                                enabled = !busy
-                            ) {
-                                Text(stringResource(Res.string.wifi_remote_browser_back))
+                            Box(Modifier.weight(1f)) {
+                                PhotoDateFilter(browser.dateRange, enabled = !busy) { range ->
+                                    gridState.requestScrollToItem(0)
+                                    controller.browsePhotos(identifier, range)
+                                }
                             }
                             TextButton(
                                 onClick = {
@@ -196,13 +208,20 @@ internal fun WifiPhotoBrowser(
                             }
                         }
                     }
+                    if (!selecting && browser.dateRange != null && captures.isNotEmpty()) {
+                        Button(enabled = !busy, onClick = {
+                            batch = DownloadBatch.DateRange
+                            if (browser.failed) controller.loadMorePhotos(identifier, allMatchingDates = true)
+                        }) { Text(stringResource(Res.string.wifi_remote_download_all)) }
+                    }
                     if (browser.loading && captures.isEmpty()) LinearProgressIndicator(Modifier.fillMaxWidth())
                     if (browser.failed && (captures.isEmpty() || !browser.hasMore)) Text(
                         stringResource(Res.string.wifi_remote_browser_failed),
                         color = MaterialTheme.colorScheme.error
                     )
                     if (!browser.loading && captures.isEmpty() && !browser.failed) {
-                        Text(stringResource(Res.string.wifi_remote_browser_empty))
+                        Text(stringResource(if (browser.dateRange == null) Res.string.wifi_remote_browser_empty
+                            else Res.string.wifi_remote_date_empty))
                     }
                 }
             }
@@ -273,11 +292,38 @@ internal fun WifiPhotoBrowser(
             }
         }
     }
-    if (showBatchOptions && selecting) {
+    if (batch == DownloadBatch.DateRange && browser.hasMore) {
+        val dismiss = {
+            batch = null
+            if (browser.loading) controller.cancelPhotoOperation(identifier)
+        }
+        AlertDialog(
+            onDismissRequest = dismiss,
+            title = { Text(stringResource(Res.string.wifi_remote_download_all)) },
+            text = {
+                if (browser.failed) Text(stringResource(Res.string.wifi_remote_browser_failed))
+                else Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(stringResource(Res.string.wifi_remote_loading_matches))
+                    LinearProgressIndicator(Modifier.fillMaxWidth())
+                }
+            },
+            confirmButton = {
+                if (browser.failed) TextButton(onClick = {
+                    controller.loadMorePhotos(identifier, allMatchingDates = true)
+                }) { Text(stringResource(Res.string.wifi_remote_viewer_retry)) }
+            },
+            dismissButton = {
+                TextButton(onClick = dismiss) { Text(stringResource(Res.string.wifi_remote_transfer_cancel)) }
+            },
+        )
+    } else if ((batch == DownloadBatch.DateRange && browser.dateRange != null && !browser.loading) ||
+        (batch == DownloadBatch.Selection && selecting)
+    ) {
         PhotoBatchDownloadSheet(
-            captures.filter { it.id in selectedIds }, state,
-            onDismiss = { showBatchOptions = false },
-            onDownload = { downloads -> showBatchOptions = false; onDownload(downloads) },
+            if (batch == DownloadBatch.DateRange) captures else captures.filter { it.id in selectedIds }, state,
+            selectOriginals = batch == DownloadBatch.DateRange,
+            onDismiss = { batch = null },
+            onDownload = { downloads -> batch = null; onDownload(downloads) },
         )
     }
 }
@@ -457,14 +503,16 @@ internal fun PhotoDetailsSheet(
 
 @Composable
 internal fun PhotoTransferStatus(transfer: WifiImageTransferState) {
-    if (transfer.totalFiles > 1) {
-        Text(
-            stringResource(
-                Res.string.wifi_remote_batch_progress,
-                transfer.completedFiles,
-                transfer.totalFiles
-            )
+    val saved = transfer.status == WifiImageTransferStatus.Saved
+    val summary = when {
+        transfer.totalFiles > 1 -> stringResource(
+            Res.string.wifi_remote_batch_progress, transfer.completedFiles, transfer.totalFiles
         )
+        saved -> stringResource(Res.string.wifi_remote_transfer_saved, transfer.filename)
+        else -> null
+    }
+    if (summary != null) {
+        Text(summary, modifier = if (saved) Modifier.semantics { liveRegion = LiveRegionMode.Polite } else Modifier)
     }
     when (transfer.status) {
         WifiImageTransferStatus.Downloading -> {
@@ -478,10 +526,9 @@ internal fun PhotoTransferStatus(transfer: WifiImageTransferState) {
             LinearProgressIndicator(Modifier.fillMaxWidth())
         }
         WifiImageTransferStatus.ConversionFailed -> Text(stringResource(Res.string.wifi_remote_conversion_failed))
-        WifiImageTransferStatus.Saved -> Text(stringResource(Res.string.wifi_remote_transfer_saved, transfer.filename))
         WifiImageTransferStatus.Failed -> Text(stringResource(Res.string.wifi_remote_transfer_failed))
         WifiImageTransferStatus.Cancelled -> Text(stringResource(Res.string.wifi_remote_transfer_cancelled))
         WifiImageTransferStatus.PermissionDenied -> Text(stringResource(Res.string.wifi_remote_storage_permission))
-        WifiImageTransferStatus.Idle -> Unit
+        WifiImageTransferStatus.Saved, WifiImageTransferStatus.Idle -> Unit
     }
 }

@@ -1,5 +1,6 @@
 package com.sasch.cameragps.sharednew.remote.wifi
 
+import kotlinx.datetime.LocalDate
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.channels.Channel
@@ -24,9 +25,9 @@ class SonyImageTransferTest : WifiLoggingTest() {
             } + byteArrayOf(0, 0)
 
     private fun info(size: Long, name: String = "DSC01234.JPG", format: Int = 0x3801,
-                     storage: Long = 1, parent: Long = 0): ByteArray =
+                     storage: Long = 1, parent: Long = 0, capturedAt: String = ""): ByteArray =
         (number(storage, 4) + number(format.toLong(), 2) + number(0, 2) + number(size, 4) +
-                ByteArray(40) + string(name) + byteArrayOf(0, 0, 0))
+                ByteArray(40) + string(name) + string(capturedAt) + byteArrayOf(0, 0))
             .also { number(parent, 4).copyInto(it, 38) }
 
     private fun properties(prepared: Boolean): ByteArray = number(1, 8) + number(0xd295, 2) +
@@ -184,6 +185,26 @@ class SonyImageTransferTest : WifiLoggingTest() {
         assertEquals(600_000L, progress.last().bytesReceived)
         transfer.closeBrowser()
         assertEquals(0x9212 to listOf(2L, 0L, 0L), transport.operations.last())
+        queue.close()
+    }
+
+    @Test
+    fun legacyDateRangeIncludesBothDaysAndKeepsUndatedPhotosInAllDates() = runTest {
+        val transport = Transport().apply {
+            val dates = listOf("20240228T235959", "20240229T000000", "2024-03-01T23:59:59-08:00",
+                "20240302T000000", "", "20240230T120000")
+            objectCount = dates.size
+            metadata = dates.mapIndexed { i, date ->
+                i + 1L to info(100, "DSC$i.JPG", capturedAt = date)
+            }.toMap()
+        }
+        val queue = PtpIpCommandQueue(transport, backgroundScope)
+        val transfer = SonyImageTransfer(queue, ready()) { Destination() }
+        val range = PhotoDateRange(LocalDate(2024, 2, 29), LocalDate(2024, 3, 1))
+        val filtered = transfer.openBrowser(range)
+        assertEquals(setOf(2L, 3L), filtered.photos.map { it.handle }.toSet())
+        assertFalse(filtered.hasMore)
+        assertEquals(6, transfer.openBrowser().totalObjects)
         queue.close()
     }
 

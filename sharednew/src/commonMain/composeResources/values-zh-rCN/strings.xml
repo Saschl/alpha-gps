@@ -332,7 +332,7 @@
     <string name="welcome_ready_body">Alpha GPS 需要访问精确位置，才能为照片添加地理位置信息。后台位置访问可让位置更新在手机锁屏时继续运行。</string>
     <string name="wifi_remote_experimental_title">实验性 Wi-Fi 遥控</string>
     <string name="wifi_remote_experimental_message">Wi-Fi 遥控功能仍处于实验阶段，目前仅在开发者的索尼 α6700 上验证过。其他相机型号的表现可能不同。\n\n如遇问题，请通过电子邮件或 GitHub 反馈，并注明相机型号及手机操作系统和版本（Android 或 iOS）。</string>
-    <string name="wifi_remote_title">Wi-Fi 遥控（实验性）</string>
+    <string name="wifi_remote_title">Wi-Fi 遥控</string>
     <string name="wifi_remote_entry_hint">实时取景、遥控快门和照片下载</string>
     <string name="wifi_remote_setup">启动相机的智能手机 Wi-Fi 连接，断开 Creators’ App 的连接，然后在手机设置中连接相机的 Wi-Fi，并输入相机的 IP 地址。</string>
     <string name="wifi_remote_ip">相机 IP 地址</string>
@@ -408,6 +408,13 @@
     <string name="wifi_remote_browser_hint">将原始 JPEG、RAW 和 HEIF 文件下载到手机相册。较新的相机仅浏览卡槽 1。相机上的文件会保留。请在下载完成前保持此页面打开。</string>
     <string name="wifi_remote_browser_loading">正在读取相机照片…</string>
     <string name="wifi_remote_browser_failed">无法读取相机照片或切换传输模式。请重试；如果相机正忙，请断开连接后重新连接。</string>
+    <string name="wifi_remote_all_dates">所有日期</string>
+    <string name="wifi_remote_today">今天</string>
+    <string name="wifi_remote_choose_dates">选择日期范围…</string>
+    <string name="wifi_remote_show_photos">显示照片</string>
+    <string name="wifi_remote_download_all">全部下载</string>
+    <string name="wifi_remote_date_empty">所选日期范围内没有拍摄的照片。</string>
+    <string name="wifi_remote_loading_matches">正在查找此日期范围内的所有照片…</string>
     <string name="wifi_remote_browser_empty">此存储卡上没有支持的照片。</string>
     <string name="wifi_remote_browser_refresh">刷新</string>
     <string name="wifi_remote_browser_back">返回遥控拍摄</string>

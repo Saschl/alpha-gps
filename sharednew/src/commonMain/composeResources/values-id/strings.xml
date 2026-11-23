@@ -332,7 +332,7 @@
     <string name="welcome_ready_body">Alpha GPS memerlukan akses lokasi presisi untuk menyimpan lokasi di foto Anda. Akses lokasi di latar belakang menjaga pembaruan lokasi tetap berjalan saat ponsel terkunci.</string>
     <string name="wifi_remote_experimental_title">Kontrol jarak jauh Wi-Fi eksperimental</string>
     <string name="wifi_remote_experimental_message">Kontrol jarak jauh Wi-Fi masih bersifat eksperimental dan saat ini baru diuji pada Sony α6700 milik pengembang. Model kamera lain mungkin berfungsi secara berbeda.\n\nLaporkan masalah melalui email atau GitHub. Sertakan model kamera serta sistem operasi dan versi ponsel Anda (Android atau iOS).</string>
-    <string name="wifi_remote_title">Kontrol jarak jauh Wi-Fi (eksperimental)</string>
+    <string name="wifi_remote_title">Kontrol jarak jauh Wi-Fi</string>
     <string name="wifi_remote_entry_hint">Tampilan langsung, rana, dan unduhan foto</string>
     <string name="wifi_remote_setup">Aktifkan koneksi Wi-Fi kamera untuk ponsel, putuskan koneksi Creators’ App, lalu hubungkan ponsel ke Wi-Fi kamera melalui pengaturan ponsel. Masukkan alamat IP kamera.</string>
     <string name="wifi_remote_ip">Alamat IP kamera</string>
@@ -408,6 +408,13 @@
     <string name="wifi_remote_browser_hint">Unduh file JPEG, RAW, dan HEIF asli ke pustaka foto Anda. Pada kamera yang lebih baru, foto ditelusuri dari slot kartu 1. File tetap ada di kamera. Biarkan layar ini terbuka hingga unduhan selesai.</string>
     <string name="wifi_remote_browser_loading">Membaca foto dari kamera…</string>
     <string name="wifi_remote_browser_failed">Tidak dapat membaca foto dari kamera atau mengubah mode transfer. Coba lagi, atau putuskan lalu sambungkan kembali jika kamera sedang sibuk.</string>
+    <string name="wifi_remote_all_dates">Semua tanggal</string>
+    <string name="wifi_remote_today">Hari ini</string>
+    <string name="wifi_remote_choose_dates">Pilih rentang tanggal…</string>
+    <string name="wifi_remote_show_photos">Tampilkan foto</string>
+    <string name="wifi_remote_download_all">Unduh semua</string>
+    <string name="wifi_remote_date_empty">Tidak ada foto yang diambil dalam rentang tanggal ini.</string>
+    <string name="wifi_remote_loading_matches">Mencari semua foto dalam rentang tanggal ini…</string>
     <string name="wifi_remote_browser_empty">Tidak ada foto yang didukung di kartu ini.</string>
     <string name="wifi_remote_browser_refresh">Muat ulang</string>
     <string name="wifi_remote_browser_back">Kembali ke pemotretan jarak jauh</string>

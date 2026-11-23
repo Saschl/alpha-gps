@@ -52,26 +52,23 @@ import org.jetbrains.compose.resources.stringResource
 internal fun PhotoBatchDownloadSheet(
     captures: List<WifiCameraCapture>,
     state: WifiRemoteState,
+    selectOriginals: Boolean = false,
     onDismiss: () -> Unit,
     onDownload: (List<WifiPhotoDownload>) -> Unit,
 ) {
-    val options = WifiPhotoBatchFormat.entries.associateWith { format ->
-        photoBatchDownloads(
-            captures,
-            setOf(format),
-            state.photoBrowser.savedDownloads,
-            state.canConvertHeif
-        )
-    }.filterValues { it.isNotEmpty() }
-    var formats by remember {
-        mutableStateOf(options.keys.singleOrNull()?.let { setOf(it) }.orEmpty())
+    val saved = state.photoBrowser.savedDownloads
+    val options = remember(captures, saved, state.canConvertHeif) {
+        WifiPhotoBatchFormat.entries.associateWith { format ->
+            photoBatchDownloads(captures, setOf(format), saved, state.canConvertHeif).size
+        }.filterValues { it > 0 }
     }
-    val downloads = photoBatchDownloads(
-        captures,
-        formats,
-        state.photoBrowser.savedDownloads,
-        state.canConvertHeif
-    )
+    var formats by remember {
+        mutableStateOf(if (selectOriginals) options.keys - WifiPhotoBatchFormat.JpegCopy
+            else options.keys.singleOrNull()?.let { setOf(it) }.orEmpty())
+    }
+    val downloads = remember(captures, formats, saved, state.canConvertHeif) {
+        photoBatchDownloads(captures, formats, saved, state.canConvertHeif)
+    }
     val busy = state.photoBrowser.loading || state.imageTransfer.busy
     val sheetState = rememberBottomSheetState(
         initialValue = SheetValue.Hidden,
@@ -100,7 +97,7 @@ internal fun PhotoBatchDownloadSheet(
                 stringResource(Res.string.wifi_remote_batch_formats_hint),
                 style = MaterialTheme.typography.bodySmall
             )
-            options.forEach { (format, files) ->
+            options.forEach { (format, fileCount) ->
                 val checked = format in formats
                 Row(
                     Modifier.fillMaxWidth().toggleable(
@@ -122,7 +119,7 @@ internal fun PhotoBatchDownloadSheet(
                             }
                         )
                         Text(
-                            stringResource(Res.string.wifi_remote_batch_file_count, files.size),
+                            stringResource(Res.string.wifi_remote_batch_file_count, fileCount),
                             style = MaterialTheme.typography.bodySmall
                         )
                     }

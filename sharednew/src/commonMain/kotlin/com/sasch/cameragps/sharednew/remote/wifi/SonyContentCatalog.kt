@@ -116,14 +116,18 @@ internal class SonyContentCatalog(
     private val hasDateIndex = capabilities.deviceInfo.supports(0x923b)
     private val remainingPeriods = ArrayDeque<LongRange>()
 
-    suspend fun open(): CameraPhotoPage {
+    suspend fun open(dateRange: PhotoDateRange? = null): CameraPhotoPage {
         clear()
         log.i { "Wi-Fi photo browser reading the slot 1 catalog" }
         if (hasDateIndex) {
             val data = data(0x923b, listOf(1L), 4 + 8 * 100_000)
-            parseCaptureDays(data).forEach { day -> remainingPeriods.addLast(day until day + DAY_MS) }
+            for (day in parseCaptureDays(data)) {
+                if (dateRange == null || dateRange.containsLocalMillis(day)) {
+                    remainingPeriods.addLast(day until day + DAY_MS)
+                }
+            }
         } else {
-            readUtcCatalog()
+            readUtcCatalog(dateRange)
         }
         return page(0)
     }
@@ -170,7 +174,7 @@ internal class SonyContentCatalog(
         }
     }
 
-    private suspend fun readUtcCatalog() {
+    private suspend fun readUtcCatalog(dateRange: PhotoDateRange?) {
         val found = linkedMapOf<Long, SonyContentFile>()
         var cursor = 0L
         var limit = BATCH_SIZE
@@ -183,6 +187,7 @@ internal class SonyContentCatalog(
             val last = batch.timestamps.max()
             if (last < cursor || (last == cursor && batch.timestamps.all { it == cursor })) {
                 if (limit == MAX_BATCH_SIZE) {
+                    check(dateRange == null) { "Camera could not enumerate the complete date range" }
                     log.w { "Camera repeated a full catalog batch at the record limit" }
                     break
                 }
@@ -193,7 +198,7 @@ internal class SonyContentCatalog(
                 limit = BATCH_SIZE
             }
         }
-        addCaptures(found.values)
+        addCaptures(if (dateRange == null) found.values else found.values.filter { dateRange.containsLocalMillis(it.localCreated) })
     }
 
     private fun addCaptures(batch: Collection<SonyContentFile>) {

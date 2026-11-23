@@ -1,5 +1,6 @@
 package com.sasch.cameragps.sharednew.remote.wifi
 
+import kotlinx.datetime.LocalDate
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
@@ -145,6 +146,50 @@ class SonyContentCatalogTest : WifiLoggingTest() {
         assertEquals(0L, last.photos.single().handle and 0xffffffffL)
         assertEquals("DSC00001.JPG", catalog.revalidate(last.photos.single().handle).filename)
         assertEquals(older, reads.last(), "Revalidate using camera-local time")
+    }
+
+    @Test
+    fun indexedRangeOnlyRequestsMatchingDaysEvenWhenCameraReturnsAdjacentPhotos() = runTest {
+        val day = 86_400_000L
+        val range = PhotoDateRange(LocalDate.fromEpochDays(1), LocalDate.fromEpochDays(2))
+        val reads = mutableListOf<Long>()
+        val catalog = catalog(dateIndex = true) { code, params ->
+            if (code == 0x923b) number(4, 4) + number(0, 8) + number(day, 8) +
+                number(2 * day, 8) + number(3 * day, 8)
+            else {
+                val from = params[0] or (params[1] shl 32)
+                reads += from
+                batch(content(1, day - 1, jpeg),
+                    content(2, day - 100, jpeg, raw, localTime = day),
+                    content(3, 3 * day + 100, jpeg, localTime = 3 * day - 1),
+                    content(4, 3 * day, jpeg))
+            }
+        }
+        val first = catalog.open(range)
+        assertEquals(listOf(3L), first.photos.map { it.handle and 0xffffffffL })
+        val last = catalog.page(1)
+        assertEquals(listOf(2L, 2L), last.photos.map { it.handle and 0xffffffffL })
+        assertEquals(2, last.totalObjects)
+        assertEquals(listOf(2 * day, day), reads)
+        val emptyDay = LocalDate.fromEpochDays(4)
+        assertEquals(0, catalog.open(PhotoDateRange(emptyDay, emptyDay)).totalObjects)
+        assertEquals(2, reads.size)
+    }
+
+    @Test
+    fun catalogWithoutIndexFiltersByCameraLocalDateAcrossUtcMidnight() = runTest {
+        val day = 86_400_000L
+        val catalog = catalog(dateIndex = false) { code, params ->
+            check(code == 0x923c && params.last() == 0L)
+            batch(content(1, day - 100, jpeg, localTime = day),
+                content(2, day, jpeg, localTime = day - 100),
+                content(3, 2 * day, jpeg, localTime = 2 * day - 1))
+        }
+        val date = LocalDate.fromEpochDays(1)
+        val result = catalog.open(PhotoDateRange(date, date))
+        assertEquals(listOf(3L, 1L), result.photos.map { it.handle and 0xffffffffL })
+        assertEquals(2, result.totalObjects)
+        assertEquals(3, catalog.open().totalObjects)
     }
 
     @Test
