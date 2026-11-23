@@ -518,7 +518,7 @@ object IosBluetoothController : BluetoothController {
     fun triggerShutterSequence(identifier: String): Boolean {
         val session = orchestrator.registry.get(identifier) ?: return false
         if (session.phase != BleSessionPhase.Transmitting) return false
-        return orchestrator.triggerShutterSequence(identifier)
+        return orchestrator.capture(identifier)
     }
 
     fun setRemoteStatusMonitoringEnabled(identifier: String, enabled: Boolean) {

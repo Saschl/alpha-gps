@@ -10,6 +10,8 @@ import kotlin.time.Duration.Companion.seconds
 import kotlin.time.TimeSource
 import kotlin.time.Duration
 
+internal val bulbDurationSeconds = 1..3600
+
 enum class BulbPhase { Idle, Starting, Exposing, Stopping, Processing, Finished, Uncertain, Failed }
 
 data class BulbTimerState(
@@ -38,7 +40,7 @@ class BulbExposure(
     private val timeSource: TimeSource = TimeSource.Monotonic,
 ) {
     init {
-        require(seconds in 1..3600)
+        require(seconds in bulbDurationSeconds)
     }
 
     private val stop = CompletableDeferred<Unit>()

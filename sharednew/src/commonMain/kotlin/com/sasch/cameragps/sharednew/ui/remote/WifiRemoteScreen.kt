@@ -266,10 +266,8 @@ fun WifiRemoteScreen(viewModel: WifiRemoteViewModel, onConnect: (String) -> Unit
     }
     if (viewModel.fullScreenPreview && ready && !state.photoBrowser.open) {
         WifiFullScreenPreview(image, state, onCollapse = viewModel::collapsePreview,
-            onCapture = { controller.capture(id) },
-            bulb = sessions[id]?.bulbTimer ?: BulbTimerState(),
-            onHoldStart = { controller.startBulbTimer(id, 3600) },
-            onHoldEnd = { controller.stopBulbTimer(id) })
+            identifier = id, shutter = controller,
+            bulb = sessions[id]?.bulbTimer ?: BulbTimerState())
         return
     }
     if (viewModel.viewedPhotoIndex != null && ready && state.photoBrowser.open) {
@@ -416,9 +414,7 @@ fun WifiRemoteScreen(viewModel: WifiRemoteViewModel, onConnect: (String) -> Unit
                         identifier = id,
                         state = state,
                         bulb = sessions[id]?.bulbTimer ?: BulbTimerState(),
-                        onCapture = { controller.capture(id) },
-                        onStartTimer = { controller.startBulbTimer(id, it) },
-                        onStopTimer = { controller.stopBulbTimer(id) },
+                        shutter = controller,
                         onBrowsePhotos = { controller.browsePhotos(id) },
                     )
                     if (busy && !ready) OutlinedButton(

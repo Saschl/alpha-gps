@@ -11,6 +11,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextReplacement
 import com.sasch.cameragps.sharednew.remote.BulbPhase
 import com.sasch.cameragps.sharednew.remote.BulbTimerState
+import com.sasch.cameragps.sharednew.remote.ShutterControls
 import com.sasch.cameragps.sharednew.remote.wifi.WifiCaptureStatus
 import com.sasch.cameragps.sharednew.remote.wifi.WifiRemotePhase
 import com.sasch.cameragps.sharednew.remote.wifi.WifiRemoteState
@@ -35,20 +36,29 @@ class WifiCaptureControlsTest {
     private var stops = 0
     private var browses = 0
 
+    private val shutter = object : ShutterControls {
+        override fun capture(identifier: String): Boolean {
+            captures++
+            return true
+        }
+
+        override fun startBulbTimer(identifier: String, seconds: Int): Boolean {
+            starts++
+            duration = seconds
+            bulb.value = BulbTimerState(BulbPhase.Starting)
+            state.value = state.value.copy(capture = WifiCaptureStatus.Shooting)
+            return true
+        }
+
+        override fun stopBulbTimer(identifier: String) { stops++ }
+    }
+
     private fun show() {
         compose.setContent {
             MaterialTheme {
                 WifiCaptureControls(
                     identifier = "camera", state = state.value, bulb = bulb.value,
-                    onCapture = { captures++ },
-                    onStartTimer = {
-                        starts++
-                        duration = it
-                        bulb.value = BulbTimerState(BulbPhase.Starting)
-                        state.value = state.value.copy(capture = WifiCaptureStatus.Shooting)
-                        true
-                    },
-                    onStopTimer = { stops++ },
+                    shutter = shutter,
                     onBrowsePhotos = { browses++ },
                 )
             }

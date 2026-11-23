@@ -17,7 +17,7 @@ import com.sasch.cameragps.sharednew.bluetooth.transport.BleOperationStatus
 import com.sasch.cameragps.sharednew.bluetooth.transport.BlePeripheralTransport
 import com.sasch.cameragps.sharednew.bluetooth.transport.BleTransportEvent
 import com.sasch.cameragps.sharednew.database.devices.CameraDeviceDAO
-import com.sasch.cameragps.sharednew.remote.BulbTimerControls
+import com.sasch.cameragps.sharednew.remote.ShutterControls
 import com.sasch.cameragps.sharednew.remote.wifi.CameraWifiCredentials
 import com.sasch.cameragps.sharednew.remote.wifi.SonyWifiBootstrap
 import com.sasch.cameragps.sharednew.remote.wifi.WifiRemoteConnectException
@@ -59,7 +59,7 @@ class CameraSessionOrchestrator(
     private val shouldRemainConnected: suspend (String) -> Boolean = { true },
     /** iOS: app-level transmission toggle for the location manager. */
     isTransmissionAllowed: () -> Boolean = { true },
-) : CameraAutoCorrectionControls, BulbTimerControls {
+) : CameraAutoCorrectionControls, ShutterControls {
     private val log = logging()
 
     val registry = CameraSessionRegistry()
@@ -203,7 +203,7 @@ class CameraSessionOrchestrator(
      * releases → wait for camera ready), as opposed to [triggerRemoteShutter]'s
      * single press with ack-driven release.
      */
-    fun triggerShutterSequence(identifier: String): Boolean =
+    override fun capture(identifier: String): Boolean =
         remoteControl.startShutterSequence(identifier)
 
     fun setRemoteMonitoring(identifier: String, enabled: Boolean) {

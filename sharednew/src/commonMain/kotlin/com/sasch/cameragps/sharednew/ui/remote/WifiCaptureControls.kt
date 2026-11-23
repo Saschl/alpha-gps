@@ -5,13 +5,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -23,11 +21,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import cameragps.sharednew.generated.resources.*
+import com.sasch.cameragps.sharednew.remote.bulbDurationSeconds
 import com.sasch.cameragps.sharednew.remote.BulbPhase
 import com.sasch.cameragps.sharednew.remote.BulbTimerState
+import com.sasch.cameragps.sharednew.remote.ShutterControls
 import com.sasch.cameragps.sharednew.remote.wifi.WifiCaptureStatus
 import com.sasch.cameragps.sharednew.remote.wifi.WifiRemoteState
 import org.jetbrains.compose.resources.stringResource
@@ -37,15 +36,13 @@ fun WifiCaptureControls(
     identifier: String,
     state: WifiRemoteState,
     bulb: BulbTimerState,
-    onCapture: () -> Unit,
-    onStartTimer: (Int) -> Boolean,
-    onStopTimer: () -> Unit,
+    shutter: ShutterControls,
     onBrowsePhotos: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var showTimer by rememberSaveable(identifier) { mutableStateOf(false) }
     var duration by rememberSaveable(identifier) { mutableStateOf("60") }
-    val seconds = duration.toIntOrNull()?.takeIf { it in 1..3600 }
+    val seconds = duration.toIntOrNull()?.takeIf { it in bulbDurationSeconds }
     val available =
         !bulb.active && state.capture != WifiCaptureStatus.Shooting && !state.imageTransfer.busy
     Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -60,7 +57,9 @@ fun WifiCaptureControls(
             }
         }
         Button(
-            onClick = if (bulb.active) onStopTimer else onCapture,
+            onClick = {
+                if (bulb.active) shutter.stopBulbTimer(identifier) else shutter.capture(identifier)
+            },
             enabled = if (bulb.active) bulb.canStop else available && state.canCaptureStill,
             modifier = Modifier.fillMaxWidth(),
         ) {
@@ -89,17 +88,7 @@ fun WifiCaptureControls(
                 Modifier.verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                OutlinedTextField(
-                    value = duration,
-                    onValueChange = { value ->
-                        if (value.length <= 4 && value.all(Char::isDigit)) duration = value
-                    },
-                    label = { Text(stringResource(Res.string.bulb_duration)) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true,
-                    isError = seconds == null,
-                    modifier = Modifier.fillMaxWidth(),
-                )
+                BulbDurationField(duration) { duration = it }
                 Text(
                     stringResource(Res.string.bulb_setup),
                     style = MaterialTheme.typography.bodySmall
@@ -108,7 +97,7 @@ fun WifiCaptureControls(
         },
         confirmButton = {
             TextButton(
-                onClick = { seconds?.let { if (onStartTimer(it)) showTimer = false } },
+                onClick = { seconds?.let { if (shutter.startBulbTimer(identifier, it)) showTimer = false } },
                 enabled = available && state.canCaptureBulb && seconds != null,
             ) { Text(stringResource(Res.string.bulb_start)) }
         },

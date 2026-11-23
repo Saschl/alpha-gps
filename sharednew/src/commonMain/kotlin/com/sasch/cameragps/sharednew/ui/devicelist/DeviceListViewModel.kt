@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sasch.cameragps.sharednew.bluetooth.session.CameraSession
 import com.sasch.cameragps.sharednew.database.devices.CameraDevice
+import com.sasch.cameragps.sharednew.remote.BulbTimerState
+import com.sasch.cameragps.sharednew.remote.wifi.WifiRemotePhase
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -39,6 +41,8 @@ data class DeviceListItem(
     val isRemoteFeatureActive: Boolean,
     val isShutterActive: Boolean,
     val locationDisabledByCamera: Boolean = false,
+    val bulbTimer: BulbTimerState = BulbTimerState(),
+    val canStartBulbTimer: Boolean = false,
 )
 
 /**
@@ -57,6 +61,9 @@ class DeviceListViewModel(dataSource: DeviceListDataSource) : ViewModel() {
         (sessions.keys + settingsByMac.keys).associateWith { identifier ->
             val session = sessions[identifier]
             val persisted = settingsByMac[identifier]
+            val wifiPhase = session?.wifiRemote?.phase
+            val bluetoothAvailable = wifiPhase == WifiRemotePhase.Idle || wifiPhase == WifiRemotePhase.Failed
+            val bulb = session?.bulbTimer?.takeIf { bluetoothAvailable } ?: BulbTimerState()
             DeviceListItem(
                 identifier = identifier,
                 customName = persisted?.takeIf { it.deviceNameIsCustom }?.deviceName
@@ -66,6 +73,9 @@ class DeviceListViewModel(dataSource: DeviceListDataSource) : ViewModel() {
                     session?.isLocationReady == true && transmissionActive,
                 isRemoteFeatureActive = session?.remoteFeatureActive == true,
                 isShutterActive = session?.shutterSequenceActive == true,
+                bulbTimer = bulb,
+                canStartBulbTimer = bluetoothAvailable && persisted?.deviceEnabled != false &&
+                        session?.remoteFeatureActive == true && !session.shutterSequenceActive && !bulb.active,
                 locationDisabledByCamera = session?.locationDisabledByCamera == true,
             )
         }

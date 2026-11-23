@@ -40,6 +40,13 @@ internal object IosAppPreferences {
 
     fun lastSeenReleaseVersion(): String? = defaults.stringForKey("ios.lastSeenReleaseVersion")
 
+    fun lastBulbSeconds(camera: String): Int =
+        defaults.integerForKey("ios.bulbSeconds.${camera.uppercase()}").toInt().takeIf { it > 0 } ?: 60
+
+    fun setLastBulbSeconds(camera: String, seconds: Int) {
+        defaults.setInteger(seconds.toLong(), forKey = "ios.bulbSeconds.${camera.uppercase()}")
+    }
+
     fun isWifiRemoteNoticeAcknowledged(): Boolean =
         defaults.boolForKey(keyWifiRemoteNoticeAcknowledged)
 

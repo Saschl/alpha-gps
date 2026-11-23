@@ -87,7 +87,6 @@ internal fun IosDeviceDetailScreen(
             dataSource = deviceDetailDataSource,
             serviceActions = IosDeviceDetailServiceActions(),
             cameraSettings = IosBluetoothController.autoCorrectionControls,
-            bulbControls = IosBluetoothController.bulbControls,
         )
     }
 

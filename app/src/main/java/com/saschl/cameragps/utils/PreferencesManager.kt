@@ -55,6 +55,13 @@ object PreferencesManager {
     fun getLastSeenReleaseVersion(context: Context): String? =
         getPreferences(context).getString("last_seen_release_version", null)
 
+    fun lastBulbSeconds(context: Context, camera: String): Int =
+        getPreferences(context).getInt("bulb_seconds_${camera.uppercase()}", 60)
+
+    fun setLastBulbSeconds(context: Context, camera: String, seconds: Int) {
+        getPreferences(context).edit { putInt("bulb_seconds_${camera.uppercase()}", seconds) }
+    }
+
     fun isWifiRemoteNoticeAcknowledged(context: Context): Boolean =
         getPreferences(context).getBoolean(KEY_WIFI_REMOTE_NOTICE_ACKNOWLEDGED, false)
 

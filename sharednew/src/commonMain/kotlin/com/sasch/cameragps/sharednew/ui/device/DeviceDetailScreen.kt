@@ -69,8 +69,6 @@ import com.sasch.cameragps.sharednew.bluetooth.session.CameraSettingState
 import com.sasch.cameragps.sharednew.remote.BulbTimerState
 import com.sasch.cameragps.sharednew.ui.components.ScreenContent
 import com.sasch.cameragps.sharednew.ui.components.ScrollbarLazyColumn
-import com.sasch.cameragps.sharednew.ui.remote.BulbTimerCard
-import com.sasch.cameragps.sharednew.ui.remote.BulbTimerLifecycle
 import com.sasch.cameragps.sharednew.util.KotlinPlatform
 import com.sasch.cameragps.sharednew.util.currentPlatform
 import org.jetbrains.compose.resources.painterResource
@@ -97,10 +95,6 @@ fun DeviceDetailContent(
     val session = sessions[deviceId.uppercase()]
     val cameraReady = session?.phase == BleSessionPhase.Transmitting
     val bulb = session?.bulbTimer ?: BulbTimerState()
-    BulbTimerLifecycle(
-        deviceId, bulb,
-        onStop = { viewModel.bulbControls?.stopBulbTimer(deviceId) })
-
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         viewModel.refreshCameraSettings(deviceId)
     }
@@ -160,18 +154,6 @@ fun DeviceDetailContent(
                             )
                         }
                     }
-                }
-            }
-
-            viewModel.bulbControls?.let { controls ->
-                item(key = "bulb_timer") {
-                    BulbTimerCard(
-                        deviceId, bulb,
-                        enabled = state.isDeviceEnabled && session?.remoteFeatureActive == true &&
-                                !session.shutterSequenceActive,
-                        onStart = { controls.startBulbTimer(deviceId, it) },
-                        onStop = { controls.stopBulbTimer(deviceId) },
-                    )
                 }
             }
 

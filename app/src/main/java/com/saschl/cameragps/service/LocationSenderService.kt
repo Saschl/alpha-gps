@@ -260,7 +260,7 @@ class LocationSenderService : LifecycleService() {
             }
 
             is ServiceCommand.TriggerShutterSequence -> {
-                val success = orchestrator.triggerShutterSequence(command.address)
+                val success = orchestrator.capture(command.address)
                 if (!success) {
                     Timber.w("Shutter sequence failed to start for ${command.address.uppercase()}")
                 }

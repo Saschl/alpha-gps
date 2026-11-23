@@ -705,3 +705,39 @@ session lifecycle and MTP metadata tests. Both Android flavors and both iOS targ
 compile. Synthetic tests exercise download through both metadata paths, late
 capability advertisement, rejected/timed-out/cancelled switches, return to live
 view, real loss, and disconnect without a remote-session reopen.
+
+## Bulb exposure: confirmed held-press sequence
+
+The maintainer confirmed a successful five-second Bulb exposure with
+`tools/sony_wifi_probe/probe.py --bulb-seconds 5 --half-press-ms 500`.
+The supplied report used server version 4.00 and vendor code version 310; it did
+not identify the camera model. This is evidence for that tested camera/session,
+not a guarantee for every model advertising the shutter controls.
+
+- Half press and full press (`0xd2c1`, `0xd2c2`, value 2) were accepted.
+- Full press remained held for 5000.686 ms after acceptance.
+- Full release and half release (value 1) both returned `0x2001`.
+- No capture-complete event arrived before release; intermediate `0xc203`
+  property-change events were not capture confirmation.
+- `0xc206` arrived 10506.422 ms after the full-press request, about 5.4 seconds
+  after the full-release response. The cause of this processing delay was not
+  established by the report.
+
+Wi-Fi Bulb therefore holds S2 until the timer ends, then releases S2 and S1.
+Bluetooth uses the separately confirmed two-click behavior: one press/release to
+start, another press/release to stop. Neither path retries an ambiguous start.
+The shared timer UI distinguishes exposure from Wi-Fi processing. Processing gets
+its own timeout based on elapsed exposure plus 30 seconds, rather than consuming
+the ordinary 20-second capture timeout while the shutter is held.
+
+The initial app UI supports 1–3600 seconds, keeps the timer screen awake and
+requests an early stop when the screen is left or the app goes into the
+background. It does not promise a background timer or automatic recovery after a
+lost connection. Set the camera to M/BULB, single-shot drive and manual focus,
+with the camera's own Bulb timer off.
+
+The full-screen Wi-Fi preview also supports manual Bulb exposure: long-press the
+shutter button to start, then release or move off the button to stop. A short tap
+keeps the ordinary single-shot behavior. The hold uses the same exposure path,
+with a one-hour maximum, and releases on gesture cancellation or preview exit.
+Busy-state recomposition must not restart its pointer handler and release early.

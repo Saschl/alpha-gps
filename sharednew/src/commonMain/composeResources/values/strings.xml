@@ -477,11 +477,12 @@
     <string name="report_error">Could not prepare or share the report. Please try again.</string>
     <string name="report_copied">Summary copied to clipboard.</string>
     <string name="bulb_title">Bulb timer</string>
-    <string name="bulb_setup">Set the camera to M → BULB, single-shot drive and manual focus. Disable its built-in Bulb timer. Keep this screen open; leaving it or backgrounding the app requests an early stop.</string>
+    <string name="bulb_setup">Set the camera to M → BULB, single-shot drive and manual focus. Disable its built-in Bulb timer. During the exposure, stay on the screen where you opened the timer. Leaving that screen or switching apps requests an early stop.</string>
     <string name="bulb_duration">Exposure seconds (1–3600)</string>
     <string name="bulb_start">Start exposure</string>
     <string name="bulb_stop">Stop exposure</string>
     <string name="bulb_starting">Starting exposure…</string>
+    <string name="bulb_time_remaining">%1$s remaining</string>
     <string name="bulb_remaining">%1$d seconds remaining</string>
     <string name="bulb_stopping">Stopping exposure…</string>
     <string name="bulb_processing">Camera is processing…</string>

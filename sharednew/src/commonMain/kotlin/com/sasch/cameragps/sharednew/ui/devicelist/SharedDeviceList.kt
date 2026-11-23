@@ -30,10 +30,15 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -43,8 +48,11 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import cameragps.sharednew.generated.resources.Res
 import cameragps.sharednew.generated.resources.android_12_requires_keep_alive
+import cameragps.sharednew.generated.resources.bulb_title
 import cameragps.sharednew.generated.resources.camera_24px
 import cameragps.sharednew.generated.resources.cancel
 import cameragps.sharednew.generated.resources.connected
@@ -64,14 +72,21 @@ import cameragps.sharednew.generated.resources.remote_feature_inactive
 import cameragps.sharednew.generated.resources.saved_devices
 import cameragps.sharednew.generated.resources.show_details
 import cameragps.sharednew.generated.resources.tap_to_connect
+import cameragps.sharednew.generated.resources.timer_24px
 import cameragps.sharednew.generated.resources.transmission_active
 import cameragps.sharednew.generated.resources.transmission_inactive
 import cameragps.sharednew.generated.resources.trigger_shutter
 import com.sasch.cameragps.sharednew.bluetooth.BluetoothDeviceInfo
+import com.sasch.cameragps.sharednew.remote.BulbPhase
+import com.sasch.cameragps.sharednew.remote.BulbTimerControls
 import com.sasch.cameragps.sharednew.ui.ShutterPulseIcon
 import com.sasch.cameragps.sharednew.ui.TransmissionDot
 import com.sasch.cameragps.sharednew.ui.components.AdaptiveAction
 import com.sasch.cameragps.sharednew.ui.components.ScrollbarLazyColumn
+import com.sasch.cameragps.sharednew.ui.remote.ActiveBulbTimer
+import com.sasch.cameragps.sharednew.ui.remote.BulbTimerSheet
+import com.sasch.cameragps.sharednew.ui.remote.BulbTimerStatus
+import com.sasch.cameragps.sharednew.ui.remote.KeepBulbScreenAwake
 import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
@@ -97,9 +112,50 @@ fun SharedDeviceList(
     onDelete: (BluetoothDeviceInfo) -> Unit,
     onOpenDetails: (BluetoothDeviceInfo) -> Unit,
     onOpenTroubleshooting: () -> Unit,
+    bulbControls: BulbTimerControls? = null,
+    lastBulbSeconds: (String) -> Int = { 60 },
+    onBulbDurationUsed: (String, Int) -> Unit = { _, _ -> },
 ) {
     var deviceToDelete by remember { mutableStateOf<BluetoothDeviceInfo?>(null) }
     var deviceToPair by remember { mutableStateOf<BluetoothDeviceInfo?>(null) }
+
+    var timerId by rememberSaveable { mutableStateOf<String?>(null) }
+    if (bulbControls != null) {
+        val pendingStarts = remember(bulbControls) { mutableSetOf<String>() }
+        val active = items.values.filter { it.bulbTimer.active }.map { it.identifier }
+        // Start is accepted before the list observes the new session state.
+        SideEffect { pendingStarts.removeAll(active.toSet()) }
+        val activeNow by rememberUpdatedState(active)
+        fun stopOnExit() {
+            (pendingStarts + activeNow).forEach(bulbControls::stopBulbTimer)
+            pendingStarts.clear()
+        }
+        if (active.isNotEmpty()) KeepBulbScreenAwake()
+        DisposableEffect(bulbControls) { onDispose { stopOnExit() } }
+        LifecycleEventEffect(Lifecycle.Event.ON_STOP) { stopOnExit() }
+
+        timerId?.let { id ->
+            val device = devices.firstOrNull { it.isSaved && it.identifier.uppercase() == id }
+            if (device == null || items[id]?.isRemoteFeatureActive != true) {
+                LaunchedEffect(id) { timerId = null }
+            } else key(id) {
+                BulbTimerSheet(
+                    cameraName = device.name,
+                    initialSeconds = remember(id) { lastBulbSeconds(id) },
+                    enabled = items[id]?.canStartBulbTimer == true,
+                    onStart = { seconds ->
+                        bulbControls.startBulbTimer(id, seconds).also { accepted ->
+                            if (accepted) {
+                                pendingStarts.add(id)
+                                onBulbDurationUsed(id, seconds)
+                            }
+                        }
+                    },
+                    onDismiss = { timerId = null },
+                )
+            }
+        }
+    }
 
     // Pairing mode hint dialog for first-time connections
     deviceToPair?.let { device ->
@@ -180,6 +236,8 @@ fun SharedDeviceList(
                     onConnect = { onConnect(device) },
                     onTriggerRemoteShutter = { onTriggerRemoteShutter(device) },
                     onDeleteRequest = { deviceToDelete = device },
+                    onOpenTimer = bulbControls?.let { { timerId = device.identifier.uppercase() } },
+                    onStopTimer = { bulbControls?.stopBulbTimer(device.identifier) },
                     onOpenDetails = { onOpenDetails(device) },
                     onOpenTroubleshooting = onOpenTroubleshooting,
                 )
@@ -277,6 +335,8 @@ private fun SwipeToDeleteDeviceCard(
     onConnect: () -> Unit,
     onTriggerRemoteShutter: () -> Unit,
     onDeleteRequest: () -> Unit,
+    onOpenTimer: (() -> Unit)?,
+    onStopTimer: () -> Unit,
     onOpenDetails: () -> Unit,
     onOpenTroubleshooting: () -> Unit,
 ) {
@@ -328,6 +388,8 @@ private fun SwipeToDeleteDeviceCard(
             hapticsEnabled = hapticsEnabled,
             onConnect = onConnect,
             onTriggerRemoteShutter = onTriggerRemoteShutter,
+            onOpenTimer = onOpenTimer,
+            onStopTimer = onStopTimer,
             onOpenDetails = onOpenDetails,
             onOpenTroubleshooting = onOpenTroubleshooting,
         )
@@ -341,6 +403,8 @@ private fun DeviceCard(
     item: DeviceListItem?,
     showKeepAliveHint: Boolean,
     hapticsEnabled: Boolean,
+    onOpenTimer: (() -> Unit)? = null,
+    onStopTimer: () -> Unit = {},
     onConnect: () -> Unit,
     onTriggerRemoteShutter: () -> Unit,
     onOpenDetails: () -> Unit,
@@ -463,31 +527,47 @@ private fun DeviceCard(
                     },
                 )
             }
-            if (device.isSaved && isRemoteFeatureActive) {
+            val bulb = item?.bulbTimer
+            if (device.isSaved && bulb?.active == true && onOpenTimer != null) {
+                ActiveBulbTimer(bulb, onStopTimer, modifier = Modifier.padding(top = 12.dp))
+            } else if (device.isSaved && isRemoteFeatureActive) {
                 AdaptiveAction(modifier = Modifier.padding(top = 12.dp)) { actionModifier ->
-                    FilledTonalButton(
-                        onClick = {
-                            if (hapticsEnabled) {
-                                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                            }
-                            onTriggerRemoteShutter()
-                        },
-                        border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary),
-                        modifier = actionModifier
-                            .heightIn(min = 52.dp),
-                    ) {
-                        ShutterPulseIcon(
-                            isActive = isShutterActive,
-                            painter = painterResource(Res.drawable.camera_24px),
-                            contentDescription = null,
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            stringResource(Res.string.trigger_shutter),
-                            modifier = Modifier.weight(1f, fill = false),
-                        )
+                    Row(actionModifier, horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically) {
+                        FilledTonalButton(
+                            onClick = {
+                                if (hapticsEnabled) {
+                                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                }
+                                onTriggerRemoteShutter()
+                            },
+                            border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary),
+                            modifier = Modifier.weight(1f)
+                                .heightIn(min = 52.dp),
+                        ) {
+                            ShutterPulseIcon(
+                                isActive = isShutterActive,
+                                painter = painterResource(Res.drawable.camera_24px),
+                                contentDescription = null,
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                stringResource(Res.string.trigger_shutter),
+                                modifier = Modifier.weight(1f, fill = false),
+                            )
+                        }
+                        if (onOpenTimer != null) IconButton(
+                            onClick = onOpenTimer,
+                            enabled = item?.canStartBulbTimer == true,
+                        ) {
+                            Icon(painterResource(Res.drawable.timer_24px),
+                                contentDescription = stringResource(Res.string.bulb_title))
+                        }
                     }
                 }
+            }
+            if (bulb?.phase == BulbPhase.Uncertain || bulb?.phase == BulbPhase.Failed) {
+                BulbTimerStatus(bulb)
             }
         }
     }

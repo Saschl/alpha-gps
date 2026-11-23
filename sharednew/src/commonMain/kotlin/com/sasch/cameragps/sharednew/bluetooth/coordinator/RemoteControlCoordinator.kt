@@ -2,6 +2,7 @@ package com.sasch.cameragps.sharednew.bluetooth.coordinator
 
 import com.diamondedge.logging.logging
 import com.sasch.cameragps.sharednew.bluetooth.SonyBluetoothConstants
+import com.sasch.cameragps.sharednew.remote.bulbDurationSeconds
 import com.sasch.cameragps.sharednew.remote.BulbExposure
 import com.sasch.cameragps.sharednew.remote.BulbPhase
 import kotlin.time.Duration.Companion.milliseconds
@@ -202,7 +203,7 @@ class RemoteControlCoordinator(
     }
 
     fun startBulbTimer(identifier: String, seconds: Int): Boolean {
-        require(seconds in 1..3600)
+        require(seconds in bulbDurationSeconds)
         val id = identifier.uppercase()
         if (id in wifiOwners || id in activeSequenceJobs || id in bulbExposures || !port.isConnected(
                 id

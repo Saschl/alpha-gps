@@ -260,6 +260,7 @@ internal fun CameraGpsIosApp(
                     DeviceListContent(
                         devices = devices,
                         items = listItems,
+                        bulbControls = if (SCREENSHOT_MODE) null else bluetoothController.bulbControls,
                         isAppEnabled = isAppEnabled,
                         hapticsEnabled = hapticsEnabled,
                         migrationCandidates = migrationCandidates,

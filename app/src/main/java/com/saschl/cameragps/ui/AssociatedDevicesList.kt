@@ -69,6 +69,9 @@ fun AssociatedDevicesList(
     SharedDeviceList(
         devices = devices,
         items = items,
+        bulbControls = if (SCREENSHOT_MODE) null else AppServices.from(context).orchestrator,
+        lastBulbSeconds = { PreferencesManager.lastBulbSeconds(context, it) },
+        onBulbDurationUsed = { id, seconds -> PreferencesManager.setLastBulbSeconds(context, id, seconds) },
         showKeepAliveHint = Build.VERSION.SDK_INT < Build.VERSION_CODES.S,
         // Read on every recomposition so a toggle in settings applies on return
         hapticsEnabled = PreferencesManager.isHapticsEnabled(context),

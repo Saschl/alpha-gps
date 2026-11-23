@@ -4,9 +4,10 @@ import androidx.compose.ui.graphics.ImageBitmap
 import com.diamondedge.logging.logging
 import com.sasch.cameragps.sharednew.bluetooth.BleSessionPhase
 import com.sasch.cameragps.sharednew.bluetooth.session.CameraSessionRegistry
+import com.sasch.cameragps.sharednew.remote.bulbDurationSeconds
 import com.sasch.cameragps.sharednew.remote.BulbExposure
 import com.sasch.cameragps.sharednew.remote.BulbPhase
-import com.sasch.cameragps.sharednew.remote.BulbTimerControls
+import com.sasch.cameragps.sharednew.remote.ShutterControls
 import kotlin.math.abs
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CancellationException
@@ -101,7 +102,7 @@ class WifiRemoteController internal constructor(
     private val releaseControls: (String) -> Unit,
     private val automaticConnector: WifiAutomaticConnector? = null,
     private val manualSetupConnector: WifiManualSetupConnector? = null,
-) : BulbTimerControls {
+) : ShutterControls {
     private val log = logging()
     private var attempt = 0
     val supportsAutomaticConnection get() = automaticConnector != null
@@ -209,12 +210,10 @@ class WifiRemoteController internal constructor(
         connecting.start()
     }
 
-    fun capture(identifier: String) {
-        requestCapture(identifier, null)
-    }
+    override fun capture(identifier: String): Boolean = requestCapture(identifier, null)
 
     override fun startBulbTimer(identifier: String, seconds: Int): Boolean {
-        require(seconds in 1..3600)
+        require(seconds in bulbDurationSeconds)
         if (activeConnection?.canCaptureBulb != true) return false
         val exposure = BulbExposure(seconds, { state ->
             registry.updateIfPresent(identifier) { it.copy(bulbTimer = state) }

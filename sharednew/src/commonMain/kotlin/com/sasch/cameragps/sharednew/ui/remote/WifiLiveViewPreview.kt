@@ -45,6 +45,7 @@ import cameragps.sharednew.generated.resources.wifi_remote_hold_hint
 import cameragps.sharednew.generated.resources.bulb_start
 import cameragps.sharednew.generated.resources.bulb_stop
 import com.sasch.cameragps.sharednew.remote.BulbTimerState
+import com.sasch.cameragps.sharednew.remote.ShutterControls
 import com.sasch.cameragps.sharednew.remote.wifi.WifiCaptureStatus
 import com.sasch.cameragps.sharednew.remote.wifi.WifiPreviewStatus
 import com.sasch.cameragps.sharednew.remote.wifi.WifiRemoteState
@@ -87,10 +88,9 @@ internal fun WifiFullScreenPreview(
     image: ImageBitmap?,
     state: WifiRemoteState,
     onCollapse: () -> Unit,
-    onCapture: () -> Unit,
+    identifier: String,
+    shutter: ShutterControls,
     bulb: BulbTimerState,
-    onHoldStart: () -> Boolean,
-    onHoldEnd: () -> Unit,
 ) {
     BoxWithConstraints(Modifier.fillMaxSize().background(Color.Black)) {
         val landscape = maxWidth > maxHeight
@@ -117,7 +117,9 @@ internal fun WifiFullScreenPreview(
                     enabled = captureEnabled, canHold = state.canCaptureBulb,
                     shooting = shooting, exposing = bulb.canStop,
                     label = captureLabel, holdLabel = stringResource(Res.string.bulb_start),
-                    onCapture = onCapture, onHoldStart = onHoldStart, onHoldEnd = onHoldEnd,
+                    onCapture = { shutter.capture(identifier) },
+                    onHoldStart = { shutter.startBulbHold(identifier) },
+                    onHoldEnd = { shutter.stopBulbTimer(identifier) },
                 )
                 if (state.canCaptureBulb) Text(
                     stringResource(Res.string.wifi_remote_hold_hint),

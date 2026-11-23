@@ -42,6 +42,7 @@ import cameragps.sharednew.generated.resources.ios_troubleshooting_title
 import com.sasch.cameragps.sharednew.bluetooth.BluetoothDeviceInfo
 import com.sasch.cameragps.sharednew.bluetooth.accessory.PendingMigration
 import com.sasch.cameragps.sharednew.ui.devicelist.AddCameraButton
+import com.sasch.cameragps.sharednew.remote.BulbTimerControls
 import com.sasch.cameragps.sharednew.ui.devicelist.DeviceListItem
 import com.sasch.cameragps.sharednew.ui.devicelist.DeviceListLayout
 import com.sasch.cameragps.sharednew.ui.devicelist.EmptyStateCard
@@ -68,6 +69,7 @@ internal fun DeviceListContent(
     onTriggerRemoteShutter: (BluetoothDeviceInfo) -> Unit,
     onDelete: (BluetoothDeviceInfo) -> Unit,
     onOpenDetails: (BluetoothDeviceInfo) -> Unit,
+    bulbControls: BulbTimerControls? = null,
 ) {
     var showTroubleshootingDialog by remember { mutableStateOf(false) }
 
@@ -150,6 +152,9 @@ internal fun DeviceListContent(
                 SharedDeviceList(
                     devices = devices,
                     items = items,
+                    bulbControls = bulbControls,
+                    lastBulbSeconds = IosAppPreferences::lastBulbSeconds,
+                    onBulbDurationUsed = IosAppPreferences::setLastBulbSeconds,
                     hapticsEnabled = hapticsEnabled,
                     onConnect = onConnect,
                     onTriggerRemoteShutter = onTriggerRemoteShutter,

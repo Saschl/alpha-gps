@@ -12,6 +12,7 @@ import com.sasch.cameragps.sharednew.bluetooth.transport.BlePeripheralTransport
 import com.sasch.cameragps.sharednew.bluetooth.transport.BleTransportEvent
 import com.sasch.cameragps.sharednew.database.devices.CameraDevice
 import com.sasch.cameragps.sharednew.database.devices.CameraDeviceDAO
+import com.sasch.cameragps.sharednew.remote.ShutterControls
 import com.sasch.cameragps.sharednew.notification.TransmissionNotificationCoordinator
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -262,6 +263,24 @@ class CameraLocationLinkingTest {
         f.transport.emit(BleTransportEvent.Disconnected("A", null))
         runCurrent()
         assertEquals(listOf(0, 1, 0), updates)
+    }
+
+    @Test
+    fun captureUsesTheBluetoothShutterSequenceAndRejectsAnOverlappingPress() = runTest {
+        val f = Fixture(backgroundScope)
+        val shutter: ShutterControls = f.orchestrator
+        assertFalse(shutter.capture("A"))
+        f.connect("A")
+        runCurrent()
+        f.notify("A", Sony.REMOTE_STATUS_UUID, byteArrayOf(2, 0xA0.toByte(), 0))
+        runCurrent()
+        f.transport.operations.clear()
+        assertTrue(shutter.capture("A"))
+        assertFalse(shutter.capture("A"))
+        runCurrent()
+        val firstPress = f.transport.remoteWrites().single().second as BleOperation.Write
+        assertTrue(firstPress.value.contentEquals(Sony.HALF_SHUTTER_DOWN_COMMAND))
+        f.orchestrator.shutdownAll()
     }
 
     @Test

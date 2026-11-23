@@ -7,6 +7,7 @@ import com.sasch.cameragps.sharednew.bluetooth.session.CameraSessionRegistry
 import com.sasch.cameragps.sharednew.remote.BulbExposure
 import com.sasch.cameragps.sharednew.remote.BulbPhase
 import com.sasch.cameragps.sharednew.remote.BulbTimerState
+import com.sasch.cameragps.sharednew.remote.ShutterControls
 import com.sasch.cameragps.sharednew.ui.remote.WifiRemoteViewModel
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -836,6 +837,28 @@ class WifiRemoteControllerTest : WifiLoggingTest() {
     }
 
     @Test
+    fun heldShutterKeepsTheOneHourLimitAndCanBeReleasedEarly() = runTest {
+        val registry = CameraSessionRegistry()
+        val connection = Connection()
+        val controller = WifiRemoteController(backgroundScope, registry, { _, _ -> connection }, {}, {})
+        val shutter: ShutterControls = controller
+        controller.connect("camera", "127.0.0.1")
+        runCurrent()
+
+        assertTrue(shutter.startBulbHold("camera"))
+        runCurrent()
+        assertEquals(3600, registry.get("camera")!!.bulbTimer.remainingSeconds)
+        assertFalse(shutter.capture("camera"))
+        shutter.stopBulbTimer("camera")
+        runCurrent()
+        assertEquals(BulbPhase.Processing, registry.get("camera")!!.bulbTimer.phase)
+        connection.result.complete(WifiCaptureStatus.Captured)
+        runCurrent()
+        assertEquals(BulbPhase.Finished, registry.get("camera")!!.bulbTimer.phase)
+        controller.closeAndJoin()
+    }
+
+    @Test
     fun wifiCannotTakeOverAnActiveBluetoothBulbTimer() = runTest {
         val registry = CameraSessionRegistry()
         registry.upsert("camera") {
@@ -861,8 +884,9 @@ class WifiRemoteControllerTest : WifiLoggingTest() {
         controller.connect("camera", "127.0.0.1")
         runCurrent()
         assertEquals(WifiRemotePhase.Ready, registry.get("camera")?.wifiRemote?.phase)
-        controller.capture("camera")
-        controller.capture("camera")
+        val shutter: ShutterControls = controller
+        assertTrue(shutter.capture("camera"))
+        assertFalse(shutter.capture("camera"))
         runCurrent()
         assertEquals(1, connection.captures)
         controller.disconnect("camera")

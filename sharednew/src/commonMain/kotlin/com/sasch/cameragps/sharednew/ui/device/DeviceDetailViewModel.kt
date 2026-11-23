@@ -4,7 +4,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sasch.cameragps.sharednew.bluetooth.session.CameraAutoCorrectionControls
 import com.sasch.cameragps.sharednew.bluetooth.session.CameraAutoCorrectionSetting
-import com.sasch.cameragps.sharednew.remote.BulbTimerControls
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
@@ -14,7 +13,6 @@ class DeviceDetailViewModel(
     dataSource: DeviceDetailDataSource,
     private val serviceActions: DeviceDetailServiceActions,
     private val cameraSettings: CameraAutoCorrectionControls,
-    val bulbControls: BulbTimerControls? = null,
 ) : ViewModel() {
 
     val sessions = cameraSettings.sessions
