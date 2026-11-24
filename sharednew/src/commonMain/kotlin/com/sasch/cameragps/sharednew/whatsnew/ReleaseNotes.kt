@@ -24,8 +24,8 @@ data class ReleaseNotes(val version: String, val highlights: List<StringResource
 object ReleaseNotesCatalog {
     fun forVersion(version: String, platform: ReleasePlatform): ReleaseNotes? =
         when (version.removePrefix("v")) {
-            "1.7.3" -> ReleaseNotes(
-                version = "1.7.3",
+            "1.7.4" -> ReleaseNotes(
+                version = "1.7.4",
                 highlights = listOf(
                     Res.string.whats_new_173_photo_dates,
                     Res.string.whats_new_173_photo_browsing,
