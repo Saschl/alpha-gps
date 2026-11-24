@@ -95,6 +95,18 @@ class WhatsNewStateTest {
     }
 
     @Test
+    fun photoBrowserReleaseShowsOnBothPlatformsAfterUpgrade() {
+        val android = WhatsNewState("v1.7.3", ReleasePlatform.Android, "1.7.2", false) {}
+        val ios = WhatsNewState("1.7.3", ReleasePlatform.Ios, "1.7.2", false) {}
+        assertTrue(android.pending)
+        assertTrue(ios.pending)
+        val release = requireNotNull(android.release)
+        assertEquals("1.7.3", release.version)
+        assertEquals(4, release.highlights.size)
+        assertEquals(release, ios.release)
+    }
+
+    @Test
     fun iosPairingNotesAreOnlyIncludedOnIos() {
         val android = ReleaseNotesCatalog.forVersion("v1.6.2", ReleasePlatform.Android)!!
         val ios = ReleaseNotesCatalog.forVersion("1.6.2", ReleasePlatform.Ios)!!

@@ -1,0 +1,5 @@
+- Filtere Fotos in der WLAN-Fernbedienung nach Aufnahmedatum. Wähle „Heute“ oder einen Zeitraum, um alle passenden Fotos herunterzuladen.
+- Beim Scrollen werden weitere Fotos geladen. Zoome in der Vorschau mit zwei Fingern oder per Doppeltipp.
+- Mit dem Bulb-Timer kannst du die Dauer einer Langzeitbelichtung über Bluetooth oder WLAN festlegen.
+- Downloadbestätigungen verschwinden nach wenigen Sekunden.
+- Fehlerbehebungen

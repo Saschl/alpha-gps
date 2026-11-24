@@ -335,6 +335,10 @@
     <string name="camera_setting_retry">Refresh camera settings</string>
     <!-- In-app release notes. -->
     <string name="whats_new_title">What’s new</string>
+    <string name="whats_new_173_photo_dates">Filter Wi-Fi photos by capture date. Choose Today or a date range to download all matching photos.</string>
+    <string name="whats_new_173_photo_browsing">More photos load as you scroll. Pinch or double-tap a preview to zoom.</string>
+    <string name="whats_new_173_bulb_timer">Use the Bulb timer to set the length of a long exposure over Bluetooth or Wi-Fi.</string>
+    <string name="whats_new_173_download_confirmation">Download confirmations disappear after a few seconds.</string>
     <string name="whats_new_172_troubleshooting">One click troubleshooting, share detailed diagnostics (anonymised) if you face issues</string>
     <string name="whats_new_172_layout">Layout improvements for larger devices</string>
     <string name="whats_new_172_optimisations">Smaller optimisations</string>

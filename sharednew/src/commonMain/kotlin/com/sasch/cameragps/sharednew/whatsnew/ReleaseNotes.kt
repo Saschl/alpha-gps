@@ -10,6 +10,10 @@ import cameragps.sharednew.generated.resources.whats_new_171_zv1
 import cameragps.sharednew.generated.resources.whats_new_172_layout
 import cameragps.sharednew.generated.resources.whats_new_172_optimisations
 import cameragps.sharednew.generated.resources.whats_new_172_troubleshooting
+import cameragps.sharednew.generated.resources.whats_new_173_bulb_timer
+import cameragps.sharednew.generated.resources.whats_new_173_download_confirmation
+import cameragps.sharednew.generated.resources.whats_new_173_photo_browsing
+import cameragps.sharednew.generated.resources.whats_new_173_photo_dates
 import org.jetbrains.compose.resources.StringResource
 
 enum class ReleasePlatform { Android, Ios }
@@ -20,6 +24,16 @@ data class ReleaseNotes(val version: String, val highlights: List<StringResource
 object ReleaseNotesCatalog {
     fun forVersion(version: String, platform: ReleasePlatform): ReleaseNotes? =
         when (version.removePrefix("v")) {
+            "1.7.3" -> ReleaseNotes(
+                version = "1.7.3",
+                highlights = listOf(
+                    Res.string.whats_new_173_photo_dates,
+                    Res.string.whats_new_173_photo_browsing,
+                    Res.string.whats_new_173_bulb_timer,
+                    Res.string.whats_new_173_download_confirmation,
+                ),
+            )
+
             "1.7.2" -> ReleaseNotes(
                 version = "1.7.2",
                 highlights = listOf(

@@ -316,6 +316,10 @@
     <string name="camera_setting_retry">Kameraeinstellungen aktualisieren</string>
     <!-- In-app release notes. -->
     <string name="whats_new_title">Was ist neu?</string>
+    <string name="whats_new_173_photo_dates">Filtere Fotos in der WLAN-Fernbedienung nach Aufnahmedatum. Wähle „Heute“ oder einen Zeitraum, um alle passenden Fotos herunterzuladen.</string>
+    <string name="whats_new_173_photo_browsing">Beim Scrollen werden weitere Fotos geladen. Zoome in der Vorschau mit zwei Fingern oder per Doppeltipp.</string>
+    <string name="whats_new_173_bulb_timer">Mit dem Bulb-Timer kannst du die Dauer einer Langzeitbelichtung über Bluetooth oder WLAN festlegen.</string>
+    <string name="whats_new_173_download_confirmation">Downloadbestätigungen verschwinden nach wenigen Sekunden.</string>
     <string name="whats_new_172_troubleshooting">Fehlerbehebung mit einem Klick; bei Problemen können Sie detaillierte (anonymisierte) Diagnosedaten weitergeben</string>
     <string name="whats_new_172_layout">Verbesserungen der Darstellung auf größeren Geräten</string>
     <string name="whats_new_172_optimisations">Kleinere Optimierungen</string>
