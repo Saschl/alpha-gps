@@ -7,6 +7,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.ClosedSendChannelException
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
 import kotlin.time.Duration.Companion.milliseconds
@@ -140,9 +141,13 @@ internal class PtpIpCommandQueue(
         require(maxDataBytes in 0..8 * 1024 * 1024)
         val pending =
             Pending(code, parameters.toList(), dataIn, dataOut, operationTimeoutMs, maxDataBytes)
-        if (!requests.trySend(pending).isSuccess) return PtpIpTransactionResult.Closed
         return try {
+            // Scrolling can temporarily fill the queue with thumbnail reads.
+            if (dataIn) requests.send(pending)
+            else if (!requests.trySend(pending).isSuccess) return PtpIpTransactionResult.Closed
             pending.result.await()
+        } catch (_: ClosedSendChannelException) {
+            PtpIpTransactionResult.Closed
         } catch (cancelled: CancellationException) {
             pending.result.cancel()
             throw cancelled

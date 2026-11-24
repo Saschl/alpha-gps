@@ -5,11 +5,10 @@ import androidx.compose.ui.graphics.ImageBitmap
 import com.diamondedge.logging.logging
 import com.sasch.cameragps.sharednew.bluetooth.BleSessionPhase
 import com.sasch.cameragps.sharednew.bluetooth.session.CameraSessionRegistry
-import com.sasch.cameragps.sharednew.remote.bulbDurationSeconds
 import com.sasch.cameragps.sharednew.remote.BulbExposure
 import com.sasch.cameragps.sharednew.remote.BulbPhase
 import com.sasch.cameragps.sharednew.remote.ShutterControls
-import kotlin.time.Duration.Companion.seconds
+import com.sasch.cameragps.sharednew.remote.bulbDurationSeconds
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -32,6 +31,8 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 
 internal interface WifiRemoteConnection {
     val cameraName: String
@@ -115,7 +116,7 @@ class WifiRemoteController internal constructor(
     private val _owner = MutableStateFlow<String?>(null)
     val owner = _owner.asStateFlow()
     private var job: Job? = null
-    private var thumbnailCache = linkedMapOf<Long, ImageBitmap?>()
+    private var thumbnailCache = linkedMapOf<Long, ImageBitmap>()
     private val _photoPreview = MutableStateFlow<WifiPhotoPreview?>(null)
     val photoPreview = _photoPreview.asStateFlow()
     private var photoPreviewJob: Job? = null
@@ -300,24 +301,35 @@ class WifiRemoteController internal constructor(
     }
 
     internal suspend fun photoThumbnail(identifier: String, handle: Long): ImageBitmap? {
-        val state = registry.get(identifier)?.wifiRemote ?: return null
         val connection = activeConnection ?: return null
-        if (!_owner.value.equals(identifier, true) || !state.photoBrowser.open || state.imageTransfer.busy) return null
         val cache = thumbnailCache
-        if (handle in cache) return cache.remove(handle).also { cache[handle] = it }
-        val image = try {
-            connection.photoThumbnail(handle)
-        } catch (cancelled: CancellationException) {
-            throw cancelled
-        } catch (failure: Exception) {
-            log.w(failure) { "Wi-Fi photo thumbnail unavailable" }
-            null
+        repeat(2) { attempt ->
+            val state = registry.get(identifier)?.wifiRemote ?: return null
+            if (cache !== thumbnailCache || !_owner.value.equals(identifier, true) ||
+                !state.photoBrowser.open || state.imageTransfer.busy
+            ) return null
+            cache.remove(handle)?.let { image ->
+                cache[handle] = image
+                return image
+            }
+            val image = try {
+                connection.photoThumbnail(handle)
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (failure: Exception) {
+                if (attempt == 1) log.w(failure) { "Wi-Fi photo thumbnail unavailable" }
+                null
+            }
+            currentCoroutineContext().ensureActive()
+            if (cache !== thumbnailCache) return null
+            if (image != null) {
+                cache[handle] = image
+                if (cache.size > 24) cache.remove(cache.keys.first())
+                return image
+            }
+            if (attempt == 0) delay(250.milliseconds)
         }
-        currentCoroutineContext().ensureActive()
-        if (cache !== thumbnailCache) return null
-        cache[handle] = image
-        if (cache.size > 24) cache.remove(cache.keys.first())
-        return image
+        return null
     }
 
     fun showPhotoPreview(identifier: String, handle: Long) {

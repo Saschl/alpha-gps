@@ -7,10 +7,10 @@ import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
+import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
-import kotlin.test.assertContentEquals
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class PtpIpCommandQueueTest : WifiLoggingTest() {
@@ -55,16 +55,40 @@ class PtpIpCommandQueueTest : WifiLoggingTest() {
     }
 
     @Test
+    fun scrollingPastQueuedThumbnailsMakesRoomForVisibleReads() = runTest {
+        val transport = FakeTransport()
+        val queue = PtpIpCommandQueue(transport, backgroundScope)
+        val reads = List(70) { handle ->
+            async { queue.executeDataIn(0x923e, listOf(handle.toLong())) }
+        }
+        runCurrent()
+        assertTrue(reads.none { it.isCompleted })
+        // The first request is already on the wire. The middle cells have scrolled offscreen.
+        for (i in 1 until reads.lastIndex) reads[i].cancel()
+        runCurrent()
+        transport.replies.send(response(1))
+        runCurrent()
+        transport.replies.send(response(2))
+        assertIs<PtpIpTransactionResult.Response>(reads.first().await())
+        assertIs<PtpIpTransactionResult.Response>(reads.last().await())
+        assertEquals(listOf(0, reads.lastIndex), transport.sent.map { it.body[10].toInt() })
+        queue.close()
+    }
+
+    @Test
     fun closingConnectionReleasesActiveAndParkedCallers() = runTest {
         val transport = FakeTransport()
         val queue = PtpIpCommandQueue(transport, backgroundScope)
         val first = async { queue.executeNoData(0x1002) }
         val second = async { queue.executeNoData(0x1002) }
+        val reads = List(70) { async { queue.executeDataIn(0x1001) } }
         runCurrent()
         queue.close()
         runCurrent()
         assertEquals(PtpIpTransactionResult.Closed, first.await())
         assertEquals(PtpIpTransactionResult.Closed, second.await())
+        for (read in reads) assertEquals(PtpIpTransactionResult.Closed, read.await())
+        assertEquals(PtpIpTransactionResult.Closed, queue.executeDataIn(0x1001))
     }
 
     @Test

@@ -53,6 +53,7 @@ import cameragps.sharednew.generated.resources.wifi_remote_viewer_position
 import cameragps.sharednew.generated.resources.wifi_remote_viewer_retry
 import cameragps.sharednew.generated.resources.wifi_remote_viewer_transfer_wait
 import com.sasch.cameragps.sharednew.remote.wifi.WifiPhotoDownload
+import com.sasch.cameragps.sharednew.remote.wifi.WifiPhotoPreview
 import com.sasch.cameragps.sharednew.remote.wifi.WifiRemoteState
 import com.sasch.cameragps.sharednew.remote.wifi.groupCameraPhotos
 import kotlinx.coroutines.launch
@@ -133,9 +134,15 @@ internal fun WifiPhotoViewer(
                 key = { page -> captures.getOrNull(page)?.id ?: "boundary:$page" },
             ) { page ->
                 val capture = captures.getOrNull(page)
-                val screenPreview = preview?.takeIf { it.handle == capture?.preview?.handle }
-                val thumbnail = capture?.let { rememberPhotoThumbnail(viewModel, it.thumbnail.handle, state.imageTransfer.busy) }
-                val image = screenPreview?.image ?: thumbnail?.image
+                val photo = capture?.let {
+                    val thumbnail = rememberPhotoThumbnail(
+                        viewModel,
+                        it.thumbnail.handle,
+                        state.imageTransfer.busy
+                    )
+                    viewerPhotoPreview(it.preview.handle, preview, thumbnail)
+                }
+                val image = photo?.image
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     when {
                         capture == null -> Column(
@@ -167,7 +174,7 @@ internal fun WifiPhotoViewer(
                             modifier = Modifier.fillMaxSize()
                         )
 
-                        browser.loading || screenPreview?.loading == true || thumbnail?.loading == true -> CircularProgressIndicator(
+                        browser.loading || photo?.loading == true -> CircularProgressIndicator(
                             color = Color.White
                         )
                         else -> Text(stringResource(Res.string.wifi_remote_preview_unavailable))
@@ -212,12 +219,22 @@ internal fun WifiPhotoViewer(
         }
     }
     if (showDetails && current != null) {
-        val screenPreview = preview?.takeIf { it.handle == current.preview.handle }
+        val handle = current.preview.handle
+        val photo = preview?.takeIf { it.handle == handle && it.image != null }
+            ?: viewerPhotoPreview(
+                handle,
+                preview,
+                rememberPhotoThumbnail(
+                    viewModel,
+                    current.thumbnail.handle,
+                    state.imageTransfer.busy
+                )
+            )
         PhotoDetailsSheet(
             capture = current,
-            image = screenPreview?.image ?: rememberPhotoThumbnail(viewModel, current.thumbnail.handle, state.imageTransfer.busy).image,
+            image = photo.image,
             state = state,
-            previewLoading = screenPreview?.loading == true,
+            previewLoading = photo.loading,
             onDismiss = {
                 viewModel.controller.clearPhotoTransferResult(viewModel.identifier)
                 showDetails = false
@@ -234,6 +251,18 @@ internal fun WifiPhotoViewer(
             },
             onCancel = { viewModel.controller.cancelPhotoOperation(viewModel.identifier) })
     }
+}
+
+internal fun viewerPhotoPreview(
+    handle: Long,
+    preview: WifiPhotoPreview?,
+    thumbnail: WifiPhotoPreview,
+): WifiPhotoPreview {
+    val full = preview?.takeIf { it.handle == handle }
+    val image = full?.image ?: thumbnail.image
+    // The pager can display the incoming page before its settled-page request starts.
+    val loading = image == null && (full == null || full.loading || thumbnail.loading)
+    return WifiPhotoPreview(handle, image, loading)
 }
 
 private val PhotoViewerColors = darkColorScheme(

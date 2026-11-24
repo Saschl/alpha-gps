@@ -168,8 +168,8 @@ internal class SonyImageTransfer(
         if (!(catalog?.hasThumbnails
                 ?: capabilities.deviceInfo.supports(GET_THUMB)) || handle !in listedPhotos
         ) return null
+        val bytes = catalog?.thumbnail(handle) ?: data(GET_THUMB, listOf(handle), 512 * 1024)
         return try {
-            val bytes = catalog?.thumbnail(handle) ?: data(GET_THUMB, listOf(handle), 512 * 1024)
             withContext(Dispatchers.Default) {
                 if (bytes.size >= 2 && bytes[0] == 0xff.toByte() && bytes[1] == 0xd8.toByte()) {
                     val jpeg = SonyJpeg.inspect(bytes)

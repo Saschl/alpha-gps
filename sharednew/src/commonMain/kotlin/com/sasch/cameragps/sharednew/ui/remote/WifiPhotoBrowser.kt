@@ -333,7 +333,8 @@ internal fun rememberPhotoThumbnail(
     viewModel: WifiRemoteViewModel, handle: Long, transferBusy: Boolean
 ): WifiPhotoPreview = key(viewModel, handle) {
     val thumbnail by produceState(WifiPhotoPreview(handle), transferBusy) {
-        if (!transferBusy) {
+        if (!transferBusy && value.image == null) {
+            value = WifiPhotoPreview(handle)
             val image = viewModel.controller.photoThumbnail(viewModel.identifier, handle)
             value = WifiPhotoPreview(handle, image, loading = false)
         }

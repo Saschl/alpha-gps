@@ -13,20 +13,13 @@ import com.sasch.cameragps.sharednew.remote.BulbPhase
 import com.sasch.cameragps.sharednew.remote.BulbTimerState
 import com.sasch.cameragps.sharednew.remote.ShutterControls
 import com.sasch.cameragps.sharednew.ui.remote.WifiRemoteViewModel
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertIs
-import kotlin.test.assertNull
-import kotlin.test.assertSame
-import kotlin.test.assertTrue
-import kotlin.time.Duration.Companion.seconds
-import kotlinx.datetime.LocalDate
+import com.sasch.cameragps.sharednew.ui.remote.viewerPhotoPreview
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -38,6 +31,15 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
+import kotlinx.datetime.LocalDate
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertIs
+import kotlin.test.assertNull
+import kotlin.test.assertSame
+import kotlin.test.assertTrue
+import kotlin.time.Duration.Companion.seconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class WifiRemoteControllerTest : WifiLoggingTest() {
@@ -264,6 +266,62 @@ class WifiRemoteControllerTest : WifiLoggingTest() {
     }
 
     @Test
+    fun swipingWaitsForTheIncomingPreviewEvenIfItsThumbnailIsUnavailable() {
+        val missed = WifiPhotoPreview(3L, loading = false)
+        val previous = WifiPhotoPreview(0L, PreviewBitmap(), loading = false)
+        assertTrue(viewerPhotoPreview(2L, null, missed).loading)
+        val incoming = viewerPhotoPreview(2L, previous, missed)
+        assertNull(incoming.image)
+        assertTrue(incoming.loading)
+        assertTrue(viewerPhotoPreview(2L, WifiPhotoPreview(2L), missed).loading)
+
+        val fullMiss = WifiPhotoPreview(2L, loading = false)
+        assertTrue(viewerPhotoPreview(2L, fullMiss, WifiPhotoPreview(3L)).loading)
+        assertFalse(viewerPhotoPreview(2L, fullMiss, missed).loading)
+        val small = missed.copy(image = PreviewBitmap(160, 80))
+        assertSame(small.image, viewerPhotoPreview(2L, previous, small).image)
+        val full = fullMiss.copy(image = PreviewBitmap())
+        assertSame(full.image, viewerPhotoPreview(2L, full, small).image)
+    }
+
+    @Test
+    fun visibleThumbnailRetriesOnceAndOnlySuccessfulReadsEnterTheCache() = runTest {
+        val connection = pagedConnection()
+        val controller = WifiRemoteController(
+            backgroundScope,
+            CameraSessionRegistry(),
+            { _, _ -> connection },
+            {},
+            {})
+        controller.connect("camera", "127.0.0.1")
+        runCurrent()
+        controller.browsePhotos("camera")
+        runCurrent()
+
+        val visible = async { controller.photoThumbnail("camera", 1L) }
+        runCurrent()
+        assertFalse(visible.isCompleted)
+        connection.thumbnailImage = PreviewBitmap(160, 80)
+        assertSame(connection.thumbnailImage, visible.await())
+        assertSame(connection.thumbnailImage, controller.photoThumbnail("camera", 1L))
+        assertEquals(listOf(1L, 1L), connection.thumbnailRequests)
+
+        connection.thumbnailImage = null
+        assertNull(controller.photoThumbnail("camera", 3L))
+        connection.thumbnailImage = PreviewBitmap(160, 80)
+        assertSame(connection.thumbnailImage, controller.photoThumbnail("camera", 3L))
+        assertEquals(listOf(1L, 1L, 3L, 3L, 3L), connection.thumbnailRequests)
+
+        connection.thumbnailImage = null
+        val offscreen = launch { controller.photoThumbnail("camera", 5L) }
+        runCurrent()
+        offscreen.cancel()
+        advanceTimeBy(1.seconds)
+        assertEquals(1, connection.thumbnailRequests.count { it == 5L })
+        controller.closeAndJoin()
+    }
+
+    @Test
     fun swipingDiscardsLatePreviewAndFailureKeepsBrowserUsable() = runTest {
         val connection = pagedConnection()
         val registry = CameraSessionRegistry()
@@ -458,7 +516,7 @@ class WifiRemoteControllerTest : WifiLoggingTest() {
     @Test
     fun gridAppendsOncePreservesSelectionAndRefreshRestartsAtTheBeginning() = runTest {
         val registry = CameraSessionRegistry()
-        val connection = pagedConnection()
+        val connection = pagedConnection().apply { thumbnailImage = PreviewBitmap(160, 80) }
         val controller = WifiRemoteController(backgroundScope, registry, { _, _ -> connection }, {}, {})
         val model = WifiRemoteViewModel("camera", controller)
         controller.connect("camera", "127.0.0.1")
@@ -1429,6 +1487,7 @@ class WifiRemoteControllerTest : WifiLoggingTest() {
         runTest {
         val registry = CameraSessionRegistry()
         val connection = Connection().apply {
+            thumbnailImage = PreviewBitmap(160, 80)
             photos = listOf(
                 WifiCameraPhoto(42, "ONE.HIF", 100, "image/heif", "", captureId = "one"),
                 WifiCameraPhoto(43, "ONE.ARW", 100, "image/x-sony-arw", "", captureId = "one"),
