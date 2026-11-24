@@ -26,7 +26,7 @@ rootProject.name = "CameraGps"
 include(":app")
 include(":sharednew")
 include(":heif")
-include(":camerasim")
+//include(":camerasim")
 
 // Standalone test tool: a phone that pretends to be a Sony camera (see camerasim/README.md)
 if (providers.gradleProperty("includeCameraSim").orNull == "true") {
