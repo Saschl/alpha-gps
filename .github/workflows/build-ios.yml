@@ -1,9 +1,9 @@
 name: Build iOS
 
 on:
-  push:
-    tags:
-      - 'v*'
+  #push:
+  #  tags:
+  #    - 'v*'
   workflow_dispatch:
 
 permissions:
