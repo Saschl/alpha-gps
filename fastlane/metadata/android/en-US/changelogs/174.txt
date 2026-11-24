@@ -2,4 +2,4 @@
 - More photos load as you scroll. Pinch or double-tap a preview to zoom.
 - Use the Bulb timer to set the length of a long exposure over Bluetooth or Wi-Fi.
 - Download confirmations disappear after a few seconds.
-- Bug fixes
+- Bug fixes and UI improvements
